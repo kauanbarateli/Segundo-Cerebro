@@ -62,6 +62,7 @@ test("legacy closure includes the Next stop relay, Knowledge guard and shared Au
   assert.equal(frame.statements.some(node=>ts.isImportDeclaration(node)&&ts.isStringLiteral(node.moduleSpecifier)&&node.moduleSpecifier.text==="./auth-theme-switcher"),true);
   assert.equal(paths.includes(theme),true);assert.equal(all.filter(path=>path===theme).length,1);
   assert.equal(paths.includes(relay),true);assert.equal(paths.includes(reserved),true);assert.equal(all.filter(path=>path===reserved).length,1);
+  for(const path of ["src/components/features/capturar/drafts.ts","src/components/features/capturar/image-preview.tsx","src/components/features/capturar/image-rules.ts","src/components/features/capturar/images.ts","src/components/features/capturar/model.ts","src/components/features/capturar/quick-capture.tsx","src/components/features/capturar/requests.ts","src/components/features/capturar/use-image-attachments.ts","src/lib/navigation/optional-destinations.ts"])assert.equal(all.filter(item=>item===path).length,1,path);
   assert.equal(all.length,304);assert.equal(all.filter(path=>path==="supabase/migrations/20261023061901_onboarding_foundation.sql").length,1);assert.equal(all.filter(path=>path==="src/lib/environment/application-destination.ts").length,1);assert.equal(all.length,DRIVE_SOURCE_COUNTS.git);
   assert.equal(createHash("sha256").update(all.join("\n")+"\n").digest("hex"),"5631da45e3401d538bef4e704574f9abf4382be3c7b97db8336a5e913d1ee2a1");
   const added=DRIVE_HISTORICAL_READER_SOURCE.path,previous=all.filter(path=>path!==added);

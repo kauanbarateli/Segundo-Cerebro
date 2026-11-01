@@ -21,6 +21,10 @@ const sourceSha="a".repeat(40),hash="b".repeat(64);
 // Original doc18:08f542 - five Drive UI + four imports =541; RichLink adds
 // only document-link ->542, independently derived from HEAD blobs/current AST.
 const authThemeAddedPaths=["src/components/features/auth/auth-theme-switcher.tsx"];
+// Frente A (fase 1): real imports added by the header quick capture, the extracted composer and optional destinations;
+// the retired calendar views and the settings install card are no longer reachable from the bound pages.
+const frenteAAddedPaths=["src/components/features/capturar/capture-settings.tsx","src/components/features/capturar/image-preview.tsx","src/components/features/capturar/quick-capture.tsx","src/components/features/capturar/use-image-attachments.ts","src/lib/navigation/optional-destinations.ts"];
+const frenteARemovedPaths=["src/components/features/calendario/calendar-agenda.tsx","src/components/features/calendario/calendar-month.tsx","src/components/pwa/install-help.tsx","src/components/pwa/pwa.css"];
 const doc18AddedPaths=["src/components/editor/document-reader.tsx","src/components/features/cofre/vault-secret-field.tsx","src/components/features/configuracoes/preference-draft.ts","src/components/features/projetos/task-refusal.ts","src/components/editor/document-link.ts"];
 const doc18UnreachableDrivePaths=["src/components/features/drive/drive-client.ts","src/components/features/drive/drive-connected-workspace.tsx","src/components/features/drive/drive-workspace.tsx","src/components/features/drive/drive.css","src/components/features/drive/projections.ts"];
 const frontABAddedPaths=["src/components/features/capturar/capture-settings.tsx","src/components/features/capturar/image-preview.tsx","src/components/features/capturar/quick-capture.tsx","src/components/features/capturar/use-image-attachments.ts","src/components/features/configuracoes/signup-origin-setting.css","src/components/features/configuracoes/signup-origin-setting.tsx","src/lib/access/front-b-capabilities-server.ts","src/lib/auth/signup-http.ts","src/lib/navigation/optional-destinations.ts"];
@@ -448,7 +452,7 @@ test("complete549+61 collector includes doc18, Goals image host, Finance series,
   const derived=await deriveAdminBrowserSourcePaths();
   // Preserve the historical doc18+Link542 delta, then add the single Auth theme
   // import derived independently from abb and HEAD. Drive remains a tombstone.
-  assert.equal(542-doc18UnreachableDrivePaths.length+doc18AddedPaths.length+authThemeAddedPaths.length,543);
+  assert.equal(542-doc18UnreachableDrivePaths.length+doc18AddedPaths.length+authThemeAddedPaths.length+frenteAAddedPaths.length-frenteARemovedPaths.length,544);
   for(const path of [...doc18AddedPaths,...authThemeAddedPaths]){
     assert.equal(derived.includes(path),true,path);
     const bytes=await readFile(new URL(path,root));
@@ -604,12 +608,14 @@ test("Next oversize output is discarded in RAM and failed group never becomes a 
 test("Next output failure after readiness vetoes an otherwise passed worker and remains failed after successful teardown",async()=>{const d=processDouble(),r=report();r.cases[1]={case:ADMIN_BROWSER_CASES[1],report:blankAdminBrowserCase(ADMIN_BROWSER_CASES[1]),infrastructure:Object.fromEntries(ADMIN_BROWSER_INFRA_KEYS.map(k=>[k,false])),migrationsApplied:0,catalogueChecks:0,nextStopSignal:"NONE"};assert.equal(vetoAdminBrowserNextFailure(r,d.next.metadata()),false);assert.equal(r.writeOutcomeUncertain,false);d.child.stderr.emit("data",Buffer.alloc(2097153));assert.equal(vetoAdminBrowserNextFailure(r,d.next.metadata()),true);assert.equal(await d.next.stop(),true);assert.equal(d.next.metadata().groupConfirmed,true);assert.equal(vetoAdminBrowserNextFailure(r,d.next.metadata()),true);assert.equal(r.cases[0].report.status,"passed");const projected=validateAdminBrowserCiReport(r);assert.equal(projected.status,"failed");assert.equal(projected.code,"PROCESS_UNCONFIRMED");assert.equal(projected.writeOutcomeUncertain,true);assert.equal(projected.cases[1].report.status,"not-run");});
 test("Next spawn failure remains closed and failed without retaining raw details",async()=>{const d=createAdminBrowserNextProcess({}, {spawnProcess:()=>{throw Error("SYNTHETIC_PRIVATE_CANARY");}});assert.equal(d.metadata().failed,true);assert.equal(d.metadata().closed,true);assert.equal(JSON.stringify(d.metadata()).includes("CANARY"),false);assert.equal(await d.stop(),true);});
 test("source closure derives real imports and preserves all eighteen finite declared paths and guards",async()=>{const paths=await deriveAdminBrowserSourcePaths();assert.equal(paths.length,ADMIN_BROWSER_SOURCE_COUNTS.git);assert.equal(ADMIN_BROWSER_NEW_PATHS.length,18);assert.equal(new Set(paths).size,paths.length);assert.deepEqual(paths,[...paths].sort());for(const p of ADMIN_BROWSER_SOURCE_SEEDS)assert.equal(paths.includes(p),true,p);for(const p of ["src/lib/auth/runtime.ts","src/lib/auth/actions.ts","src/lib/auth/service.ts","src/app/(workspace)/layout.tsx","src/middleware.ts","src/components/features/auth/auth-form.tsx","supabase/migrations/20261010044217_finance_monthly_plan.sql","src/components/features/configuracoes/settings-legal-section.tsx","src/components/ui/legal-links.tsx","src/components/ui/legal-links.css"])assert.equal(paths.includes(p),true,p);assert.equal(paths.some(p=>p.startsWith("node_modules/")||p.includes("..")),false);});
-test("doc18 source closure preserves prior changes and binds the Auth theme import",async()=>{
+test("doc18 source closure preserves prior changes, binds the Auth theme import and the Frente A delta",async()=>{
   const paths=await deriveAdminBrowserSourcePaths();
   assert.equal(ADMIN_BROWSER_SOURCE_COUNTS.git,542-doc18UnreachableDrivePaths.length+doc18AddedPaths.length+authThemeAddedPaths.length+frontABAddedPaths.length-frontABUnreachablePaths.length+1);
   assert.equal(paths.length,549);assert.equal(ADMIN_BROWSER_SOURCE_COUNTS.dependencies,61);
   for(const path of [...doc18AddedPaths,...authThemeAddedPaths])assert.equal(paths.includes(path),true,path);
   for(const path of doc18UnreachableDrivePaths)assert.equal(paths.includes(path),false,path);
+  for(const path of frenteAAddedPaths)assert.equal(paths.includes(path),true,path);
+  for(const path of frenteARemovedPaths)assert.equal(paths.includes(path),false,path);
   for(const path of frontABAddedPaths)assert.equal(paths.includes(path),true,path);
   for(const path of frontABUnreachablePaths)assert.equal(paths.includes(path),false,path);
   assert.equal(paths.includes("tests/e2e/fixtures/auth-sign-in-acknowledgement.tsx"),false);
@@ -806,7 +812,7 @@ test("Admin permits the canonical harness only as an explicit hash seed and refu
 });
 
 
-// CURRENT27/doc18/Auth: git543 follows the original AST getter and independent
+// CURRENT27/doc18/Auth/Frente A: git544 follows the original AST getter and independent
 // Git-blob walker agreement on the exact +5/-5 UI delta above; runtime
 // qualification remains separate from these pure source controls.
 test("Admin Browser selects historical026 after full current27 byte qualification", async () => {
