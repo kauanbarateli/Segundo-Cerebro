@@ -38,7 +38,10 @@
       "codex/b05-atualizacoes-20261031": false,
       "codex/b06-integracao-20261031": false,
       "codex/b07-retencao-origem": false,
-      "codex/reconciliacao-banco-20261031": false
+      "codex/reconciliacao-banco-20261031": false,
+      "codex/fix-auditoria-173": false,
+      "codex/b08-integracao-frentes": false,
+      "codex/frente-b-migrations-locais": false
     }
   }
 }
