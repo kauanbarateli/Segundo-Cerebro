@@ -1,7 +1,7 @@
 name: Comparativo de foco no Chromium
 on:
   push:
-    branches: [codex/front-b-focus-modes]
+    branches: [codex/front-b-foco-real]
     paths: [.github/workflows/front-b-feedback-focus-modes.yml]
 permissions:
   contents: read
