@@ -29,7 +29,7 @@ jobs:
       - name: Dependências fixadas
         run: npm ci
       - name: Contratos puros
-        run: node --test tests/scripts/front-b-offline-observation.test.mjs
+        run: node --test tests/scripts/front-b-offline-observation.test.mjs tests/scripts/front-b-offline-deviations.test.mjs
       - name: Observação sintética sem rede
         run: |
           env -i \
