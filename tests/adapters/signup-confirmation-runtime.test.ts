@@ -25,7 +25,7 @@ describe("adaptador de confirmação de cadastro", () => {
     mocks.enabled.mockReturnValue(true); mocks.rpc.mockResolvedValue({ data: { allowed: true }, error: null });
     mocks.verifyOtp.mockResolvedValue({ error: null }); mocks.getUser.mockResolvedValue({ data: { user: { id: userId, email: "a@example.invalid", email_confirmed_at: "2026-10-31T12:00:00Z", is_anonymous: false } }, error: null });
     mocks.getClaims.mockResolvedValue({ data: { claims: { sub: userId, session_id: sessionId } }, error: null });
-    mocks.signupRpc.mockResolvedValue({ intentId, termsVersion: "v1", privacyVersion: "v2", state: "bound" }); mocks.signOut.mockResolvedValue({ error: null });
+    mocks.signupRpc.mockResolvedValue({ intentId, termsVersion: "v1", privacyVersion: "v2", state: "bound", originPending: false }); mocks.signOut.mockResolvedValue({ error: null });
   });
   afterEach(() => { vi.clearAllMocks(); });
   it("verifica somente OTP de cadastro e escreve checkpoint protegido", async () => {
@@ -43,7 +43,7 @@ describe("adaptador de confirmação de cadastro", () => {
     expect(mocks.verifyOtp).not.toHaveBeenCalled(); expect(set).not.toHaveBeenCalled();
   });
   it("pede recuperação privada de intenção após OTP válido quando o vínculo expirou", async () => {
-    mocks.signupRpc.mockResolvedValueOnce(null).mockResolvedValueOnce({ intentId, termsVersion: "v1", privacyVersion: "v2", state: "bound" });
+    mocks.signupRpc.mockResolvedValueOnce(null).mockResolvedValueOnce({ intentId, termsVersion: "v1", privacyVersion: "v2", state: "bound", originPending: false });
     const { jar } = cookies();
     expect(await verifySignupConfirmation(createSignupConfirmationPorts(config, jar), token, legal)).toEqual({ status: "ready" });
     expect(mocks.signupRpc).toHaveBeenNthCalledWith(2, config, "signup_recover_verified_intent", expect.objectContaining({ p_user: userId, p_session: sessionId, p_terms: "v1", p_privacy: "v2" }));

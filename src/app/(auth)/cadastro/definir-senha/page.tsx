@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { SignupLegal, SignupPassword } from "@/components/features/auth/signup-fields";
+import { SignupLegal, SignupOriginConfirmation, SignupPassword } from "@/components/features/auth/signup-fields";
 import { readAuthConfiguration } from "@/lib/auth/config";
 import { SIGNUP_CHECKPOINT_COOKIE } from "@/lib/auth/signup-confirmation-runtime";
 import { verifySignupCheckpoint } from "@/lib/auth/signup-checkpoint";
@@ -26,6 +26,7 @@ export default async function SignupPasswordPage({ searchParams }: { searchParam
       <form className="auth-form" action="/auth/finalizar-cadastro" method="post">
         {!checkpoint.passwordConfirmed && <SignupPassword />}
         <SignupLegal termsVersion={LEGAL_DOCUMENTS.termos.version} privacyVersion={LEGAL_DOCUMENTS.privacidade.version} />
+        {checkpoint.originPending && <SignupOriginConfirmation />}
         <Button type="submit" variant="primary">Concluir cadastro</Button>
       </form>
     </>}

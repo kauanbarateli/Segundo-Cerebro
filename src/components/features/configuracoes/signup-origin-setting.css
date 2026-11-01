@@ -1,0 +1,4 @@
+.signup-origin-setting { display:grid; gap:var(--space-3); min-width:0; }
+.signup-origin-setting h3 { margin:0 0 var(--space-1); font-size:var(--type-corpo-forte); font-weight:var(--weight-corpo-forte); }
+.signup-origin-setting p { margin:0; color:var(--ink-muted); font-size:var(--type-corpo); line-height:var(--leading-corpo); }
+.signup-origin-setting .ui-button { justify-self:start; }

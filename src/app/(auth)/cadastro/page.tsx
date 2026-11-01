@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
-import { SignupLegal, SignupPassword } from "@/components/features/auth/signup-fields";
+import { SignupLegal, SignupOriginChoice, SignupPassword } from "@/components/features/auth/signup-fields";
 import { signupAvailable } from "@/lib/auth/signup-availability";
 import { LEGAL_DOCUMENTS } from "@/lib/legal/documents";
 
@@ -27,6 +27,7 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
         <Field name="email" label="E-mail" type="email" autoComplete="email" required maxLength={254} />
         <SignupPassword />
         <SignupLegal termsVersion={LEGAL_DOCUMENTS.termos.version} privacyVersion={LEGAL_DOCUMENTS.privacidade.version} />
+        <SignupOriginChoice />
         <Button type="submit" variant="primary">Criar conta</Button>
       </form>
       <p className="auth-registration">Já solicitou sua conta? <Link href="/cadastro/reenviar">Reenviar confirmação</Link></p>

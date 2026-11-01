@@ -39,6 +39,10 @@ export function createSignupCompletionPorts(config: SupabaseAuthConfig, jar: Aut
       return { allowed: data.allowed };
     },
     findBoundIntent: confirmation.findBoundIntent,
+    async discardPendingOrigin(userId, sessionId, intentId, hash) {
+      const value = await signupRpc(config, "signup_discard_pending_origin", { p_user: userId, p_session: sessionId, p_intent: intentId, p_subject_hash: hash });
+      if (!value || typeof value !== "object" || Array.isArray(value) || Object.keys(value).join(",") !== "status" || !["discarded", "absent"].includes(String((value as Record<string, unknown>).status))) return signupUnavailable();
+    },
     async updatePassword(password) {
       if (!signupEnabled(config)) return "unknown";
       try {
@@ -52,8 +56,8 @@ export function createSignupCompletionPorts(config: SupabaseAuthConfig, jar: Aut
       const value = await signupRpc(config, "signup_attest_password_reset", { p_user: userId, p_session: sessionId, p_intent: intentId, p_subject_hash: hash });
       if (value !== null) return signupUnavailable();
     },
-    async complete(userId, sessionId, intentId, hash, terms, privacy) {
-      const value = await signupRpc(config, "signup_complete", { p_user: userId, p_session: sessionId, p_intent: intentId, p_subject_hash: hash, p_terms: terms, p_privacy: privacy });
+    async complete(userId, sessionId, intentId, hash, terms, privacy, acceptOrigin, originVersion) {
+      const value = await signupRpc(config, "signup_complete", { p_user: userId, p_session: sessionId, p_intent: intentId, p_subject_hash: hash, p_terms: terms, p_privacy: privacy, p_accept_origin: acceptOrigin, p_origin_version: originVersion });
       if (!value || typeof value !== "object" || Array.isArray(value) || Object.keys(value).join(",") !== "status") return signupUnavailable();
       const status = (value as Record<string, unknown>).status;
       if (status !== "admitted" && status !== "already_admitted") return signupUnavailable();

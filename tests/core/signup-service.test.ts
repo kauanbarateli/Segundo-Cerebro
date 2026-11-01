@@ -10,7 +10,7 @@ describe("solicitação de cadastro", () => {
   it("emite intenção antes do provedor sem armazenar e-mail ou senha na intenção", async () => {
     const services = ports();
     expect(await requestPublicSignup(services, payload, legal)).toEqual({ status: "accepted" });
-    expect(services.createIntent).toHaveBeenCalledWith({ bindingHash: "b".repeat(64), subjectHash: "c".repeat(64), termsVersion: "t1", privacyVersion: "p1", expiresAt: 1_801_000 });
+    expect(services.createIntent).toHaveBeenCalledWith({ bindingHash: "b".repeat(64), subjectHash: "c".repeat(64), termsVersion: "t1", privacyVersion: "p1", expiresAt: 1_801_000, origin: null, originVersion: null });
     expect(services.signup).toHaveBeenCalledWith({ email: "pessoa@example.com", password: payload.password, pointer: "a".repeat(43) });
     expect(vi.mocked(services.createIntent).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(services.signup).mock.invocationCallOrder[0]!);
   });
@@ -31,5 +31,12 @@ describe("solicitação de cadastro", () => {
     const services = ports();
     expect(await requestPublicSignup(services, { ...payload, role: "master" }, legal)).toEqual({ status: "invalid", field: "input" });
     expect(services.limit).not.toHaveBeenCalled(); expect(services.signup).not.toHaveBeenCalled();
+  });
+  it("somente inclui UTMs permitidas após consentimento explícito", async () => {
+    const p = ports(), candidate = { utm_source: "busca", utm_campaign: "organização", referrer: "privado" };
+    expect(await requestPublicSignup(p, payload, legal, { consented: false, candidate })).toEqual({ status: "accepted" });
+    expect(p.createIntent).toHaveBeenLastCalledWith(expect.objectContaining({ origin: null, originVersion: null }));
+    expect(await requestPublicSignup(p, payload, legal, { consented: true, candidate })).toEqual({ status: "accepted" });
+    expect(p.createIntent).toHaveBeenLastCalledWith(expect.objectContaining({ origin: { utm_source: "busca", utm_campaign: "organização" }, originVersion: "signup-origin-v1" }));
   });
 });

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { signSignupCheckpoint, verifySignupCheckpoint } from "../../src/lib/auth/signup-checkpoint";
 
 const secret = "s".repeat(32), time = 1000;
-const state = { userId: "10000000-0000-4000-8000-000000000001", sessionId: "20000000-0000-4000-8000-000000000001", intentId: "30000000-0000-4000-8000-000000000001", issuedAt: time, expiresAt: time + 600_000, passwordConfirmed: false };
+const state = { userId: "10000000-0000-4000-8000-000000000001", sessionId: "20000000-0000-4000-8000-000000000001", intentId: "30000000-0000-4000-8000-000000000001", issuedAt: time, expiresAt: time + 600_000, passwordConfirmed: false, originPending: false };
 
 describe("checkpoint de confirmação de cadastro", () => {
   it("vincula identidade, sessão e intenção sem conter senha ou token OTP", () => {

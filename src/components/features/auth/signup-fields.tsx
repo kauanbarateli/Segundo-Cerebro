@@ -4,6 +4,7 @@ import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Icons } from "@/components/ui/icons";
+import { parseSignupOrigin, SIGNUP_UTM_FIELDS, type SignupOrigin } from "@/core/acquisition/signup-origin";
 
 export function SignupPassword() {
   const [revealed, setRevealed] = useState(false);
@@ -32,4 +33,35 @@ export function SignupLegal({ termsVersion, privacyVersion }: { termsVersion: st
     </label>
     <div className="auth-policy-links"><Link href="/termos-de-servico" aria-label="Ler os termos de serviço (abre em nova aba)" target="_blank" rel="noopener noreferrer">Termos de serviço</Link><Link href="/privacidade" aria-label="Ler a política de privacidade (abre em nova aba)" target="_blank" rel="noopener noreferrer">Privacidade</Link></div>
   </div>;
+}
+
+/** URL values are not read, stored or submitted before the optional choice. */
+export function SignupOriginChoice() {
+  const id = useId(), [checked, setChecked] = useState(false), [origin, setOrigin] = useState<SignupOrigin | null>(null);
+  function choose(value: boolean) {
+    setChecked(value);
+    if (!value) { setOrigin(null); return; }
+    const query = new URLSearchParams(window.location.search), candidate: Record<string, string> = {};
+    for (const field of SIGNUP_UTM_FIELDS) { const item = query.get(field); if (item !== null) candidate[field] = item; }
+    setOrigin(parseSignupOrigin(true, candidate));
+  }
+  return <div className="auth-legal">
+    <label className="auth-legal-check" htmlFor={id}><span className="auth-legal-control">
+      {/* eslint-disable-next-line no-restricted-syntax -- Campo opcional do tipo checkbox, não suportado por Field. */}
+      <input id={id} name="consentedOrigin" type="checkbox" value="yes" checked={checked} onChange={event => choose(event.currentTarget.checked)} /><span className="auth-legal-mark" aria-hidden="true"><Icons.Check /></span>
+    </span><span>Permitir o uso da origem deste link em métricas de cadastro, por até 12 meses. Opcional.</span></label>
+    {checked && !origin && <p className="auth-feedback" role="status">Este link não contém uma origem de campanha válida.</p>}
+    {origin && Object.entries(origin).map(([field, value]) => (
+      /* eslint-disable-next-line no-restricted-syntax -- Só campos permitidos e consentidos são enviados. */
+      <input key={field} type="hidden" name={field} value={value} />
+    ))}
+  </div>;
+}
+
+export function SignupOriginConfirmation() {
+  const id = useId();
+  return <div className="auth-legal"><label className="auth-legal-check" htmlFor={id}><span className="auth-legal-control">
+    {/* eslint-disable-next-line no-restricted-syntax -- Confirmação opcional separada dos termos. */}
+    <input id={id} name="acceptedOrigin" type="checkbox" value="yes" /><span className="auth-legal-mark" aria-hidden="true"><Icons.Check /></span>
+  </span><span>Permitir o uso da origem informada no cadastro em métricas, por até 12 meses. Opcional.</span></label></div>;
 }

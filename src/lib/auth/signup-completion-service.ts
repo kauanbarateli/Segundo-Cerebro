@@ -1,8 +1,9 @@
 import { validEmail, validNewPassword } from "./policy";
 import type { SignupCheckpoint } from "./signup-checkpoint";
+import { SIGNUP_ORIGIN_CONSENT_VERSION } from "../../core/acquisition/signup-origin";
 
 type PendingIdentity = { userId: string; sessionId: string; email: string };
-type Intent = { intentId: string; termsVersion: string; privacyVersion: string; state: "bound" | "consumed" };
+type Intent = { intentId: string; termsVersion: string; privacyVersion: string; state: "bound" | "consumed"; originPending: boolean };
 export interface SignupCompletionPorts {
   now(): number;
   /** Reads and verifies the signed HttpOnly checkpoint; never client-supplied identity. */
@@ -11,16 +12,17 @@ export interface SignupCompletionPorts {
   subjectHash(email: string): string;
   limit(userId: string): Promise<{ allowed: boolean }>;
   findBoundIntent(userId: string, sessionId: string, hash: string): Promise<Intent | null>;
+  discardPendingOrigin(userId: string, sessionId: string, intentId: string, hash: string): Promise<void>;
   updatePassword(password: string): Promise<"updated" | "rejected" | "unknown">;
   putCheckpoint(value: SignupCheckpoint): Promise<void>;
   attestPasswordReset(userId: string, sessionId: string, intentId: string, hash: string): Promise<void>;
-  complete(userId: string, sessionId: string, intentId: string, hash: string, terms: string, privacy: string): Promise<"admitted" | "already_admitted">;
+  complete(userId: string, sessionId: string, intentId: string, hash: string, terms: string, privacy: string, acceptOrigin: boolean, originVersion: string | null): Promise<"admitted" | "already_admitted">;
   clearCheckpoint(): Promise<void>;
 }
 export type SignupCompletionResult = { status: "completed" | "invalid" | "password-invalid" | "rate-limited" | "needs-verification" | "unavailable" };
 
 /** Explicit POST only. A signed checkpoint is meaningful only with the same verified session. */
-export async function completePublicSignup(ports: SignupCompletionPorts, input: { password: unknown; acceptedLegal: unknown; termsVersion: unknown; privacyVersion: unknown }, current: { terms: string; privacy: string }): Promise<SignupCompletionResult> {
+export async function completePublicSignup(ports: SignupCompletionPorts, input: { password: unknown; acceptedLegal: unknown; termsVersion: unknown; privacyVersion: unknown; acceptedOrigin?: unknown }, current: { terms: string; privacy: string }): Promise<SignupCompletionResult> {
   try {
     let checkpoint = ports.readCheckpoint();
     const now = ports.now();
@@ -36,10 +38,16 @@ export async function completePublicSignup(ports: SignupCompletionPorts, input: 
     if (!intent || intent.intentId !== checkpoint.intentId) return { status: "needs-verification" };
     // A previous commit may have succeeded even when its response was lost.
     if (intent.state === "consumed") {
-      await ports.complete(identity.userId, identity.sessionId, intent.intentId, hash, intent.termsVersion, intent.privacyVersion);
+      await ports.complete(identity.userId, identity.sessionId, intent.intentId, hash, intent.termsVersion, intent.privacyVersion, false, null);
       await ports.clearCheckpoint(); return { status: "completed" };
     }
     if (input.acceptedLegal !== true || input.termsVersion !== current.terms || input.privacyVersion !== current.privacy || intent.termsVersion !== current.terms || intent.privacyVersion !== current.privacy || !current.terms || !current.privacy) return { status: "invalid" };
+    const acceptOrigin = intent.originPending && checkpoint.originPending && input.acceptedOrigin === true;
+    if (intent.originPending && !acceptOrigin) {
+      await ports.discardPendingOrigin(identity.userId, identity.sessionId, intent.intentId, hash);
+      checkpoint = { ...checkpoint, originPending: false };
+      await ports.putCheckpoint(checkpoint);
+    }
     if (!checkpoint.passwordConfirmed) {
       if (typeof input.password !== "string" || input.password.length > 4096 || !validNewPassword(input.password)) return { status: "password-invalid" };
       const outcome = await ports.updatePassword(input.password);
@@ -53,7 +61,7 @@ export async function completePublicSignup(ports: SignupCompletionPorts, input: 
       await ports.putCheckpoint(checkpoint);
     }
     await ports.attestPasswordReset(identity.userId, identity.sessionId, intent.intentId, hash);
-    await ports.complete(identity.userId, identity.sessionId, intent.intentId, hash, intent.termsVersion, intent.privacyVersion);
+    await ports.complete(identity.userId, identity.sessionId, intent.intentId, hash, intent.termsVersion, intent.privacyVersion, acceptOrigin, acceptOrigin ? SIGNUP_ORIGIN_CONSENT_VERSION : null);
     await ports.clearCheckpoint();
     return { status: "completed" };
   } catch { return { status: "unavailable" }; }

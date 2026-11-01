@@ -10,11 +10,11 @@ import type { SignupConfirmationPorts } from "./signup-confirmation-service";
 export const SIGNUP_CHECKPOINT_COOKIE = "sc-flow-signup-confirmation";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const authCookie = (name: string) => name === AUTH_COOKIE_NAME || name.startsWith(`${AUTH_COOKIE_NAME}.`) || name.startsWith(`${AUTH_COOKIE_NAME}-`);
-function parseIntent(result: unknown): { intentId: string; termsVersion: string; privacyVersion: string; state: "bound" | "consumed" } {
-  if (!result || typeof result !== "object" || Array.isArray(result) || Object.keys(result).sort().join(",") !== "intentId,privacyVersion,state,termsVersion") return signupUnavailable();
+function parseIntent(result: unknown): { intentId: string; termsVersion: string; privacyVersion: string; state: "bound" | "consumed"; originPending: boolean } {
+  if (!result || typeof result !== "object" || Array.isArray(result) || Object.keys(result).sort().join(",") !== "intentId,originPending,privacyVersion,state,termsVersion") return signupUnavailable();
   const value = result as Record<string, unknown>;
-  if (typeof value.intentId !== "string" || !UUID.test(value.intentId) || typeof value.termsVersion !== "string" || value.termsVersion.length > 100 || typeof value.privacyVersion !== "string" || value.privacyVersion.length > 100 || (value.state !== "bound" && value.state !== "consumed")) return signupUnavailable();
-  return { intentId: value.intentId, termsVersion: value.termsVersion, privacyVersion: value.privacyVersion, state: value.state };
+  if (typeof value.intentId !== "string" || !UUID.test(value.intentId) || typeof value.termsVersion !== "string" || value.termsVersion.length > 100 || typeof value.privacyVersion !== "string" || value.privacyVersion.length > 100 || typeof value.originPending !== "boolean" || (value.state !== "bound" && value.state !== "consumed")) return signupUnavailable();
+  return { intentId: value.intentId, termsVersion: value.termsVersion, privacyVersion: value.privacyVersion, state: value.state, originPending: value.originPending };
 }
 
 /** No route invokes this candidate until the confirmation and QA gates pass. */

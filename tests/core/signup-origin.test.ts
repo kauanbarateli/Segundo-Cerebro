@@ -14,6 +14,7 @@ describe("origem facultativa do cadastro", () => {
   it("ignora campos inválidos sem impedir os válidos", () => {
     expect(parseSignupOrigin(true, { utm_source: "<script>", utm_medium: "ok", utm_campaign: "x".repeat(201), utm_term: "a\u0000b", utm_content: 42 })).toEqual({ utm_medium: "ok" });
     expect(parseSignupOrigin(true, { utm_source: "  " })).toBeNull();
+    expect(parseSignupOrigin(true, { utm_source: "\uD800", utm_medium: "🧠" })).toEqual({ utm_medium: "🧠" });
   });
   it("respeita o teto total em bytes UTF-8", () => {
     const result = parseSignupOrigin(true, Object.fromEntries(["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"].map((key) => [key, "🧠".repeat(200)])));

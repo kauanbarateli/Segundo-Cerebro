@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { verifySignupConfirmation, type SignupConfirmationPorts } from "../../src/lib/auth/signup-confirmation-service";
 
 const identity = { userId: "10000000-0000-4000-8000-000000000001", sessionId: "20000000-0000-4000-8000-000000000001", email: "Pessoa@Example.com" };
-const intent = { intentId: "30000000-0000-4000-8000-000000000001", termsVersion: "v1", privacyVersion: "v2", state: "bound" as const };
+const intent = { intentId: "30000000-0000-4000-8000-000000000001", termsVersion: "v1", privacyVersion: "v2", state: "bound" as const, originPending: false };
 const legal = { terms: "v1", privacy: "v2" }, token = "a".repeat(64);
 function ports(): SignupConfirmationPorts {
   return { now: () => 1000, canBegin: () => true, limitToken: vi.fn(async () => ({ allowed: true })), verifyEmailProof: vi.fn(async () => identity), subjectHash: vi.fn(() => "b".repeat(64)), findBoundIntent: vi.fn(async () => intent), recoverVerifiedIntent: vi.fn(async () => intent), putCheckpoint: vi.fn(async () => {}), clearProvisionalSession: vi.fn(async () => {}) };
@@ -13,7 +13,7 @@ describe("confirmação explícita de cadastro", () => {
     const p = ports(); expect(await verifySignupConfirmation(p, token, legal)).toEqual({ status: "ready" });
     expect(p.subjectHash).toHaveBeenCalledWith("pessoa@example.com");
     expect(p.findBoundIntent).toHaveBeenCalledWith(identity.userId, identity.sessionId, "b".repeat(64));
-    expect(p.putCheckpoint).toHaveBeenCalledWith({ userId: identity.userId, sessionId: identity.sessionId, intentId: intent.intentId, issuedAt: 1000, expiresAt: 601000, passwordConfirmed: false });
+    expect(p.putCheckpoint).toHaveBeenCalledWith({ userId: identity.userId, sessionId: identity.sessionId, intentId: intent.intentId, issuedAt: 1000, expiresAt: 601000, passwordConfirmed: false, originPending: false });
     expect(p.clearProvisionalSession).not.toHaveBeenCalled();
   });
   it("não inicia verificação com token inválido ou tentativa limitada", async () => {

@@ -10,9 +10,9 @@ export interface SignupConfirmationPorts {
   /** Verifies a purpose-bound OTP, then independently verifies user and session with Auth. */
   verifyEmailProof(tokenHash: string): Promise<{ userId: string; sessionId: string; email: string } | null>;
   subjectHash(email: string): string;
-  findBoundIntent(userId: string, sessionId: string, subjectHash: string): Promise<{ intentId: string; termsVersion: string; privacyVersion: string; state: "bound" | "consumed" } | null>;
+  findBoundIntent(userId: string, sessionId: string, subjectHash: string): Promise<{ intentId: string; termsVersion: string; privacyVersion: string; state: "bound" | "consumed"; originPending: boolean } | null>;
   /** Only after this request has successfully verified a signup OTP. */
-  recoverVerifiedIntent(userId: string, sessionId: string, subjectHash: string, terms: string, privacy: string): Promise<{ intentId: string; termsVersion: string; privacyVersion: string; state: "bound" | "consumed" }>;
+  recoverVerifiedIntent(userId: string, sessionId: string, subjectHash: string, terms: string, privacy: string): Promise<{ intentId: string; termsVersion: string; privacyVersion: string; state: "bound" | "consumed"; originPending: boolean }>;
   /** Signs the checkpoint and sets a secure, HttpOnly cookie; never exposes it to the UI. */
   putCheckpoint(value: SignupCheckpoint): Promise<void>;
   /** Clear any provisional Auth cookies and checkpoint on failure. */
@@ -41,7 +41,7 @@ export async function verifySignupConfirmation(ports: SignupConfirmationPorts, t
     if (!intent || intent.state !== "bound" || !UUID.test(intent.intentId) || !legal.terms || !legal.privacy || intent.termsVersion !== legal.terms || intent.privacyVersion !== legal.privacy) return { status: "invalid" };
     const now = ports.now();
     if (!Number.isSafeInteger(now) || now < 0 || !Number.isSafeInteger(now + 600_000)) return { status: "unavailable" };
-    await ports.putCheckpoint({ userId: identity.userId, sessionId: identity.sessionId, intentId: intent.intentId, issuedAt: now, expiresAt: now + 600_000, passwordConfirmed: false });
+    await ports.putCheckpoint({ userId: identity.userId, sessionId: identity.sessionId, intentId: intent.intentId, issuedAt: now, expiresAt: now + 600_000, passwordConfirmed: false, originPending: intent.originPending });
     return { status: "ready" };
   } catch { return { status: "unavailable" }; }
   };

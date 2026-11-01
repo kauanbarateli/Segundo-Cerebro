@@ -39,9 +39,13 @@ describe("páginas preparadas de cadastro", () => {
   it("só permite definir senha com checkpoint válido e oferece retomada após troca", async () => {
     const absent = renderToStaticMarkup(await PasswordPage({ searchParams: Promise.resolve({}) }));
     expect(absent).not.toContain('action="/auth/finalizar-cadastro"');
-    const now = Date.now(), token = signSignupCheckpoint({ userId: "10000000-0000-4000-8000-000000000001", sessionId: "20000000-0000-4000-8000-000000000001", intentId: "30000000-0000-4000-8000-000000000001", issuedAt: now, expiresAt: now + 600_000, passwordConfirmed: true }, config.stateSecret, now);
+    const now = Date.now(), token = signSignupCheckpoint({ userId: "10000000-0000-4000-8000-000000000001", sessionId: "20000000-0000-4000-8000-000000000001", intentId: "30000000-0000-4000-8000-000000000001", issuedAt: now, expiresAt: now + 600_000, passwordConfirmed: true, originPending: false }, config.stateSecret, now);
     fake.getAll.mockReturnValue([{ name: "sc-flow-signup-confirmation", value: token }]);
     const resume = renderToStaticMarkup(await PasswordPage({ searchParams: Promise.resolve({}) }));
     expect(resume).toContain('action="/auth/finalizar-cadastro"'); expect(resume).not.toContain('name="password"'); expect(resume).not.toContain(token);
+    const pendingOrigin = signSignupCheckpoint({ userId: "10000000-0000-4000-8000-000000000001", sessionId: "20000000-0000-4000-8000-000000000001", intentId: "30000000-0000-4000-8000-000000000001", issuedAt: now, expiresAt: now + 600_000, passwordConfirmed: true, originPending: true }, config.stateSecret, now);
+    fake.getAll.mockReturnValue([{ name: "sc-flow-signup-confirmation", value: pendingOrigin }]);
+    const origin = renderToStaticMarkup(await PasswordPage({ searchParams: Promise.resolve({}) }));
+    expect(origin).toContain('name="acceptedOrigin"'); expect(origin).not.toContain('name="acceptedOrigin" type="checkbox" value="yes" checked');
   });
 });

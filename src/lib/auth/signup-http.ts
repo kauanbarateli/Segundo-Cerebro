@@ -25,9 +25,8 @@ async function boundedJson(response: Response): Promise<unknown> {
 }
 
 /** Narrow server-only candidate transport; never log body, credentials or errors. */
-type SignupRpcName = "signup_intent_create" | "signup_find_bound_intent" | "signup_recover_verified_intent" | "signup_attest_password_reset" | "signup_complete";
-export async function signupRpc(config: SupabaseAuthConfig, name: SignupRpcName, body: object): Promise<unknown> {
-  if (!["signup_intent_create", "signup_find_bound_intent", "signup_recover_verified_intent", "signup_attest_password_reset", "signup_complete"].includes(name) || !signupEnabled(config)) return signupUnavailable();
+type SignupRpcName = "signup_intent_create" | "signup_find_bound_intent" | "signup_recover_verified_intent" | "signup_discard_pending_origin" | "signup_attest_password_reset" | "signup_complete";
+async function postRpc(config: SupabaseAuthConfig, name: string, body: object): Promise<unknown> {
   const response = await fetch(new URL(`/rest/v1/rpc/${name}`, config.supabaseUrl), {
     method: "POST", cache: "no-store", redirect: "error", signal: AbortSignal.timeout(10_000),
     headers: { "Content-Type": "application/json", "Accept": "application/json", apikey: config.secretKey, Authorization: `Bearer ${config.secretKey}` },
@@ -36,4 +35,15 @@ export async function signupRpc(config: SupabaseAuthConfig, name: SignupRpcName,
   if (name === "signup_attest_password_reset" && response.status === 204) return null;
   if (!response.ok || response.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase() !== "application/json") return signupUnavailable();
   return boundedJson(response);
+}
+
+export async function signupRpc(config: SupabaseAuthConfig, name: SignupRpcName, body: object): Promise<unknown> {
+  if (!["signup_intent_create", "signup_find_bound_intent", "signup_recover_verified_intent", "signup_discard_pending_origin", "signup_attest_password_reset", "signup_complete"].includes(name) || !signupEnabled(config)) return signupUnavailable();
+  return postRpc(config, name, body);
+}
+
+/** Withdrawal must remain available even when new signups are disabled. */
+export async function signupOriginRpc(config: SupabaseAuthConfig, name: "signup_origin_status" | "signup_origin_withdraw", body: object): Promise<unknown> {
+  if (!["signup_origin_status", "signup_origin_withdraw"].includes(name) || !isTrustedHostedDatabaseOrigin(config)) return signupUnavailable();
+  return postRpc(config, name, body);
 }

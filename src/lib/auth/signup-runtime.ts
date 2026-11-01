@@ -24,7 +24,7 @@ export function createSignupRequestPorts(config: SupabaseAuthConfig): SignupRequ
     async createIntent(intent) {
       // The schema candidate is not in generated types until promotion. Only
       // this fixed endpoint and server-only credential are used for the draft.
-      const result = await signupRpc(config, "signup_intent_create", { p_binding_hash: intent.bindingHash, p_subject_hash: intent.subjectHash, p_terms: intent.termsVersion, p_privacy: intent.privacyVersion, p_expires: new Date(intent.expiresAt).toISOString() });
+      const result = await signupRpc(config, "signup_intent_create", { p_binding_hash: intent.bindingHash, p_subject_hash: intent.subjectHash, p_terms: intent.termsVersion, p_privacy: intent.privacyVersion, p_expires: new Date(intent.expiresAt).toISOString(), p_origin: intent.origin, p_origin_version: intent.originVersion });
       if (typeof result !== "string" || !UUID.test(result)) return signupUnavailable();
     },
     async signup(value) {
