@@ -4,7 +4,7 @@ import { RelatedPanel } from "@/components/layout/related-panel";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ChangeEvent } from "react";
-import type { AnexoCaptura, Captura, CamposCaptura } from "@/core/capturas";
+import type { Captura, CamposCaptura } from "@/core/capturas";
 import type { DemoQueries } from "@/lib/demo/types";
 import { FUSO_DO_APP } from "@/core/tempo";
 import { useDemoApplication, useDemoQuery } from "@/lib/demo/demo-provider";
@@ -12,32 +12,19 @@ import { ConnectedApplicationError, dismissExplicitlyResolvedConflict, isCommand
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Icons } from "@/components/ui/icons";
-import { Collapsible } from "@/components/ui/data-display";
 import { Dialog } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
 import { PromoteCapture } from "@/components/layout/promote-capture";
-import { fileReadUrl, uploadFile } from "@/components/layout/file-upload";
+import { fileReadUrl } from "@/components/layout/file-upload";
 import { clearDrafts, findDraft, readDrafts, writeDrafts, type DraftMap, type DraftStorage } from "./drafts";
-import { ACCEPT_IMAGES, imagesFrom, prepareImage } from "./images";
+import { ACCEPT_IMAGES, imagesFrom } from "./images";
+import { ImagePreview } from "./image-preview";
+import { CaptureSettings } from "./capture-settings";
+import { MAX_CAPTURE_IMAGES, useImageAttachments } from "./use-image-attachments";
 import { TYPE_LABELS, documentOfDraft, draftFrom, filterCaptures, hasDraftContent, incoming, normalize, references, rewriteWiki, sameDraft, unlinkDraft, validateDraft, withDraftDocument, type CaptureDraft } from "./model";
 import { CaptureRequests } from "./requests";
 import "./capture.css";
 import FormattedEditor, { type DocumentReferenceCommand } from "@/components/editor/document-editor";
-
-function ImagePreview({ attachment, blob, privateUrl, onRemove }: { attachment: AnexoCaptura; blob?: Blob; privateUrl?: string; onRemove: () => void }) {
-  const [url, setUrl] = useState<string | null>(null);
-  useEffect(() => {
-    if (!blob) return;
-    const objectUrl = URL.createObjectURL(blob); setUrl(objectUrl);
-    return () => URL.revokeObjectURL(objectUrl);
-  }, [blob]);
-  return <figure className="capture-image">
-    {/* Object URLs are session-only previews, so Next's network image optimizer is inapplicable. */}
-    {/* eslint-disable-next-line @next/next/no-img-element */}
-    {url || privateUrl ? <img src={url ?? privateUrl} alt={`Prévia de ${attachment.name}`} loading="lazy" /> : <p>Prévia disponível apenas na sessão em que a imagem foi anexada.</p>}
-    <figcaption><span>{attachment.name}</span><Button variant="ghost" onClick={onRemove} aria-label={`Remover imagem ${attachment.name}`}><Icons.X /></Button></figcaption>
-  </figure>;
-}
 
 /** INFERIDO: ícones do protótipo por tipo (`capture`, `file-text`, `tasks`); lembrete usa o sino existente. */
 const TYPE_ICONS = { idea: Icons.Inbox, note: Icons.File, task: Icons.Tasks, reminder: Icons.Bell } as const;
@@ -68,13 +55,13 @@ function CaptureEditor({ data }: { data: DemoQueries["captures"] }) {
   const [draft, setDraft] = useState<CaptureDraft>(() => draftFrom(undefined, personal));
   const current = useRef(draft); const items = useRef(data.items); items.current = data.items;
   const drafts = useRef<DraftMap>({}); const storage = useRef<DraftStorage | null>(null); const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hydrated = useRef(false); const signedOut = useRef(false); const writing = useRef(false); const uploadEpoch = useRef(0);
+  const hydrated = useRef(false); const signedOut = useRef(false); const writing = useRef(false);
   const titleRef = useRef<HTMLInputElement>(null); const bodyRef = useRef<HTMLTextAreaElement>(null); const fileRef = useRef<HTMLInputElement>(null);
   const richReference = useRef<DocumentReferenceCommand | null>(null);
   const exposeReference = useCallback((command: DocumentReferenceCommand | null) => { richReference.current = command; }, []);
   const linkButton = useRef<HTMLButtonElement>(null); const linkSearch = useRef<HTMLInputElement>(null);
-  const [feedback, setFeedback] = useState("Pronto para escrever"); const [available, setAvailable] = useState(true);
-  const [error, setError] = useState<string | null>(null); const [writeBusy, setBusy] = useState(false); const [uploading, setUploading] = useState(false);
+  const [feedback, setFeedback] = useState(""); const [available, setAvailable] = useState(true);
+  const [error, setError] = useState<string | null>(null); const [writeBusy, setBusy] = useState(false);
   const [filter, setFilter] = useState<"all" | "inbox" | "organized" | "archived">("inbox"); const [query, setQuery] = useState("");
   const [linksOpen, setLinksOpen] = useState(false); const [linkQuery, setLinkQuery] = useState(""); const [cursor, setCursor] = useState(0);
   const [draftVersion, setDraftVersion] = useState(0);
@@ -119,6 +106,8 @@ function CaptureEditor({ data }: { data: DemoQueries["captures"] }) {
   const conflictReadEpoch = useRef(0);
   const conflictIntent = useRef<{ id: string; clientId: string; owner: string; epoch: number; reading: boolean; ready: boolean } | null>(null);
   const busy = writeBusy || !!conflict?.reading;
+  const images = useImageAttachments({ draft: current, signedOut, busy, onAttach: (attachments) => change({ attachments: [...current.current.attachments, ...attachments] }), onError: setError });
+  const { uploading } = images;
   const [titleValidationFocus, setTitleValidationFocus] = useState<{ draft: CaptureDraft; owner: string; message: string } | null>(null);
   const selected = data.items.find((item) => item.id === draft.id);
   const promoted = !!selected && !!data.readonlyCaptureIds?.includes(selected.id);
@@ -149,7 +138,7 @@ function CaptureEditor({ data }: { data: DemoQueries["captures"] }) {
     if (saved ? sameDraft(value, draftFrom(saved, personal)) : !hasDraftContent(value)) delete drafts.current[value.id];
     else drafts.current = { ...drafts.current, [value.id]: structuredClone(value) };
     const ok = writeDrafts(storage.current, app.userId, drafts.current); setAvailable(ok);
-    setFeedback(ok ? findDraft(drafts.current, value.id) ? "Rascunho salvo neste navegador" : saved ? savedFeedback : "Pronto para escrever" : "Sem armazenamento · sessão atual");
+    setFeedback(ok ? findDraft(drafts.current, value.id) ? "Rascunho salvo neste navegador" : saved ? savedFeedback : "" : "Sem armazenamento · sessão atual");
     setDraftVersion((version) => version + 1);
   }
   const flush = useRef(persist); flush.current = persist;
@@ -161,15 +150,15 @@ function CaptureEditor({ data }: { data: DemoQueries["captures"] }) {
     savedDraft.current = record ? draftFrom(record, personal) : null;
     const initial = findDraft(drafts.current, requestedId) ?? draftFrom(record, personal); assign(initial);
     if (initial.pending_client_id) setUncertainAction("save");
-    setFeedback(stored.available ? findDraft(drafts.current, requestedId) ? "Rascunho recuperado" : record ? savedFeedback : "Pronto para escrever" : "Sem armazenamento · sessão atual");
+    setFeedback(stored.available ? findDraft(drafts.current, requestedId) ? "Rascunho recuperado" : record ? savedFeedback : "" : "Sem armazenamento · sessão atual");
     const onHide = () => { if (document.hidden) flush.current(); };
     const onLeave = () => flush.current();
-    const cancelImages = () => { uploadEpoch.current++; };
+    const cancelImages = () => images.cancel();
     const cancelConflictRead = () => { conflictReadEpoch.current++; conflictIntent.current = null; };
     const onLogout = (event: Event) => {
       const userId = (event as CustomEvent<{ userId?: string }>).detail?.userId;
       if (userId && userId !== app.userId) return;
-      signedOut.current = true; cancelConflictRead(); uploadEpoch.current++; if (timer.current) clearTimeout(timer.current);
+      signedOut.current = true; cancelConflictRead(); images.cancel(); if (timer.current) clearTimeout(timer.current);
       drafts.current = {}; clearDrafts(storage.current, app.userId);
     };
     document.addEventListener("visibilitychange", onHide); window.addEventListener("pagehide", onLeave); window.addEventListener("segundo-cerebro:demo-logout", onLogout);
@@ -186,7 +175,7 @@ function CaptureEditor({ data }: { data: DemoQueries["captures"] }) {
     if (requestedId !== "new" && !record) return;
     savedDraft.current = record ? draftFrom(record, personal) : null;
     assign(findDraft(drafts.current, requestedId) ?? draftFrom(record, personal)); setError(null);
-    setFeedback(findDraft(drafts.current, requestedId) ? "Rascunho recuperado" : record ? savedFeedback : "Pronto para escrever");
+    setFeedback(findDraft(drafts.current, requestedId) ? "Rascunho recuperado" : record ? savedFeedback : "");
     titleRef.current?.focus({ preventScroll: true });
   }, [requestedId, personal, savedFeedback, uncertainAction]);
   useEffect(() => {
@@ -374,31 +363,7 @@ function CaptureEditor({ data }: { data: DemoQueries["captures"] }) {
   }
   function submitCurrent() { if (conflictIntent.current) return Promise.resolve(); return uncertainUndo.current ? uncertainUndo.current() : perform(uncertainAction ?? "save"); }
 
-  async function attach(files: File[]) {
-    if (!files.length || uploading || busy) return;
-    const remaining = 6 - current.current.attachments.length;
-    if (files.length > remaining) { setError("Cada nota aceita até seis imagens. Remova uma imagem ou escolha menos arquivos."); return; }
-    setUploading(true); setError(null); const epoch = uploadEpoch.current; const id = current.current.id;
-    try {
-      const prepared = [];
-      if (connected) {
-        const attachments: AnexoCaptura[] = [];
-        for (const file of files) {
-          const uploaded = await uploadFile({ file, kind: "capture_image", userId: app.userId, storageOrigin: app.storageOrigin, sender: app.executeDomainCommand });
-          if ((uploaded.mime !== "image/png" && uploaded.mime !== "image/jpeg") || !uploaded.width || !uploaded.height) throw new Error("A imagem ainda não foi validada.");
-          attachments.push({ id: uploaded.id, name: uploaded.name, mime: uploaded.mime, width: uploaded.width, height: uploaded.height, bytes: uploaded.bytes });
-        }
-        if (!signedOut.current && epoch === uploadEpoch.current && current.current.id === id) change({ attachments: [...current.current.attachments, ...attachments] });
-        return;
-      }
-      for (const file of files) prepared.push(await prepareImage(file));
-      if (signedOut.current || epoch !== uploadEpoch.current || current.current.id !== id) return;
-      for (const image of prepared) app.stageImage(image);
-      change({ attachments: [...current.current.attachments, ...prepared.map(({ id, name, mime, width, height, bytes }) => ({ id, name, mime, width, height, bytes }))] });
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Não foi possível preparar a imagem."); }
-    finally { setUploading(false); }
-  }
-  function chooseFiles(event: ChangeEvent<HTMLInputElement>) { void attach(Array.from(event.target.files ?? [])); event.target.value = ""; }
+  function chooseFiles(event: ChangeEvent<HTMLInputElement>) { void images.attach(Array.from(event.target.files ?? [])); event.target.value = ""; }
   function insertWiki(item: Captura): boolean {
     if (connected || current.current.document) {
       const inserted = richReference.current?.({ id: item.id, title: item.title ?? "Sem título" }) ?? false;
@@ -448,14 +413,14 @@ function CaptureEditor({ data }: { data: DemoQueries["captures"] }) {
     </section>
 
       <section ref={editorPanel} className="capture-editor capture-compose" aria-label="Editor de nota" hidden={missing}>
-        <div className="capture-compose-head"><Button variant="ghost" className="capture-back-to-list" disabled={busy || uploading || !!uncertainAction} onClick={() => { persist(); setMobileEditor(false); router.replace("/capturar", { scroll: false }); }}><Icons.ChevronLeft />Suas notas</Button><span className="capture-document-label">{draft.id === "new" ? "Nova nota" : selected?.status === "archived" ? "Nota arquivada" : "Documento"}</span><Button variant="primary" onClick={() => void submitCurrent()} loading={busy} disabled={uploading || editorInvalid || promoted || !!conflict}>{draft.id === "new" ? "Salvar nota" : "Salvar alterações"}</Button></div>
-        <div className="capture-location"><span>{draft.id === "new" ? "Nova nota" : TYPE_LABELS[draft.type]} · {selected?.status === "archived" ? "Arquivo" : selected?.status === "organized" ? "Conhecimento" : "Caixa de entrada"}</span><span role="status">{feedback}</span></div>
-        <form onSubmit={(event) => { event.preventDefault(); void submitCurrent(); }} onKeyDown={(event) => { if ((event.ctrlKey || event.metaKey) && event.key === "Enter" && !document.querySelector("dialog[open]")) { event.preventDefault(); void submitCurrent(); } }} onPaste={(event) => { const files = imagesFrom(event.clipboardData); if (files.length) { event.preventDefault(); void attach(files); } }} onDragOver={(event) => { if (event.dataTransfer.types.includes("Files")) event.preventDefault(); }} onDrop={(event) => { if (event.dataTransfer.files.length) { event.preventDefault(); void attach(Array.from(event.dataTransfer.files)); } }}>
+        <div className="capture-compose-head"><Button variant="ghost" className="capture-back-to-list" disabled={busy || uploading || !!uncertainAction} onClick={() => { persist(); setMobileEditor(false); router.replace("/capturar", { scroll: false }); }}><Icons.ChevronLeft />Suas notas</Button>{selected?.status === "archived" && <span className="capture-document-label">Nota arquivada</span>}<Button variant="primary" onClick={() => void submitCurrent()} loading={busy} disabled={uploading || editorInvalid || promoted || !!conflict}>{draft.id === "new" ? "Salvar nota" : "Salvar alterações"}</Button></div>
+        <div className="capture-location"><span>{draft.id === "new" ? "" : TYPE_LABELS[draft.type] + " · "}{selected?.status === "archived" ? "Arquivo" : selected?.status === "organized" ? "Conhecimento" : "Caixa de entrada"}</span><span role="status">{feedback}</span></div>
+        <form onSubmit={(event) => { event.preventDefault(); void submitCurrent(); }} onKeyDown={(event) => { if ((event.ctrlKey || event.metaKey) && event.key === "Enter" && !document.querySelector("dialog[open]")) { event.preventDefault(); void submitCurrent(); } }} onPaste={(event) => { const files = imagesFrom(event.clipboardData); if (files.length) { event.preventDefault(); void images.attach(files); } }} onDragOver={(event) => { if (event.dataTransfer.types.includes("Files")) event.preventDefault(); }} onDrop={(event) => { if (event.dataTransfer.files.length) { event.preventDefault(); void images.attach(Array.from(event.dataTransfer.files)); } }}>
           {uncertainAction && <p className="capture-hint" role="alert">O resultado ainda não foi confirmado. <Button onClick={() => void submitCurrent()} disabled={busy}>Confirmar o mesmo envio</Button></p>}
           {promoted && <p className="capture-hint">Esta é a origem arquivada da página. <Link href={`/conhecimento?origin=${encodeURIComponent(selected!.id)}`}>Abrir a página em Conhecimento</Link></p>}
           <fieldset className="capture-form-fields" disabled={busy || !!uncertainAction || promoted}>
           <Field label="Título da nota" visuallyHiddenLabel ref={titleRef} className="capture-title" placeholder="Dê um título à sua ideia" maxLength={120} value={draft.title} onChange={(event) => change({ title: event.target.value })} disabled={busy} error={error} />
-          <div className="capture-toolbar"><Button variant="ghost" ref={linkButton} onClick={() => { setLinkQuery(""); setLinksOpen(true); }} disabled={busy}><Icons.Link />Vincular nota</Button><Button variant="ghost" onClick={() => fileRef.current?.click()} disabled={busy || draft.attachments.length >= 6} loading={uploading}><Icons.Upload />Anexar imagem</Button><span>{words} {words === 1 ? "palavra" : "palavras"} · {related.ids.length} {related.ids.length === 1 ? "conexão" : "conexões"}</span>
+          <div className="capture-toolbar"><Button variant="ghost" ref={linkButton} onClick={() => { setLinkQuery(""); setLinksOpen(true); }} disabled={busy}><Icons.Link />Vincular nota</Button><Button variant="ghost" onClick={() => fileRef.current?.click()} disabled={busy || draft.attachments.length >= MAX_CAPTURE_IMAGES} loading={uploading}><Icons.Upload />Anexar imagem</Button><span>{words} {words === 1 ? "palavra" : "palavras"} · {related.ids.length} {related.ids.length === 1 ? "conexão" : "conexões"}</span>
           {/* Hidden native file chooser is activated by the visible, named Button; Field intentionally has no file variant. */}
           {/* eslint-disable-next-line no-restricted-syntax */}
           <input ref={fileRef} type="file" accept={ACCEPT_IMAGES} multiple hidden aria-label="Escolher imagens" onChange={chooseFiles} /></div>
@@ -468,7 +433,7 @@ function CaptureEditor({ data }: { data: DemoQueries["captures"] }) {
           {!!related.missing.length && <p className="capture-hint">Ainda não encontrada: {related.missing.join(", ")}. O texto será salvo; o vínculo aparece quando a nota existir.</p>}
           {draft.exampleAttachment && <div className="capture-chip"><span>referencia-de-leitura.jpg · exemplo nominal</span><Button variant="ghost" aria-label="Remover anexo de exemplo" onClick={() => change({ exampleAttachment: false })}><Icons.X /></Button></div>}
           {!!draft.attachments.length && <><div className="capture-images">{draft.attachments.map((attachment) => <ImagePreview key={attachment.id} attachment={attachment} blob={app.getImage(attachment.id)?.blob} privateUrl={connected ? fileReadUrl(attachment.id, app.userId) : undefined} onRemove={() => change({ attachments: draft.attachments.filter((image) => image.id !== attachment.id) })} />)}</div><p className="capture-hint">{connected ? "Imagens reencodadas sem os metadados originais. Salve a nota para manter estes vínculos." : "Imagens preparadas sem os metadados originais. Os arquivos ficam apenas nesta sessão."}</p></>}
-          <Collapsible title="Organizar e definir tipo"><div className="capture-metadata"><Field as="select" label="Tipo" value={draft.type} onChange={(event) => change({ type: event.target.value as CaptureDraft["type"] })}>{Object.entries(TYPE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</Field><Field as="select" label="Categoria" value={draft.category_id ?? ""} onChange={(event) => change({ category_id: event.target.value || null })}><option value="">Sem categoria</option>{data.categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</Field><Field as="select" label="Projeto" value={draft.project_id ?? ""} onChange={(event) => change({ project_id: event.target.value || null })}><option value="">Nenhum</option>{data.projects.filter((project) => !project.deleted_at || project.id === draft.project_id).map((project) => <option key={project.id} value={project.id}>{project.name}{project.deleted_at ? " · excluído" : ""}</option>)}</Field></div>{draft.type === "reminder" && <p className="capture-hint">Lembrete classifica a anotação. Avisos agendados ainda não estão disponíveis.</p>}</Collapsible>
+          <CaptureSettings draft={draft} categories={data.categories} projects={data.projects} onChange={change} />
           <footer className="capture-save"><p>{available ? "Rascunho local automático." : "Sem armazenamento · sessão atual"}</p><span>Ctrl/Cmd + Enter para salvar.</span></footer>
           </fieldset>
         </form>
