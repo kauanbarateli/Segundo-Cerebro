@@ -1,0 +1,10 @@
+import { test } from 'vitest';
+import assert from 'node:assert/strict';
+import { completePublicSignup } from '../../src/lib/auth/signup-completion-service';
+import { fencePorts } from '../../src/lib/auth/signup-fence-wire';
+const u='10000000-0000-4000-8000-000000000001',s='20000000-0000-4000-8000-000000000001',i='30000000-0000-4000-8000-000000000001',g='40000000-0000-4000-8000-000000000001',r='50000000-0000-4000-8000-000000000001';
+test('service and actual wire preserve correlation; uncertain start does not call Auth',async()=>{const calls=[];let updates=0;const wire=fencePorts(async(name,args)=>{calls.push([name,args]);if(name==='signup_fence_confirm')return false;if(name==='signup_fence_reserve')return {status:'acquired',requestId:args.p_request,generation:g};if(name==='signup_fence_start')throw Error('ack lost');throw Error('unexpected operation');});
+ const ports={...wire,reservationEnabled:()=>true,now:()=>2,readCheckpoint:()=>({userId:u,sessionId:s,intentId:i,expiresAt:100,passwordConfirmed:false,originPending:false}),readVerifiedIdentity:async()=>({userId:u,sessionId:s,email:'pessoa@example.invalid'}),subjectHash:()=> 'a'.repeat(64),limit:async()=>({allowed:true}),findBoundIntent:async()=>({intentId:i,termsVersion:'t',privacyVersion:'p',state:'bound',originPending:false}),newRequestId:()=>r,updatePassword:async()=>{updates++;return 'updated';},clearCheckpoint:async()=>{}};
+ assert.equal((await completePublicSignup(ports,{password:'senha sintética longa',acceptedLegal:true,termsVersion:'t',privacyVersion:'p'},{terms:'t',privacy:'p'})).status,'pending-reconciliation');
+ assert.deepEqual(calls.map(([name])=>name),['signup_fence_confirm','signup_fence_reserve','signup_fence_start']);assert.equal(calls[2][1].p_request,r);assert.equal(calls[2][1].p_generation,g);assert.equal(updates,0);
+});

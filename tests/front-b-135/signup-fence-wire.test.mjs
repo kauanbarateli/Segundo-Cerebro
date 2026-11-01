@@ -1,0 +1,12 @@
+import { test } from 'vitest';
+import assert from 'node:assert/strict';
+import { fencePorts } from '../../src/lib/auth/signup-fence-wire';
+const f={userId:'u',sessionId:'s',intentId:'i',subjectHash:'h',requestId:'r',generation:'g'};
+test('all reserve/start/ack/finish/confirm/withdraw calls bind exact server scopes and legal snapshot',async()=>{const calls=[],ports=fencePorts(async(name,args)=>{calls.push({name,args});return true;});
+ await ports.reserveCompletion({...f,terms:'t',privacy:'p',acceptOrigin:true,originVersion:'o'});await ports.startCompletion(f);await ports.markUncertain(f);await ports.acknowledgePassword(f);await ports.finishCompletion(f,{terms:'T',privacy:'P',originVersion:'O'});await ports.confirmFinished('u','s','i');await ports.withdrawCurrent('u','s');
+ assert.deepEqual(calls.map(x=>x.name),['signup_fence_reserve','signup_fence_start','signup_fence_uncertain','signup_fence_ack','signup_fence_finish','signup_fence_confirm','signup_fence_withdraw']);
+ assert.deepEqual(calls[0].args,{p_user:'u',p_session:'s',p_intent:'i',p_subject_hash:'h',p_request:'r',p_terms:'t',p_privacy:'p',p_accept_origin:true,p_origin_version:'o'});
+ assert.deepEqual(calls[4].args,{p_user:'u',p_session:'s',p_intent:'i',p_subject_hash:'h',p_request:'r',p_generation:'g',p_current_terms:'T',p_current_privacy:'P',p_current_origin:'O'});assert.deepEqual(calls[6].args,{p_user:'u',p_session:'s'});
+ assert.equal(JSON.stringify(calls).includes('password'),false);assert.equal(JSON.stringify(calls).includes('utm_'),false);
+});
+test('uncertain-mark refusal never appears successful',async()=>{const p=fencePorts(async()=>false);await assert.rejects(()=>p.markUncertain(f));});

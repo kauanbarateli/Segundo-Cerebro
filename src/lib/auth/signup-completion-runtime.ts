@@ -1,11 +1,13 @@
 import "server-only";
+import { randomUUID } from "node:crypto";
 import { createPrivilegedClient, createRequestClient, type AuthCookieJar } from "./clients";
 import type { SupabaseAuthConfig } from "./config";
 import { secureCookieOptions } from "./cookie-policy";
 import { subjectHash } from "./flow-state";
 import { verifySignupCheckpoint } from "./signup-checkpoint";
 import { createSignupConfirmationPorts, SIGNUP_CHECKPOINT_COOKIE } from "./signup-confirmation-runtime";
-import { signupEnabled, signupRpc, signupUnavailable } from "./signup-http";
+import { signupEnabled, signupFenceRpc, signupUnavailable } from "./signup-http";
+import { fencePorts } from "./signup-fence-wire";
 import type { SignupCompletionPorts } from "./signup-completion-service";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -16,6 +18,10 @@ export function createSignupCompletionPorts(config: SupabaseAuthConfig, jar: Aut
   let client: ReturnType<typeof createRequestClient> | undefined;
   const requestClient = () => client ??= createRequestClient(config, jar, true, responseHeaders);
   return {
+    // signupEnabled contains an unconditional false release gate in this draft.
+    reservationEnabled: () => signupEnabled(config),
+    ...fencePorts((name, args) => signupFenceRpc(config, name, args)),
+    newRequestId: randomUUID,
     now: Date.now,
     readCheckpoint() {
       if (!signupEnabled(config)) return null;
@@ -39,10 +45,6 @@ export function createSignupCompletionPorts(config: SupabaseAuthConfig, jar: Aut
       return { allowed: data.allowed };
     },
     findBoundIntent: confirmation.findBoundIntent,
-    async discardPendingOrigin(userId, sessionId, intentId, hash) {
-      const value = await signupRpc(config, "signup_discard_pending_origin", { p_user: userId, p_session: sessionId, p_intent: intentId, p_subject_hash: hash });
-      if (!value || typeof value !== "object" || Array.isArray(value) || Object.keys(value).join(",") !== "status" || !["discarded", "absent"].includes(String((value as Record<string, unknown>).status))) return signupUnavailable();
-    },
     async updatePassword(password) {
       if (!signupEnabled(config)) return "unknown";
       try {
@@ -50,18 +52,6 @@ export function createSignupCompletionPorts(config: SupabaseAuthConfig, jar: Aut
         if (!error) return "updated";
         return error.status === 400 || error.status === 422 ? "rejected" : "unknown";
       } catch { return "unknown"; }
-    },
-    putCheckpoint: confirmation.putCheckpoint,
-    async attestPasswordReset(userId, sessionId, intentId, hash) {
-      const value = await signupRpc(config, "signup_attest_password_reset", { p_user: userId, p_session: sessionId, p_intent: intentId, p_subject_hash: hash });
-      if (value !== null) return signupUnavailable();
-    },
-    async complete(userId, sessionId, intentId, hash, terms, privacy, acceptOrigin, originVersion) {
-      const value = await signupRpc(config, "signup_complete", { p_user: userId, p_session: sessionId, p_intent: intentId, p_subject_hash: hash, p_terms: terms, p_privacy: privacy, p_accept_origin: acceptOrigin, p_origin_version: originVersion });
-      if (!value || typeof value !== "object" || Array.isArray(value) || Object.keys(value).join(",") !== "status") return signupUnavailable();
-      const status = (value as Record<string, unknown>).status;
-      if (status !== "admitted" && status !== "already_admitted") return signupUnavailable();
-      return status;
     },
     async clearCheckpoint() { jar.set(SIGNUP_CHECKPOINT_COOKIE, "", secureCookieOptions(config.secureCookies, { maxAge: 0 })); },
   };

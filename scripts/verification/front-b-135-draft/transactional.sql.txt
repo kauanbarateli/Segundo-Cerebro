@@ -1,0 +1,191 @@
+-- UNREVIEWED SCRATCH ONLY. Not a migration. Do not apply on any persistent DB.
+-- Depends on unapproved 028 and #190 draft; neither is assumed installed.
+BEGIN;
+DO $scratch_guard$ BEGIN RAISE EXCEPTION 'UNREVIEWED SCRATCH SQL: DO NOT APPLY'; END $scratch_guard$;
+
+-- Distinguishes retention expiry from a user's explicit withdrawal.
+ALTER TABLE app_private.signup_completion_fences_draft ADD COLUMN origin_expired boolean NOT NULL DEFAULT false;
+
+-- Revoke bypasses only in this candidate transaction. The actual cutover must
+-- additionally fence all old roles, open requests, versions and direct callers.
+REVOKE ALL ON FUNCTION app_private.draft_ack_completion(uuid,uuid,uuid,text,uuid,uuid) FROM PUBLIC,anon,authenticated,service_role;
+REVOKE ALL ON FUNCTION app_private.signup_attest_password_reset(uuid,uuid,uuid,text),public.signup_attest_password_reset(uuid,uuid,uuid,text),app_private.signup_complete(uuid,uuid,uuid,text,text,text,boolean,text),public.signup_complete(uuid,uuid,uuid,text,text,text,boolean,text) FROM PUBLIC,anon,authenticated,service_role;
+
+-- Server assertion only: no SQL statement can prove the external GoTrue effect.
+-- Identity and same session must be verified again by trusted server after Auth.
+CREATE FUNCTION app_private.draft_ack_with_proof(p_user uuid,p_session uuid,p_intent uuid,p_subject_hash text,p_request uuid,p_generation uuid)
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE f app_private.signup_completion_fences_draft; i app_private.signup_intents;
+BEGIN
+ PERFORM app_private.draft_completion_context(p_user,p_session,p_intent,p_subject_hash,true,true);
+ SELECT * INTO f FROM app_private.signup_completion_fences_draft WHERE user_id=p_user AND intent_id=p_intent
+  AND owner_session_id=p_session AND request_id=p_request AND generation=p_generation FOR UPDATE;
+ IF NOT FOUND OR f.phase IS DISTINCT FROM 'auth_in_flight' THEN RETURN false; END IF;
+ SELECT * INTO STRICT i FROM app_private.signup_intents WHERE id=p_intent;
+ INSERT INTO app_private.signup_password_proofs(intent_id,user_id,session_id,expires_at)
+ VALUES(i.id,p_user,p_session,least(i.expires_at,pg_catalog.now()+interval '10 minutes'))
+ ON CONFLICT(intent_id) DO UPDATE SET user_id=excluded.user_id,session_id=excluded.session_id,
+  expires_at=excluded.expires_at,consumed_at=NULL
+ WHERE app_private.signup_password_proofs.consumed_at IS NULL;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ UPDATE app_private.signup_completion_fences_draft SET phase='password_acknowledged',updated_at=pg_catalog.now()
+  WHERE user_id=p_user AND intent_id=p_intent AND owner_session_id=p_session AND request_id=p_request
+   AND generation=p_generation AND phase='auth_in_flight';
+ IF NOT FOUND THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ RETURN true;
+END $$;
+
+-- Read-only idempotent confirmation. The trusted server binds these IDs to a
+-- verified session and signed checkpoint; this function is not browser auth.
+-- No subject hash is needed: retention may scrub it after admission.
+CREATE FUNCTION app_private.draft_confirm_complete(p_user uuid,p_session uuid,p_intent uuid)
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+BEGIN
+ IF p_user IS NULL OR p_session IS NULL OR p_intent IS NULL THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ PERFORM 1 FROM auth.users WHERE id=p_user FOR SHARE;
+ PERFORM 1 FROM auth.sessions WHERE id=p_session AND user_id=p_user FOR SHARE;
+ PERFORM 1 FROM public.user_moderation WHERE user_id=p_user FOR SHARE;
+ IF app_private.signup_pending_identity(p_user,p_session) IS NOT TRUE THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ PERFORM pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(p_user::text || ':signup',0));
+ PERFORM 1 FROM app_private.signup_intents WHERE id=p_intent AND user_id=p_user AND state='consumed' FOR SHARE;
+ IF NOT FOUND THEN RETURN false; END IF;
+ PERFORM 1 FROM app_private.user_admission WHERE user_id=p_user AND origin='public' AND state='admitted' FOR SHARE;
+ IF NOT FOUND THEN RETURN false; END IF;
+ PERFORM 1 FROM app_private.signup_completion_fences_draft WHERE user_id=p_user AND owner_session_id=p_session AND intent_id=p_intent AND phase='complete' FOR SHARE;
+ IF NOT FOUND THEN RETURN false; END IF;
+ RETURN EXISTS(SELECT 1 FROM app_private.onboarding_entries WHERE user_id=p_user AND source_kind='public' AND source_intent=p_intent);
+END $$;
+
+-- Input versions are supplied by trusted server; SQL does not independently
+-- discover the currently published legal or origin-consent document versions.
+CREATE FUNCTION app_private.draft_finish_fenced(p_user uuid,p_session uuid,p_intent uuid,p_subject_hash text,p_request uuid,p_generation uuid,p_current_terms text,p_current_privacy text,p_current_origin text)
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE f app_private.signup_completion_fences_draft; i app_private.signup_intents;
+BEGIN
+ -- Only a positively verified completed operation may bypass bound/pending;
+ -- stale request/generation must not be reported as a matching finish.
+ IF app_private.draft_confirm_complete(p_user,p_session,p_intent) THEN
+  RETURN EXISTS(SELECT 1 FROM app_private.signup_completion_fences_draft WHERE user_id=p_user AND owner_session_id=p_session
+   AND intent_id=p_intent AND request_id=p_request AND generation=p_generation AND phase='complete');
+ END IF;
+ PERFORM app_private.draft_completion_context(p_user,p_session,p_intent,p_subject_hash,true,true);
+ SELECT * INTO f FROM app_private.signup_completion_fences_draft WHERE user_id=p_user AND intent_id=p_intent
+  AND owner_session_id=p_session AND request_id=p_request AND generation=p_generation FOR UPDATE;
+ IF NOT FOUND OR f.phase IS DISTINCT FROM 'password_acknowledged' THEN RETURN false; END IF;
+ SELECT * INTO STRICT i FROM app_private.signup_intents WHERE id=p_intent;
+ IF p_current_terms IS NULL OR p_current_privacy IS NULL OR f.terms_version IS DISTINCT FROM p_current_terms
+  OR f.privacy_version IS DISTINCT FROM p_current_privacy OR i.terms_version IS DISTINCT FROM f.terms_version
+  OR i.privacy_version IS DISTINCT FROM f.privacy_version THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ IF NOT f.origin_accepted AND i.origin IS NOT NULL THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ IF f.origin_accepted AND NOT f.origin_withdrawn AND NOT f.origin_expired AND i.origin IS NOT NULL AND
+  (p_current_origin IS NULL OR f.origin_consent_version IS DISTINCT FROM p_current_origin
+   OR i.origin_consent_version IS DISTINCT FROM f.origin_consent_version) THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ UPDATE app_private.signup_password_proofs SET consumed_at=pg_catalog.now()
+  WHERE intent_id=i.id AND user_id=p_user AND session_id=p_session AND consumed_at IS NULL AND expires_at>pg_catalog.now();
+ IF NOT FOUND THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ IF f.origin_accepted AND NOT f.origin_withdrawn AND NOT f.origin_expired AND i.origin IS NOT NULL THEN
+  INSERT INTO app_private.signup_origins(user_id,origin,consent_version,consented_at,expires_at)
+   VALUES(p_user,i.origin,i.origin_consent_version,pg_catalog.now(),pg_catalog.now()+interval '12 months');
+  PERFORM app_private.append_event(p_user,'signup_origin',p_user,'created','web',NULL,pg_catalog.jsonb_build_object('consent','granted'));
+ END IF;
+ UPDATE app_private.signup_intents SET state='consumed',consumed_at=pg_catalog.now(),origin=NULL,origin_consent_version=NULL,origin_consented_at=NULL
+  WHERE id=i.id AND user_id=p_user AND state='bound';
+ IF NOT FOUND THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ UPDATE app_private.user_admission SET origin='public',state='admitted',admitted_at=pg_catalog.now()
+  WHERE user_id=p_user AND origin='unclassified' AND state='pending';
+ IF NOT FOUND THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ INSERT INTO app_private.onboarding_entries(user_id,source_operation,source_kind,source_intent) VALUES(p_user,NULL,'public',i.id);
+ PERFORM app_private.append_event(p_user,'signup_admission',p_user,'created','web',NULL,pg_catalog.jsonb_build_object('user_id',p_user,'origin','public'));
+ PERFORM app_private.append_event(p_user,'onboarding_entry',p_user,'created','web',NULL,pg_catalog.jsonb_build_object('user_id',p_user,'eligibility','new_explicit','schema_version',1));
+ UPDATE app_private.signup_completion_fences_draft SET phase='complete',updated_at=pg_catalog.now()
+  WHERE user_id=p_user AND intent_id=p_intent AND owner_session_id=p_session AND request_id=p_request
+   AND generation=p_generation AND phase='password_acknowledged';
+ IF NOT FOUND THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ RETURN true;
+END $$;
+
+-- Privacy withdrawal is independent of the forced-password flag. It still
+-- requires an active verified owner/session and a non-blocked confirmed user.
+CREATE FUNCTION app_private.draft_withdraw_identity(p_user uuid,p_session uuid)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path='' AS $$
+ SELECT p_user IS NOT NULL AND p_session IS NOT NULL AND EXISTS(
+  SELECT 1 FROM auth.users u JOIN auth.sessions s ON s.user_id=u.id JOIN public.user_moderation m ON m.user_id=u.id
+  WHERE u.id=p_user AND s.id=p_session AND u.email_confirmed_at IS NOT NULL AND NOT u.is_anonymous
+   AND u.deleted_at IS NULL AND (u.banned_until IS NULL OR u.banned_until<=pg_catalog.now())
+   AND (s.not_after IS NULL OR s.not_after>pg_catalog.now()) AND m.status='active');
+$$;
+REVOKE ALL ON FUNCTION app_private.draft_withdraw_identity(uuid,uuid) FROM PUBLIC,anon,authenticated,service_role;
+
+-- Monotonic withdrawal across pending and completed states, on the same
+-- per-user signup lock as reserve and finish. No new consent is written.
+CREATE FUNCTION app_private.draft_withdraw_origin(p_user uuid,p_session uuid,p_intent uuid,p_subject_hash text)
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE i app_private.signup_intents; a app_private.user_admission; f app_private.signup_completion_fences_draft; removed boolean;
+BEGIN
+ IF p_user IS NULL OR p_session IS NULL OR p_intent IS NULL THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ PERFORM 1 FROM auth.users WHERE id=p_user FOR SHARE;
+ PERFORM 1 FROM auth.sessions WHERE id=p_session AND user_id=p_user FOR SHARE;
+ PERFORM 1 FROM public.user_moderation WHERE user_id=p_user FOR SHARE;
+ IF app_private.draft_withdraw_identity(p_user,p_session) IS NOT TRUE THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ PERFORM pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(p_user::text || ':signup',0));
+ SELECT * INTO i FROM app_private.signup_intents WHERE id=p_intent AND user_id=p_user FOR UPDATE;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ SELECT * INTO a FROM app_private.user_admission WHERE user_id=p_user FOR UPDATE;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ SELECT * INTO f FROM app_private.signup_completion_fences_draft WHERE user_id=p_user FOR UPDATE;
+ IF FOUND AND f.intent_id IS DISTINCT FROM p_intent THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ IF i.state='bound' AND a.origin='unclassified' AND a.state='pending' AND i.subject_hash IS NOT DISTINCT FROM p_subject_hash AND p_subject_hash ~ '^[a-f0-9]{64}$' THEN
+  UPDATE app_private.signup_intents SET origin=NULL,origin_consent_version=NULL,origin_consented_at=NULL WHERE id=p_intent;
+  UPDATE app_private.signup_completion_fences_draft SET origin_withdrawn=true,updated_at=pg_catalog.now() WHERE user_id=p_user AND intent_id=p_intent;
+  RETURN true;
+ END IF;
+ -- A current verified session of the same owner may withdraw after admission;
+ -- unlike idempotent finish, this does not require the original session.
+ IF i.state='consumed' AND a.origin='public' AND a.state='admitted' AND f.phase='complete' THEN
+  UPDATE app_private.signup_completion_fences_draft SET origin_withdrawn=true,updated_at=pg_catalog.now() WHERE user_id=p_user AND intent_id=p_intent;
+  DELETE FROM app_private.signup_origins WHERE user_id=p_user;
+  removed:=FOUND;
+  IF removed THEN PERFORM app_private.append_event(p_user,'signup_origin',p_user,'deleted','web',NULL,pg_catalog.jsonb_build_object('consent','withdrawn')); END IF;
+  RETURN true;
+ END IF;
+ RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501';
+END $$;
+
+-- Separate authenticated settings command: no browser-supplied intent, legal
+-- version, checkpoint or password. Runtime derives p_user/p_session from Auth.
+CREATE FUNCTION app_private.draft_withdraw_current(p_user uuid,p_session uuid)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE intent_changed integer:=0; stored_changed integer:=0;
+BEGIN
+ IF p_user IS NULL OR p_session IS NULL THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ PERFORM 1 FROM auth.users WHERE id=p_user FOR SHARE;
+ PERFORM 1 FROM auth.sessions WHERE id=p_session AND user_id=p_user FOR SHARE;
+ PERFORM 1 FROM public.user_moderation WHERE user_id=p_user FOR SHARE;
+ IF app_private.draft_withdraw_identity(p_user,p_session) IS NOT TRUE THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ PERFORM pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(p_user::text || ':signup',0));
+ PERFORM 1 FROM app_private.signup_intents WHERE user_id=p_user FOR UPDATE;
+ UPDATE app_private.signup_intents SET origin=NULL,origin_consent_version=NULL,origin_consented_at=NULL WHERE user_id=p_user AND state='bound' AND origin IS NOT NULL;
+ GET DIAGNOSTICS intent_changed=ROW_COUNT;
+ PERFORM 1 FROM app_private.user_admission WHERE user_id=p_user FOR UPDATE;
+ PERFORM 1 FROM app_private.signup_completion_fences_draft WHERE user_id=p_user FOR UPDATE;
+ UPDATE app_private.signup_completion_fences_draft SET origin_withdrawn=true,updated_at=pg_catalog.now() WHERE user_id=p_user AND NOT origin_withdrawn;
+ DELETE FROM app_private.signup_origins WHERE user_id=p_user;
+ GET DIAGNOSTICS stored_changed=ROW_COUNT;
+ IF intent_changed+stored_changed>0 THEN
+  PERFORM app_private.append_event(p_user,'signup_origin',p_user,'deleted','web',NULL,pg_catalog.jsonb_build_object('consent','withdrawn'));
+  RETURN pg_catalog.jsonb_build_object('status','withdrawn');
+ END IF;
+ RETURN pg_catalog.jsonb_build_object('status','absent');
+END $$;
+
+-- Existing public wrapper is left in place and delegates through this private
+-- function. Actual replacement requires prior exact-body/ACL qualification.
+CREATE OR REPLACE FUNCTION app_private.signup_origin_withdraw(p_user uuid,p_session uuid)
+RETURNS jsonb LANGUAGE sql SECURITY DEFINER SET search_path='' AS $$
+ SELECT app_private.draft_withdraw_current(p_user,p_session)
+$$;
+
+REVOKE ALL ON FUNCTION app_private.draft_ack_with_proof(uuid,uuid,uuid,text,uuid,uuid),app_private.draft_confirm_complete(uuid,uuid,uuid),app_private.draft_finish_fenced(uuid,uuid,uuid,text,uuid,uuid,text,text,text),app_private.draft_withdraw_origin(uuid,uuid,uuid,text),app_private.draft_withdraw_current(uuid,uuid) FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION app_private.draft_ack_with_proof(uuid,uuid,uuid,text,uuid,uuid),app_private.draft_confirm_complete(uuid,uuid,uuid),app_private.draft_finish_fenced(uuid,uuid,uuid,text,uuid,uuid,text,text,text),app_private.draft_withdraw_origin(uuid,uuid,uuid,text),app_private.draft_withdraw_current(uuid,uuid) TO service_role;
+-- No public wrappers, no provider recovery, no production cutover.
+COMMIT;

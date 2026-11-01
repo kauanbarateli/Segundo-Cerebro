@@ -1,10 +1,16 @@
 import "server-only";
 import type { SupabaseAuthConfig } from "./config";
+import type { FenceArgs } from "./signup-fence-wire";
 import { isTrustedHostedDatabaseOrigin } from "./database-origin-server";
 
 export const signupUnavailable = () => { throw new Error("Signup unavailable."); };
+// Hard gate: only a reviewed code change after the SQL/provider/cutover gates may remove this.
+const TRANSACTIONAL_SIGNUP_RELEASED: boolean = false;
+export function signupFenceDeployed(config: SupabaseAuthConfig): boolean {
+  return TRANSACTIONAL_SIGNUP_RELEASED && isTrustedHostedDatabaseOrigin(config);
+}
 export function signupEnabled(config: SupabaseAuthConfig): boolean {
-  return process.env.PUBLIC_SIGNUP_ENABLED === "true" && isTrustedHostedDatabaseOrigin(config);
+  return signupFenceDeployed(config) && process.env.PUBLIC_SIGNUP_ENABLED === "true";
 }
 async function boundedJson(response: Response): Promise<unknown> {
   const reader = response.body?.getReader();
@@ -62,4 +68,10 @@ export async function signupRpc<Name extends SignupRpcName>(config: SupabaseAuth
 export async function signupOriginRpc(config: SupabaseAuthConfig, name: "signup_origin_status" | "signup_origin_withdraw", body: Actor): Promise<unknown> {
   if (!["signup_origin_status", "signup_origin_withdraw"].includes(name) || !isTrustedHostedDatabaseOrigin(config)) return signupUnavailable();
   return postRpc(config, name, body);
+}
+
+/** Draft-only transport. No environment variable can turn this on. */
+export async function signupFenceRpc<K extends keyof FenceArgs>(config:SupabaseAuthConfig,name:K,body:FenceArgs[K]):Promise<unknown> {
+  if (!signupFenceDeployed(config) || (name !== "signup_fence_withdraw" && !signupEnabled(config)) || !["signup_fence_reserve","signup_fence_start","signup_fence_uncertain","signup_fence_ack","signup_fence_finish","signup_fence_confirm","signup_fence_withdraw"].includes(name)) return signupUnavailable();
+  return postRpc(config,name,body);
 }

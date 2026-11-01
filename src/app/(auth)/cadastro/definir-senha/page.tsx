@@ -11,17 +11,21 @@ import { LEGAL_DOCUMENTS } from "@/lib/legal/documents";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Proteger conta · Segundo Cérebro", robots: { index: false, follow: false } };
-const errors: Record<string, string> = { invalid: "Confirme os termos atuais para continuar.", "password-invalid": "Confira a senha e tente novamente.", "rate-limited": "Aguarde um pouco antes de tentar novamente.", unavailable: "Não foi possível concluir. Tente novamente." };
+const errors: Record<string, string> = { invalid: "Confirme os termos atuais para continuar.", "password-invalid": "Confira a senha e tente novamente.", "rate-limited": "Aguarde um pouco antes de tentar novamente.", "pending-reconciliation": "Não foi possível confirmar a conclusão. Aguarde orientação antes de tentar novamente.", unavailable: "Não foi possível concluir. Tente novamente." };
 export default async function SignupPasswordPage({ searchParams }: { searchParams: Promise<{ status?: string | string[] }> }) {
-  let checkpoint = null;
+  let checkpoint = null, available = false;
   try {
-    const config = readAuthConfiguration(), matches = (await cookies()).getAll().filter(cookie => cookie.name === SIGNUP_CHECKPOINT_COOKIE);
-    if (config.mode === "supabase" && signupEnabled(config) && matches.length === 1) checkpoint = verifySignupCheckpoint(matches[0]?.value, config.stateSecret, Date.now());
+    const config = readAuthConfiguration();
+    if (config.mode === "supabase" && signupEnabled(config)) {
+      available = true;
+      const matches = (await cookies()).getAll().filter(cookie => cookie.name === SIGNUP_CHECKPOINT_COOKIE);
+      if (matches.length === 1) checkpoint = verifySignupCheckpoint(matches[0]?.value, config.stateSecret, Date.now());
+    }
   } catch { /* Fail closed. */ }
   const status = (await searchParams).status, error = typeof status === "string" ? errors[status] : undefined;
   return <>
-    <header className="auth-heading"><h1 id="auth-title">Proteja sua conta</h1><p>{checkpoint?.passwordConfirmed ? "Sua senha já foi definida. Falta apenas concluir o cadastro." : "Defina sua senha para concluir a confirmação deste e-mail."}</p></header>
-    {!checkpoint ? <p className="auth-feedback" role="status">A confirmação não está disponível ou expirou. <Link href="/cadastro/reenviar">Solicite uma nova mensagem</Link>.</p> : <>
+    <header className="auth-heading"><h1 id="auth-title">{available ? "Proteja sua conta" : "Confirmação indisponível"}</h1><p>{available ? checkpoint?.passwordConfirmed ? "Sua senha já foi definida. Falta apenas concluir o cadastro." : "Defina sua senha para concluir a confirmação deste e-mail." : "A confirmação de cadastro está temporariamente indisponível. Tente novamente mais tarde."}</p></header>
+    {available && !checkpoint ? <p className="auth-feedback" role="status">A confirmação não está disponível ou expirou. <Link href="/cadastro/reenviar">Solicite uma nova mensagem</Link>.</p> : checkpoint ? <>
       {error && <p className="auth-feedback" role="alert">{error}</p>}
       <form className="auth-form" action="/auth/finalizar-cadastro" method="post">
         {!checkpoint.passwordConfirmed && <SignupPassword />}
@@ -29,6 +33,6 @@ export default async function SignupPasswordPage({ searchParams }: { searchParam
         {checkpoint.originPending && <SignupOriginConfirmation />}
         <Button type="submit" variant="primary">Concluir cadastro</Button>
       </form>
-    </>}
+    </> : null}
   </>;
 }

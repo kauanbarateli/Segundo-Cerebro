@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
 import type { SupabaseAuthConfig } from "../../src/lib/auth/config";
 
 const doubles = vi.hoisted(() => ({ rpc: vi.fn(), signup: vi.fn(), provider: vi.fn(), trusted: vi.fn() }));
@@ -6,6 +7,9 @@ vi.mock("server-only", () => ({}));
 vi.mock("@/lib/auth/clients", () => ({ createPrivilegedClient: () => ({ rpc: doubles.rpc }) }));
 vi.mock("@/lib/auth/database-origin-server", () => ({ isTrustedHostedDatabaseOrigin: doubles.trusted }));
 vi.mock("@supabase/supabase-js", () => ({ createClient: doubles.provider }));
+// This test-only fixture changes the release flag, so positive cases test the
+// original wire under a simulated authorization; production remains disabled.
+vi.mock("@/lib/auth/signup-http", async () => import("../fixtures/signup-http-enabled"));
 import { createSignupRequestPorts } from "../../src/lib/auth/signup-runtime";
 import { requestPublicSignup } from "../../src/lib/auth/signup-service";
 
@@ -14,6 +18,12 @@ const input = { email: "a@example.invalid", password: "senha longa de teste", ac
 const legal = { terms: "v1", privacy: "v2" };
 
 describe("adaptador servidor para solicitação de cadastro", () => {
+  it("vincula o fixture ao código real com única mudança de autorização e caminho do import", () => {
+    const actual = readFileSync(new URL("../../src/lib/auth/signup-http.ts", import.meta.url), "utf8");
+    const fixture = readFileSync(new URL("../fixtures/signup-http-enabled.ts", import.meta.url), "utf8");
+    expect(actual).toContain("const TRANSACTIONAL_SIGNUP_RELEASED: boolean = false;");
+    expect(fixture).toBe(actual.replace("const TRANSACTIONAL_SIGNUP_RELEASED: boolean = false;", "const TRANSACTIONAL_SIGNUP_RELEASED: boolean = true;").replace('from "./database-origin-server"', 'from "@/lib/auth/database-origin-server"').replace('from "./config"', 'from "@/lib/auth/config"').replace('from "./signup-fence-wire"', 'from "@/lib/auth/signup-fence-wire"'));
+  });
   beforeEach(() => {
     vi.stubEnv("PUBLIC_SIGNUP_ENABLED", "true"); doubles.trusted.mockReturnValue(true);
     doubles.rpc.mockResolvedValue({ data: { allowed: true }, error: null });
