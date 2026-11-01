@@ -24,7 +24,7 @@ export const DRIVE_INFRA_KEYS = Object.freeze(["pg17","instanceBound","container
 // historical; this inventory never qualifies execution or CURRENT27 coverage.
 // Frentes A/B and signup fence added sixteen reviewed transitive sources; no Drive route was enabled.
 // The historical canonical reader adds one reviewed transitive helper only.
-export const DRIVE_SOURCE_COUNTS = Object.freeze({git:310,dependencies:50});
+export const DRIVE_SOURCE_COUNTS = Object.freeze({git:311,dependencies:50});
 export const DRIVE_HISTORICAL_READER_SOURCE = Object.freeze({path:"tests/helpers/canonical-front-b-source.mjs",bytes:6638,sha256:"fcdbeb291832d3025d3551d42e47fb8b20ecbf1b7fe294990b6be25d41202040"});
 // Public c781efe Git sources reached from uploads/route.ts:8, then helper:3.
 // Closed provenance metadata; it neither enables Drive nor proves hosted use.
@@ -49,6 +49,7 @@ export const DRIVE_FRONT_AB_SOURCES = Object.freeze([
   Object.freeze({path:"src/lib/auth/signup-checkpoint.ts",bytes:2699,sha256:"3628fb20ffbbdc50c89969f7043fe02887255c7ffdb5ee1c90710638af1318bc"}),
   Object.freeze({path:"src/lib/auth/signup-completion-service.ts",bytes:8646,sha256:"4c649a6fbceea56b17c0ad371075450749664c47fdfe3cece666b82a7c6323c3"}),
   Object.freeze({path:"src/lib/auth/signup-fence-wire.ts",bytes:2481,sha256:"d1847d592f4b76eb18506323988ee04eb9fc06f5e28bfe0fd73b809612224059"}),
+  Object.freeze({path:"src/lib/auth/signup-provisional.ts",bytes:3202,sha256:"e24655cef6a9517b06d47bbe63ff19ac251f082abfa21e4ae1cc67adf14a2baa"}),
   Object.freeze({path:"src/lib/supabase/database.front-b-qa028.ts",bytes:3969,sha256:"53bcc3e4dc1ae54c137b281deebc394ef74249042b307120e7f10b5898f5f8ea"}),
   Object.freeze({path:"src/lib/feedback/reconciliation-gate.ts",bytes:637,sha256:"9342a5bd9b1aed1ae1d58cbc8ccf425501d4a9a5366895bb54a9256f4d84bdf0"}),
 ]);
