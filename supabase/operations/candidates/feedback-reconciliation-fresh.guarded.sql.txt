@@ -1,0 +1,250 @@
+-- FRESH INSTALL CANDIDATE ONLY; BLOCKED AND NOT AUTHORIZED FOR ANY REMOTE DATABASE.
+-- Preserve the qualified ledger; qualify catalogue, deployment, retention and PostgREST first.
+BEGIN;
+DO $scratch_guard$ BEGIN RAISE EXCEPTION 'UNREVIEWED SCRATCH SQL: DO NOT APPLY'; END $scratch_guard$;
+DO $fresh_only$ BEGIN
+ IF current_user <> 'postgres' OR pg_catalog.to_regclass('app_private.feedback_requests') IS NOT NULL
+ OR pg_catalog.to_regclass('app_private.feedback_barriers_draft') IS NOT NULL
+ OR pg_catalog.to_regprocedure('app_private.feedback_submit(uuid,uuid,uuid,text,text)') IS NOT NULL
+ OR pg_catalog.to_regprocedure('public.feedback_submit(uuid,uuid,uuid,text,text)') IS NOT NULL
+ OR pg_catalog.to_regprocedure('app_private.feedback_list(uuid,uuid,timestamp with time zone,uuid)') IS NOT NULL
+ OR pg_catalog.to_regprocedure('public.feedback_list(uuid,uuid,timestamp with time zone,uuid)') IS NOT NULL
+ THEN RAISE EXCEPTION 'FEEDBACK_FRESH_FOUNDATION_REFUSED'; END IF;
+END $fresh_only$;
+-- Keep this independent guard until the post-admission PG17 constraint is pinned and locked.
+DO $event_contract_guard$ BEGIN RAISE EXCEPTION 'DOMAIN_EVENT_CONTRACT_NOT_QUALIFIED'; END $event_contract_guard$;
+set local lock_timeout='5s';
+set local statement_timeout='60s';
+
+create table app_private.feedback_requests (
+ id uuid primary key default gen_random_uuid(),
+ user_id uuid not null references auth.users(id) on delete cascade,
+ client_id uuid not null,
+ category text not null check (category in ('suggestion','complaint','problem','improvement','other')),
+ message text not null check (char_length(btrim(message)) between 10 and 5000),
+ created_at timestamptz not null default now(),
+ unique (user_id,client_id)
+);
+alter table app_private.feedback_requests enable row level security;
+revoke all on app_private.feedback_requests from public,anon,authenticated,service_role;
+create index feedback_requests_owner_created on app_private.feedback_requests(user_id,created_at desc,id desc);
+
+do $$ declare expression text; begin
+ select pg_get_expr(conbin,conrelid) into strict expression from pg_constraint
+  where conrelid='public.domain_events'::regclass and conname='domain_events_entity_type_check';
+ alter table public.domain_events drop constraint domain_events_entity_type_check;
+ execute format('alter table public.domain_events add constraint domain_events_entity_type_check check ((%s) or entity_type = ''feedback_request'')',expression);
+end $$;
+
+create function app_private.feedback_submit(p_user uuid,p_session uuid,p_client uuid,p_category text,p_message text) returns jsonb
+language plpgsql security definer set search_path='' as $$
+declare v_row app_private.feedback_requests;
+begin
+ perform app_private.require_actor(p_user,p_session);
+ if p_client is null or p_category is null or p_category not in ('suggestion','complaint','problem','improvement','other')
+  or p_message is null or char_length(btrim(p_message)) not between 10 and 5000
+  or p_message ~ '[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]' then
+  raise exception 'Invalid feedback.' using errcode='22023';
+ end if;
+ insert into app_private.feedback_requests(user_id,client_id,category,message)
+ values(p_user,p_client,p_category,btrim(p_message)) on conflict(user_id,client_id) do nothing returning * into v_row;
+ if found then
+  perform app_private.append_event(p_user,'feedback_request',v_row.id,'created','web',null,
+   jsonb_build_object('id',v_row.id,'category',v_row.category,'status','received'));
+ else
+  select * into strict v_row from app_private.feedback_requests where user_id=p_user and client_id=p_client;
+  if v_row.category<>p_category or v_row.message<>btrim(p_message) then
+   raise exception 'Conflicting request.' using errcode='23505';
+  end if;
+ end if;
+ return jsonb_build_object('id',v_row.id,'category',v_row.category,'text',v_row.message,'status','received','createdAt',v_row.created_at);
+end $$;
+
+create function app_private.feedback_list(p_user uuid,p_session uuid,p_before timestamptz,p_before_id uuid) returns jsonb
+language plpgsql security definer set search_path='' as $$
+begin
+ perform app_private.require_actor(p_user,p_session);
+ if (p_before is null)<>(p_before_id is null) then raise exception 'Invalid cursor.' using errcode='22023'; end if;
+ return coalesce((select jsonb_agg(jsonb_build_object('id',f.id,'category',f.category,'text',f.message,'status','received','createdAt',f.created_at) order by f.created_at desc,f.id desc)
+  from (select * from app_private.feedback_requests where user_id=p_user and (p_before is null or (created_at,id)<(p_before,p_before_id)) order by created_at desc,id desc limit 51) f),'[]'::jsonb);
+end $$;
+
+create function public.feedback_submit(p_user uuid,p_session uuid,p_client uuid,p_category text,p_message text) returns jsonb
+language sql security invoker set search_path='' as $$ select app_private.feedback_submit(p_user,p_session,p_client,p_category,p_message) $$;
+create function public.feedback_list(p_user uuid,p_session uuid,p_before timestamptz,p_before_id uuid) returns jsonb
+language sql security invoker set search_path='' as $$ select app_private.feedback_list(p_user,p_session,p_before,p_before_id) $$;
+revoke all on function app_private.feedback_submit(uuid,uuid,uuid,text,text), app_private.feedback_list(uuid,uuid,timestamptz,uuid), public.feedback_submit(uuid,uuid,uuid,text,text), public.feedback_list(uuid,uuid,timestamptz,uuid) from public,anon,authenticated,service_role;
+grant execute on function app_private.feedback_submit(uuid,uuid,uuid,text,text), app_private.feedback_list(uuid,uuid,timestamptz,uuid), public.feedback_submit(uuid,uuid,uuid,text,text), public.feedback_list(uuid,uuid,timestamptz,uuid) to service_role;
+
+CREATE TABLE app_private.feedback_barriers_draft (
+ user_id uuid NOT NULL,
+ client_id uuid NOT NULL,
+ phase text NOT NULL CHECK (phase IN ('submitted','cancelled')),
+ feedback_id uuid,
+ created_at timestamptz NOT NULL DEFAULT pg_catalog.now(),
+ PRIMARY KEY(user_id,client_id),
+ CHECK ((phase='submitted' AND feedback_id IS NOT NULL) OR (phase='cancelled' AND feedback_id IS NULL))
+);
+ALTER TABLE app_private.feedback_barriers_draft ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON app_private.feedback_barriers_draft FROM PUBLIC,anon,authenticated,service_role;
+-- Deliberately no TTL/cascade or FK: retention, deletion and tombstones require
+-- a reviewed design. Never interpret this sketch as an approved policy.
+
+-- This helper serializes both operations; PK is the uniqueness constraint.
+-- Hash collisions only over-serialize. Existing writers DO NOT take this lock.
+CREATE FUNCTION app_private.draft_feedback_lock(p_user uuid,p_client uuid) RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$ BEGIN
+ IF p_user IS NULL OR p_client IS NULL THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='42501'; END IF;
+ PERFORM pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(p_user::text || ':' || p_client::text || ':feedback',0));
+END $$;
+REVOKE ALL ON FUNCTION app_private.draft_feedback_lock(uuid,uuid) FROM PUBLIC,anon,authenticated,service_role;
+
+CREATE FUNCTION app_private.draft_feedback_actor(p_user uuid,p_session uuid) RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$ BEGIN
+ PERFORM 1 FROM auth.users WHERE id=p_user FOR SHARE;
+ PERFORM 1 FROM auth.sessions WHERE id=p_session AND user_id=p_user FOR SHARE;
+ PERFORM 1 FROM public.user_moderation WHERE user_id=p_user FOR SHARE;
+ PERFORM app_private.require_actor(p_user,p_session);
+END $$;
+REVOKE ALL ON FUNCTION app_private.draft_feedback_actor(uuid,uuid) FROM PUBLIC,anon,authenticated,service_role;
+
+CREATE FUNCTION app_private.draft_feedback_submit(p_user uuid,p_session uuid,p_client uuid,p_category text,p_message text) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE v_barrier app_private.feedback_barriers_draft; v_row app_private.feedback_requests;
+BEGIN
+ PERFORM app_private.draft_feedback_actor(p_user,p_session);
+ IF p_client IS NULL OR p_category IS NULL OR p_category NOT IN ('suggestion','complaint','problem','improvement','other')
+  OR p_message IS NULL OR pg_catalog.char_length(pg_catalog.btrim(p_message)) NOT BETWEEN 10 AND 5000
+  OR p_message ~ '[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]' THEN RAISE EXCEPTION 'Invalid feedback.' USING ERRCODE='22023'; END IF;
+ PERFORM app_private.draft_feedback_lock(p_user,p_client);
+ SELECT * INTO v_barrier FROM app_private.feedback_barriers_draft WHERE user_id=p_user AND client_id=p_client FOR UPDATE;
+ IF FOUND THEN
+  IF v_barrier.phase='cancelled' THEN
+   IF EXISTS(SELECT 1 FROM app_private.feedback_requests WHERE user_id=p_user AND client_id=p_client) THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='55000'; END IF;
+   RETURN pg_catalog.jsonb_build_object('status','cancelled','clientId',p_client);
+  END IF;
+  SELECT * INTO v_row FROM app_private.feedback_requests WHERE id=v_barrier.feedback_id AND user_id=p_user AND client_id=p_client;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='55000'; END IF;
+  IF v_row.category IS DISTINCT FROM p_category OR v_row.message IS DISTINCT FROM pg_catalog.btrim(p_message) THEN RAISE EXCEPTION 'Conflicting request.' USING ERRCODE='23505'; END IF;
+ ELSE
+  -- A committed legacy row may be adopted only under the same keyed lock.
+  SELECT * INTO v_row FROM app_private.feedback_requests WHERE user_id=p_user AND client_id=p_client FOR UPDATE;
+  IF FOUND THEN
+   IF v_row.category IS DISTINCT FROM p_category OR v_row.message IS DISTINCT FROM pg_catalog.btrim(p_message) THEN RAISE EXCEPTION 'Conflicting request.' USING ERRCODE='23505'; END IF;
+  ELSE
+   INSERT INTO app_private.feedback_requests(user_id,client_id,category,message) VALUES(p_user,p_client,p_category,pg_catalog.btrim(p_message)) RETURNING * INTO v_row;
+   PERFORM app_private.append_event(p_user,'feedback_request',v_row.id,'created','web',NULL,
+    pg_catalog.jsonb_build_object('id',v_row.id,'category',v_row.category,'status','received'));
+  END IF;
+  INSERT INTO app_private.feedback_barriers_draft(user_id,client_id,phase,feedback_id) VALUES(p_user,p_client,'submitted',v_row.id);
+ END IF;
+ RETURN pg_catalog.jsonb_build_object('status','submitted','clientId',p_client,'feedbackId',v_row.id);
+END $$;
+
+CREATE FUNCTION app_private.draft_feedback_cancel(p_user uuid,p_session uuid,p_client uuid) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE v_barrier app_private.feedback_barriers_draft; v_legacy_id uuid;
+BEGIN
+ PERFORM app_private.draft_feedback_actor(p_user,p_session);
+ IF p_client IS NULL THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='42501'; END IF;
+ PERFORM app_private.draft_feedback_lock(p_user,p_client);
+ SELECT * INTO v_barrier FROM app_private.feedback_barriers_draft WHERE user_id=p_user AND client_id=p_client FOR UPDATE;
+ IF NOT FOUND THEN
+  -- Only a committed same-owner legacy row proves an earlier submission.
+  SELECT id INTO v_legacy_id FROM app_private.feedback_requests WHERE user_id=p_user AND client_id=p_client FOR UPDATE;
+  IF FOUND THEN
+   INSERT INTO app_private.feedback_barriers_draft(user_id,client_id,phase,feedback_id) VALUES(p_user,p_client,'submitted',v_legacy_id);
+   RETURN pg_catalog.jsonb_build_object('status','submitted','clientId',p_client,'feedbackId',v_legacy_id);
+  END IF;
+  INSERT INTO app_private.feedback_barriers_draft(user_id,client_id,phase) VALUES(p_user,p_client,'cancelled');
+  RETURN pg_catalog.jsonb_build_object('status','cancelled','clientId',p_client);
+ END IF;
+ IF v_barrier.phase='cancelled' THEN
+   IF EXISTS(SELECT 1 FROM app_private.feedback_requests WHERE user_id=p_user AND client_id=p_client) THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='55000'; END IF;
+   RETURN pg_catalog.jsonb_build_object('status','cancelled','clientId',p_client);
+  END IF;
+ IF NOT EXISTS(SELECT 1 FROM app_private.feedback_requests WHERE id=v_barrier.feedback_id AND user_id=p_user AND client_id=p_client) THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='55000'; END IF;
+ RETURN pg_catalog.jsonb_build_object('status','submitted','clientId',p_client,'feedbackId',v_barrier.feedback_id);
+END $$;
+
+CREATE FUNCTION app_private.draft_feedback_status(p_user uuid,p_session uuid,p_client uuid) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE v_barrier app_private.feedback_barriers_draft; v_legacy_id uuid;
+BEGIN
+ PERFORM app_private.draft_feedback_actor(p_user,p_session);
+ IF p_client IS NULL THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='42501'; END IF;
+ -- Even the status path locks before adopting a committed legacy row.
+ PERFORM app_private.draft_feedback_lock(p_user,p_client);
+ SELECT * INTO v_barrier FROM app_private.feedback_barriers_draft WHERE user_id=p_user AND client_id=p_client FOR UPDATE;
+ IF NOT FOUND THEN
+  SELECT id INTO v_legacy_id FROM app_private.feedback_requests WHERE user_id=p_user AND client_id=p_client FOR UPDATE;
+  IF FOUND THEN
+   INSERT INTO app_private.feedback_barriers_draft(user_id,client_id,phase,feedback_id) VALUES(p_user,p_client,'submitted',v_legacy_id);
+   RETURN pg_catalog.jsonb_build_object('status','submitted','clientId',p_client,'feedbackId',v_legacy_id);
+  END IF;
+  RETURN pg_catalog.jsonb_build_object('status','unknown','clientId',p_client);
+ END IF;
+ IF v_barrier.phase='cancelled' THEN
+   IF EXISTS(SELECT 1 FROM app_private.feedback_requests WHERE user_id=p_user AND client_id=p_client) THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='55000'; END IF;
+   RETURN pg_catalog.jsonb_build_object('status','cancelled','clientId',p_client);
+  END IF;
+ IF NOT EXISTS(SELECT 1 FROM app_private.feedback_requests WHERE id=v_barrier.feedback_id AND user_id=p_user AND client_id=p_client) THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='55000'; END IF;
+ RETURN pg_catalog.jsonb_build_object('status','submitted','clientId',p_client,'feedbackId',v_barrier.feedback_id);
+END $$;
+
+REVOKE ALL ON FUNCTION app_private.draft_feedback_submit(uuid,uuid,uuid,text,text),app_private.draft_feedback_cancel(uuid,uuid,uuid),app_private.draft_feedback_status(uuid,uuid,uuid) FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION app_private.draft_feedback_submit(uuid,uuid,uuid,text,text),app_private.draft_feedback_cancel(uuid,uuid,uuid),app_private.draft_feedback_status(uuid,uuid,uuid) TO service_role;
+-- No public wrappers or changes to old functions: this is not an integration.
+-- DRAFT ONLY: included before COMMIT in a separately guarded test proposal.
+-- Requires the exact prior feedback foundation; never apply this fragment alone.
+-- The preceding no-public-wrappers note describes original #189 only.
+CREATE FUNCTION public.feedback_barrier_submit(p_user uuid,p_session uuid,p_client uuid,p_category text,p_message text) RETURNS jsonb
+LANGUAGE sql SECURITY INVOKER SET search_path='' AS $$
+ SELECT app_private.draft_feedback_submit(p_user,p_session,p_client,p_category,p_message)
+$$;
+CREATE FUNCTION public.feedback_barrier_status(p_user uuid,p_session uuid,p_client uuid) RETURNS jsonb
+LANGUAGE sql SECURITY INVOKER SET search_path='' AS $$
+ SELECT app_private.draft_feedback_status(p_user,p_session,p_client)
+$$;
+CREATE FUNCTION public.feedback_barrier_cancel(p_user uuid,p_session uuid,p_client uuid) RETURNS jsonb
+LANGUAGE sql SECURITY INVOKER SET search_path='' AS $$
+ SELECT app_private.draft_feedback_cancel(p_user,p_session,p_client)
+$$;
+REVOKE ALL ON FUNCTION public.feedback_barrier_submit(uuid,uuid,uuid,text,text),public.feedback_barrier_status(uuid,uuid,uuid),public.feedback_barrier_cancel(uuid,uuid,uuid) FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION public.feedback_barrier_submit(uuid,uuid,uuid,text,text),public.feedback_barrier_status(uuid,uuid,uuid),public.feedback_barrier_cancel(uuid,uuid,uuid) TO service_role;
+-- After independently verified drain, close the historical externally callable writer.
+-- Privileged owners and SECURITY DEFINER callers still require catalog inventory.
+REVOKE ALL ON FUNCTION public.feedback_submit(uuid,uuid,uuid,text,text),app_private.feedback_submit(uuid,uuid,uuid,text,text) FROM PUBLIC,anon,authenticated,service_role;
+DO $sc_acl$
+DECLARE signature text; actor_role text; table_name text; action_name text;
+BEGIN
+ IF pg_catalog.has_schema_privilege('service_role','app_private','USAGE') IS DISTINCT FROM true THEN RAISE EXCEPTION 'FEEDBACK_SCHEMA_ACL_REFUSED'; END IF;
+ FOREACH signature IN ARRAY ARRAY['app_private.draft_feedback_submit(uuid,uuid,uuid,text,text)','app_private.draft_feedback_status(uuid,uuid,uuid)','app_private.draft_feedback_cancel(uuid,uuid,uuid)'] LOOP
+  IF pg_catalog.has_function_privilege('anon',signature,'EXECUTE') IS DISTINCT FROM false
+   OR pg_catalog.has_function_privilege('authenticated',signature,'EXECUTE') IS DISTINCT FROM false
+   OR pg_catalog.has_function_privilege('service_role',signature,'EXECUTE') IS DISTINCT FROM true THEN RAISE EXCEPTION 'FEEDBACK_DELEGATE_ACL_REFUSED'; END IF;
+ END LOOP;
+ FOREACH signature IN ARRAY ARRAY['public.feedback_barrier_submit(uuid,uuid,uuid,text,text)','public.feedback_barrier_status(uuid,uuid,uuid)','public.feedback_barrier_cancel(uuid,uuid,uuid)'] LOOP
+  IF pg_catalog.has_function_privilege('anon',signature,'EXECUTE') IS DISTINCT FROM false
+    OR pg_catalog.has_function_privilege('authenticated',signature,'EXECUTE') IS DISTINCT FROM false
+    OR pg_catalog.has_function_privilege('service_role',signature,'EXECUTE') IS DISTINCT FROM true THEN
+   RAISE EXCEPTION 'FEEDBACK_ACL_REFUSED';
+  END IF;
+ END LOOP;
+ FOREACH signature IN ARRAY ARRAY['public.feedback_submit(uuid,uuid,uuid,text,text)','app_private.feedback_submit(uuid,uuid,uuid,text,text)'] LOOP
+  IF pg_catalog.has_function_privilege('anon',signature,'EXECUTE') IS DISTINCT FROM false
+    OR pg_catalog.has_function_privilege('authenticated',signature,'EXECUTE') IS DISTINCT FROM false
+    OR pg_catalog.has_function_privilege('service_role',signature,'EXECUTE') IS DISTINCT FROM false THEN
+   RAISE EXCEPTION 'FEEDBACK_LEGACY_ACL_REFUSED';
+  END IF;
+ END LOOP;
+ FOREACH actor_role IN ARRAY ARRAY['anon','authenticated','service_role'] LOOP
+  FOREACH table_name IN ARRAY ARRAY['app_private.feedback_barriers_draft','app_private.feedback_requests'] LOOP
+   FOREACH action_name IN ARRAY ARRAY['SELECT','INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES','TRIGGER'] LOOP
+    IF pg_catalog.has_table_privilege(actor_role,table_name,action_name) IS DISTINCT FROM false THEN RAISE EXCEPTION 'FEEDBACK_TABLE_ACL_REFUSED'; END IF;
+   END LOOP;
+  END LOOP;
+ END LOOP;
+END $sc_acl$;
+
+COMMIT;
