@@ -24,6 +24,9 @@ describe("canal de revisão de cadastro",()=>{
  it("recusa origem externa e mantém a guarda fechada",async()=>{
   expect((await POST(request("https://other.invalid"))).status).toBe(403);expect(fake.rpc).not.toHaveBeenCalled();fake.enabled.mockReturnValue(false);expect((await POST(request())).status).toBe(503);
  });
+ it("prova expirada retorna à revisão para encerrar a sessão provisória",async()=>{
+  vi.useFakeTimers();try{vi.setSystemTime(Date.now()+600_001);const res=await POST(request());expect(res.headers.get("location")).toContain("/cadastro/revisar?status=expired");expect(fake.rpc).not.toHaveBeenCalled();}finally{vi.useRealTimers();}
+ });
  it("resultado ambíguo não prossegue nem repete comando",async()=>{
   fake.rpc.mockRejectedValueOnce(Error("timeout"));const res=await POST(request());expect(res.headers.get("location")).toContain("status=unknown");expect(fake.rpc).toHaveBeenCalledOnce();expect(fake.write).not.toHaveBeenCalled();
  });

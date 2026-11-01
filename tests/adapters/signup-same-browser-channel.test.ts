@@ -20,7 +20,7 @@ describe("canal de confirmação ligado à tentativa",()=>{
   const proof=createSignupEmailLink(purpose,token,config.stateSecret,Date.now());
   fake.getAll.mockReturnValue([{name:purpose==="signup"?"sc-signup-otp":"sc-signup-continuation-otp",value:proof.cookie},{name:"sc-signup-browser",value:secret}]);
   const response=await submitSignupEmailLink(post(purpose,proof.nonce),purpose);
-  expect(response.headers.get("location")).toBe("https://app.example.invalid/onboarding");expect(fake.purpose).toHaveBeenCalledWith(purpose);expect(fake.verify).toHaveBeenCalledWith(token);
+  expect(response.headers.get("location")).toBe("https://app.example.invalid/entrar?notice=signup-complete&returnTo=%2Fonboarding");expect(fake.purpose).toHaveBeenCalledWith(purpose);expect(fake.verify).toHaveBeenCalledWith(token);
   expect(response.cookies.get("sc-signup-browser")).toBeUndefined();
   expect(fake.rpc).toHaveBeenCalledWith(config,"signup_browser_admit",expect.objectContaining({p_user:userId,p_session:sessionId,p_intent:intentId,p_browser:signupBrowserSecretHash(secret,config.stateSecret)}));
  });
@@ -31,7 +31,7 @@ describe("canal de confirmação ligado à tentativa",()=>{
   fake.rpc.mockImplementation(async(_config,name)=>{if(name==="signup_browser_find")return {intentId,userId,originPending:true};if(name==="signup_browser_admit"){markStarted();return new Promise<boolean>(resolve=>{finish=resolve;});}return null;});
   const a=submitSignupEmailLink(post("signup",proof.nonce),"signup");await started;
   let browserCookie="z".repeat(43);finish(true);const response=await a;
-  expect(response.headers.get("location")).toBe("https://app.example.invalid/onboarding");
+  expect(response.headers.get("location")).toBe("https://app.example.invalid/entrar?notice=signup-complete&returnTo=%2Fonboarding");
   const mutation=response.cookies.get("sc-signup-browser");
   if(mutation) browserCookie=mutation.value;
   expect(mutation).toBeUndefined();expect(browserCookie).toBe("z".repeat(43));

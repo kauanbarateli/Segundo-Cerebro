@@ -10,6 +10,7 @@ vi.mock("@/lib/auth/clients", () => ({ createRequestClient: () => ({ auth: { get
 vi.mock("@/lib/auth/signup-http", () => ({ signupEnabled: mocks.enabled, signupRpc: mocks.signupRpc, signupFenceRpc: mocks.fence, signupUnavailable: () => { throw new Error("unavailable"); } }));
 import { createSignupCompletionPorts } from "../../src/lib/auth/signup-completion-runtime";
 import { completePublicSignup } from "../../src/lib/auth/signup-completion-service";
+import {signSignupContext,SIGNUP_CONTEXT_COOKIE} from "../../src/lib/auth/signup-provisional";
 import { signSignupCheckpoint } from "../../src/lib/auth/signup-checkpoint";
 import { SIGNUP_CHECKPOINT_COOKIE } from "../../src/lib/auth/signup-confirmation-runtime";
 
@@ -18,7 +19,7 @@ const config: SupabaseAuthConfig = { mode: "supabase", appOrigin: "https://app.e
 const input = { password: "uma senha longa", acceptedLegal: true, termsVersion: "v1", privacyVersion: "v2" }, legal = { terms: "v1", privacy: "v2" };
 function cookies() {
   const now = Date.now(), value = signSignupCheckpoint({ userId, sessionId, intentId, issuedAt: now, expiresAt: now + 600_000, passwordConfirmed: false, originPending: false }, config.stateSecret, now);
-  const values = new Map([[SIGNUP_CHECKPOINT_COOKIE, value]]);
+  const values = new Map([[SIGNUP_CHECKPOINT_COOKIE, value],[SIGNUP_CONTEXT_COOKIE,signSignupContext({scope:"q".repeat(43),userId,sessionId},config.stateSecret)]]);
   const set = vi.fn((name: string, entry: string, options: CookieOptions) => { void options; values.set(name, entry); });
   return { jar: { getAll: () => [...values].map(([name, entry]) => ({ name, value: entry })), set } as AuthCookieJar, set };
 }

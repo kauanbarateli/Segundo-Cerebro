@@ -1,7 +1,8 @@
 import "server-only";
 import { createPrivilegedClient, createRequestClient, type AuthCookieJar } from "./clients";
 import type { SupabaseAuthConfig } from "./config";
-import { AUTH_COOKIE_NAME, secureCookieOptions } from "./cookie-policy";
+import { secureCookieOptions } from "./cookie-policy";
+import {SIGNUP_CONTEXT_COOKIE,SIGNUP_CONTEXT_SECONDS,signupProvisionalCookie,isProvisionalCookie,signSignupContext,readSignupContext} from "./signup-provisional";
 import { subjectHash } from "./flow-state";
 import { signSignupCheckpoint } from "./signup-checkpoint";
 import { signSignupReconsent, SIGNUP_RECONSENT_COOKIE } from "./signup-reconsent-checkpoint";
@@ -10,7 +11,6 @@ import type { SignupConfirmationPorts } from "./signup-confirmation-service";
 
 export const SIGNUP_CHECKPOINT_COOKIE = "sc-flow-signup-confirmation";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const authCookie = (name: string) => name === AUTH_COOKIE_NAME || name.startsWith(`${AUTH_COOKIE_NAME}.`) || name.startsWith(`${AUTH_COOKIE_NAME}-`);
 function parseIntent(result: unknown): { intentId: string; termsVersion: string; privacyVersion: string; state: "bound" | "consumed"; originPending: boolean } {
   if (!result || typeof result !== "object" || Array.isArray(result) || Object.keys(result).sort().join(",") !== "intentId,originPending,privacyVersion,state,termsVersion") return signupUnavailable();
   const value = result as Record<string, unknown>;
@@ -19,11 +19,12 @@ function parseIntent(result: unknown): { intentId: string; termsVersion: string;
 }
 
 /** No route invokes this candidate until the confirmation and QA gates pass. */
-export function createSignupConfirmationPorts(config: SupabaseAuthConfig, jar: AuthCookieJar, responseHeaders?: Headers, purpose: "signup" | "continuation" = "signup", strictBound = false): SignupConfirmationPorts {
+export function createSignupConfirmationPorts(config: SupabaseAuthConfig, jar: AuthCookieJar, responseHeaders?: Headers, purpose: "signup" | "continuation" = "signup", strictBound = false, confirmationScope?: string): SignupConfirmationPorts {
   let client: ReturnType<typeof createRequestClient> | undefined;
+  const scope=confirmationScope ?? readSignupContext(jar,config.stateSecret)?.scope;
   return {
     now: Date.now,
-    canBegin: () => signupEnabled(config) && !jar.getAll().some(cookie => authCookie(cookie.name) && cookie.value !== ""),
+    canBegin: () => signupEnabled(config) && !!scope && !jar.getAll().some(cookie => isProvisionalCookie(cookie.name,scope) && cookie.value !== ""),
     async limitToken(tokenHash) {
       if (!signupEnabled(config)) return signupUnavailable();
       const { data, error } = await createPrivilegedClient(config).rpc("consume_rate_limit", { p_scope: "login", p_subject_hash: subjectHash(config.rateLimitSecret, "signup-confirmation", tokenHash) });
@@ -31,8 +32,8 @@ export function createSignupConfirmationPorts(config: SupabaseAuthConfig, jar: A
       return { allowed: data.allowed };
     },
     async verifyEmailProof(tokenHash) {
-      if (!signupEnabled(config) || jar.getAll().some(cookie => authCookie(cookie.name) && cookie.value !== "")) return null;
-      client = createRequestClient(config, jar, true, responseHeaders);
+      if (!signupEnabled(config) || !scope || jar.getAll().some(cookie => isProvisionalCookie(cookie.name,scope) && cookie.value !== "")) return null;
+      client = createRequestClient(config, jar, true, responseHeaders,signupProvisionalCookie(scope));
       const { error } = await client.auth.verifyOtp({ type: purpose === "signup" ? "signup" : "recovery", token_hash: tokenHash });
       if (error) return null;
       const { data: verified, error: userError } = await client.auth.getUser();
@@ -40,6 +41,7 @@ export function createSignupConfirmationPorts(config: SupabaseAuthConfig, jar: A
       const { data: signed, error: claimsError } = await client.auth.getClaims();
       const sessionId = signed?.claims.session_id;
       if (claimsError || signed?.claims.sub !== verified.user.id || typeof sessionId !== "string" || !UUID.test(sessionId)) return null;
+      jar.set(SIGNUP_CONTEXT_COOKIE,signSignupContext({scope,userId:verified.user.id,sessionId},config.stateSecret),secureCookieOptions(config.secureCookies,{maxAge:SIGNUP_CONTEXT_SECONDS}));
       return { userId: verified.user.id, sessionId, email: verified.user.email };
     },
     subjectHash: email => subjectHash(config.rateLimitSecret, "signup-request", email),
@@ -76,7 +78,7 @@ export function createSignupConfirmationPorts(config: SupabaseAuthConfig, jar: A
       try { if (client) await client.auth.signOut({ scope: "local" }); }
       finally {
         const expired = secureCookieOptions(config.secureCookies, { maxAge: 0 });
-        for (const name of new Set([AUTH_COOKIE_NAME, SIGNUP_CHECKPOINT_COOKIE, SIGNUP_RECONSENT_COOKIE, ...jar.getAll().filter(cookie => authCookie(cookie.name)).map(cookie => cookie.name)])) jar.set(name, "", expired);
+        if(scope) for (const name of new Set([signupProvisionalCookie(scope), ...jar.getAll().filter(cookie => isProvisionalCookie(cookie.name,scope)).map(cookie => cookie.name)])) jar.set(name, "", expired);
       }
     },
   };

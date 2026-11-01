@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
+import {signSignupContext,SIGNUP_CONTEXT_COOKIE} from "../../src/lib/auth/signup-provisional";
 import { signSignupCheckpoint } from "../../src/lib/auth/signup-checkpoint";
 import { signSignupReconsent } from "../../src/lib/auth/signup-reconsent-checkpoint";
 import { createSignupEmailLink } from "../../src/lib/auth/signup-email-link";
@@ -40,7 +41,7 @@ describe("páginas preparadas de cadastro", () => {
     expect(html).not.toContain(proof.cookie); expect(html).toContain(`value="${proof.nonce}"`);
     fake.getAll.mockReturnValue([{ name: "sc-signup-continuation-otp", value: proof.cookie }, { name: "sc-auth", value: "sessao" }]);
     const existing = renderToStaticMarkup(await ConfirmPage({ searchParams: Promise.resolve({ flow: "continuation", nonce: proof.nonce }) }));
-    expect(existing).toContain('action="/auth/limpar-cadastro"'); expect(existing).not.toContain('action="/auth/continuar-cadastro"');
+    expect(existing).not.toContain('action="/auth/limpar-cadastro"'); expect(existing).toContain('action="/auth/continuar-cadastro"');
     const other = renderToStaticMarkup(await ConfirmPage({ searchParams: Promise.resolve({ flow: "continuation", nonce: "z".repeat(43) }) }));
     expect(other).not.toContain('action="/auth/limpar-cadastro"'); expect(other).not.toContain('action="/auth/continuar-cadastro"');
   });
@@ -55,13 +56,16 @@ describe("páginas preparadas de cadastro", () => {
     fake.getAll.mockReturnValue([{name:"sc-flow-signup-confirmation",value:signSignupCheckpoint(checkpoint,config.stateSecret,now)}]);
     expect(renderToStaticMarkup(await ReviewPage({searchParams:Promise.resolve({})}))).not.toContain('action="/auth/revisar-cadastro"');
     const token=signSignupReconsent({checkpoint,terms:LEGAL_DOCUMENTS.termos.version,privacy:LEGAL_DOCUMENTS.privacidade.version},config.stateSecret,now);
-    fake.getAll.mockReturnValue([{name:"sc-flow-signup-reconsent",value:token}]);
+    const context=signSignupContext({scope:"q".repeat(43),userId:checkpoint.userId,sessionId:checkpoint.sessionId},config.stateSecret);
+    fake.getAll.mockReturnValue([{name:"sc-flow-signup-reconsent",value:token},{name:SIGNUP_CONTEXT_COOKIE,value:context}]);
     const present=renderToStaticMarkup(await ReviewPage({searchParams:Promise.resolve({})}));expect(present).toContain('action="/auth/revisar-cadastro"');expect(present).toContain('name="acceptedLegal"');expect(present).toContain('name="acceptedOrigin"');expect(present).toContain("será descartada");expect(present).not.toContain(token);
-    const uncertain=renderToStaticMarkup(await ReviewPage({searchParams:Promise.resolve({status:"unknown"})}));expect(uncertain).not.toContain('action="/auth/revisar-cadastro"');expect(uncertain).toContain('action="/auth/limpar-revisao"');expect(uncertain).toContain("Encerrar sessão e pedir novo link");
+    const uncertain=renderToStaticMarkup(await ReviewPage({searchParams:Promise.resolve({status:"unknown"})}));expect(uncertain).not.toContain('action="/auth/revisar-cadastro"');expect(uncertain).toContain('action="/auth/limpar-revisao"');expect(uncertain).toContain("Encerrar sessão provisória e pedir novo link");expect(uncertain).toContain('href="/cadastro/reenviar"');expect(uncertain).toContain("Se não for possível confirmar a saída");
+    fake.getAll.mockReturnValue([{name:SIGNUP_CONTEXT_COOKIE,value:context}]);
+    const expired=renderToStaticMarkup(await ReviewPage({searchParams:Promise.resolve({})}));expect(expired).toContain('action="/auth/limpar-revisao"');expect(expired).toContain('href="/cadastro/reenviar"');expect(expired).not.toContain('action="/auth/revisar-cadastro"');
   });
   it("só permite definir senha com checkpoint válido e oferece retomada após troca", async () => {
     const absent = renderToStaticMarkup(await PasswordPage({ searchParams: Promise.resolve({}) }));
-    expect(absent).not.toContain('action="/auth/finalizar-cadastro"'); expect(absent).toContain("/cadastro/reenviar");
+    expect(absent).not.toContain('action="/auth/finalizar-cadastro"'); expect(absent).toContain("/cadastro/revisar");
     const pendingWithoutCheckpoint = renderToStaticMarkup(await PasswordPage({ searchParams: Promise.resolve({ status: "pending-reconciliation" }) }));
     expect(pendingWithoutCheckpoint).toContain('href="mailto:suporte@segundocerebroapp.com.br"');
     expect(pendingWithoutCheckpoint).not.toContain("/cadastro/reenviar");

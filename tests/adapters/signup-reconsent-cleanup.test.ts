@@ -1,8 +1,9 @@
 import {beforeEach,describe,expect,it,vi} from "vitest";
 import {NextRequest} from "next/server";
-import {signSignupReconsent,signupReconsentFormTag} from "../../src/lib/auth/signup-reconsent-checkpoint";
+import {signupReconsentFormTag} from "../../src/lib/auth/signup-reconsent-checkpoint";
+import {signSignupContext,SIGNUP_CONTEXT_COOKIE,signupProvisionalCookie} from "../../src/lib/auth/signup-provisional";
 const fake=vi.hoisted(()=>({enabled:vi.fn(),getAll:vi.fn(),set:vi.fn(),actor:vi.fn(),signOut:vi.fn()}));
-const userId="10000000-0000-4000-8000-000000000001",sessionId="20000000-0000-4000-8000-000000000001",intentId="30000000-0000-4000-8000-000000000001",config={mode:"supabase",appOrigin:"https://app.example.invalid",stateSecret:"s".repeat(32),secureCookies:true};
+const userId="10000000-0000-4000-8000-000000000001",sessionId="20000000-0000-4000-8000-000000000001",scope="q".repeat(43),config={mode:"supabase",appOrigin:"https://app.example.invalid",stateSecret:"s".repeat(32),secureCookies:true};
 vi.mock("server-only",()=>({}));
 vi.mock("next/headers",()=>({cookies:async()=>({getAll:fake.getAll,set:fake.set})}));
 vi.mock("@/lib/auth/config",()=>({readAuthConfiguration:()=>config}));
@@ -14,8 +15,9 @@ import {POST} from "../../src/app/auth/limpar-revisao/route";
 let tag="";
 const request=(origin=config.appOrigin)=>new NextRequest("https://app.example.invalid/auth/limpar-revisao",{method:"POST",headers:{origin,"content-type":"application/x-www-form-urlencoded"},body:new URLSearchParams({reviewTag:tag}).toString()});
 describe("limpeza da sessão provisória",()=>{
- beforeEach(()=>{vi.clearAllMocks();fake.enabled.mockReturnValue(true);fake.actor.mockResolvedValue({userId,sessionId,email:"p@example.invalid"});fake.signOut.mockResolvedValue({error:null});const now=Date.now(),checkpoint={userId,sessionId,intentId,issuedAt:now,expiresAt:now+600000,passwordConfirmed:false,originPending:true};const token=signSignupReconsent({checkpoint,terms:"v1",privacy:"v2"},config.stateSecret,now);tag=signupReconsentFormTag(token,config.stateSecret);fake.getAll.mockReturnValue([{name:"sc-flow-signup-reconsent",value:token},{name:"sc-auth.0",value:"session"}]);});
- it("sai apenas da sessão verificada e orienta pedir outro OTP",async()=>{const res=await POST(request());expect(res.headers.get("location")).toBe("https://app.example.invalid/cadastro/reenviar");expect(fake.signOut).toHaveBeenCalledWith({scope:"local"});expect(fake.set).toHaveBeenCalledWith("sc-auth.0","",expect.objectContaining({maxAge:0}));});
+ beforeEach(()=>{vi.clearAllMocks();fake.enabled.mockReturnValue(true);fake.actor.mockResolvedValue({userId,sessionId,email:"p@example.invalid"});fake.signOut.mockResolvedValue({error:null});const token=signSignupContext({scope,userId,sessionId},config.stateSecret);tag=signupReconsentFormTag(token,config.stateSecret);fake.getAll.mockReturnValue([{name:SIGNUP_CONTEXT_COOKIE,value:token},{name:signupProvisionalCookie(scope)+".0",value:"provisional"},{name:"sc-auth.0",value:"main"},{name:signupProvisionalCookie("z".repeat(43))+".0",value:"other provisional"}]);});
+ it("sai apenas da sessão verificada e orienta pedir outro OTP",async()=>{const res=await POST(request());expect(res.headers.get("location")).toBe("https://app.example.invalid/cadastro/reenviar");expect(fake.signOut).toHaveBeenCalledWith({scope:"local"});expect(fake.set).toHaveBeenCalledWith(signupProvisionalCookie(scope)+".0","",expect.objectContaining({maxAge:0}));expect(fake.set.mock.calls.some(call=>String(call[0]).startsWith("sc-auth"))).toBe(false);expect(fake.set.mock.calls.some(call=>String(call[0]).startsWith(signupProvisionalCookie("z".repeat(43))))).toBe(false);});
+ it("em erro de saída não afirma revogação e retorna ao estado com opção de reenvio",async()=>{fake.signOut.mockResolvedValueOnce({error:{message:"provider unavailable"}});const res=await POST(request());expect(res.headers.get("location")).toContain("/cadastro/revisar?status=unknown");});
  it("não toca sessão de outra conta ou aba que já mudou",async()=>{fake.actor.mockResolvedValueOnce({userId,sessionId:"20000000-0000-4000-8000-000000000002",email:"p@example.invalid"});const res=await POST(request());expect(res.headers.get("location")).toContain("status=unknown");expect(fake.signOut).not.toHaveBeenCalled();expect(fake.set).not.toHaveBeenCalled();});
  it("recusa origem externa e tag de outra aba",async()=>{expect((await POST(request("https://other.invalid"))).status).toBe(403);tag="a".repeat(64);expect((await POST(request())).headers.get("location")).toContain("status=unknown");expect(fake.signOut).not.toHaveBeenCalled();});
 });

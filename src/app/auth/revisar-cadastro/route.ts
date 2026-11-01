@@ -30,7 +30,7 @@ export async function POST(request:NextRequest){
    renew:value=>signupRpc(config,"signup_browser_renew",{p_user:value.userId,p_session:value.sessionId,p_intent:value.intentId,p_subject:value.subjectHash,p_terms:value.terms,p_privacy:value.privacy,p_keep_origin:value.keepOrigin,p_origin_version:value.originVersion,p_proof_expires_at:value.proofExpiresAt})},
    {acceptedLegal:form.acceptedLegal==="yes",termsVersion:form.termsVersion,privacyVersion:form.privacyVersion,acceptedOrigin:form.acceptedOrigin==="yes"},
    {terms:LEGAL_DOCUMENTS.termos.version,privacy:LEGAL_DOCUMENTS.privacidade.version,originVersion:SIGNUP_ORIGIN_CONSENT_VERSION});
-  const destination=result.status==="renewed"?"/cadastro/definir-senha":result.status==="needs-verification"?"/cadastro/reenviar":`/cadastro/revisar?status=${result.status}`;
+  const destination=result.status==="renewed"?"/cadastro/definir-senha":result.status==="needs-verification"?"/cadastro/revisar?status=expired":`/cadastro/revisar?status=${result.status}`;
   const response=signupRedirect(config,destination);for(const [name,value] of headers)response.headers.set(name,value);return response;
  }catch{return new NextResponse(null,{status:503,headers:noStoreHeaders()});}
 }

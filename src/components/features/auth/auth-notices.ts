@@ -7,6 +7,7 @@ export function authNotice(value: string | undefined, kind: AuthFormKind): { mes
     if (value === "password-recheck") return { message: "A senha foi alterada. Entre novamente com a nova senha para confirmar sua sessão.", error: false };
     if (value === "password-updated-logout-incomplete") return { message: "Senha atualizada e saída local concluída. Não foi possível confirmar a revogação da sessão. Entre novamente e tente sair outra vez.", error: true };
     if (value === "session-required") return { message: "Entre na sua conta para continuar.", error: false };
+    if (value === "signup-complete") return { message: "Conta confirmada. Entre para começar. Se outra conta estiver aberta, entrar trocará a conta neste navegador.", error: false };
     if (value === "signed-out") return { message: "Você saiu da sua conta.", error: false };
     if (value === "logout-incomplete") return { message: "Você saiu deste navegador. Não foi possível confirmar a saída da conta. Entre novamente e tente sair outra vez.", error: true };
   }

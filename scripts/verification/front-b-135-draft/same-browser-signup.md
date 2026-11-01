@@ -237,3 +237,46 @@ between RPC return and actual transaction commit, or the retention scheduler.
 The changed RPC signature and composition need new independent review and
 qualification: all prior `39abb` retention/health/PG17 evidence stays pinned
 to the old artifact and must not be silently carried forward.
+
+## Isolated provisional Auth session
+
+This candidate uses a separate, per-link random Supabase SSR cookie namespace
+for provisional OTP sessions. The namespace is derived from the verified link
+nonce and is disjoint from `sc-auth`. An independently signed, HttpOnly context
+binds that namespace to the verified user and session. The signed context has
+issued-at and expiry validated server-side with a 24-hour maximum; provisional
+Auth cookies are also capped to 24 hours in SSR setAll while preserving deletion
+maxAge=0. Cleanup does not depend on an expired legal/OTP checkpoint. An
+explicit same-origin action rechecks `getUser` and `getClaims`, signs out only
+the bound provisional session and clears only that namespace. It does not
+clear the shared context cookie in a late response, since another tab may
+already have written a newer one. Failed or ambiguous sign-out is not presented
+as successful. The old endpoint that cleared the principal session is disabled.
+
+Admission does not promote the provisional cookie. Both completion paths go to
+an explicit sign-in with `/onboarding` as the return destination; an existing
+principal session remains unchanged until the person chooses to sign in. The
+pending origin-withdrawal channel resolves and verifies the provisional actor.
+Static flow/context cookies can still cause one concurrent signup tab to lose
+its progress; the new namespace only prevents it from clearing the principal
+session or another attempt's Auth cookie. After admission the candidate attempts local-scope sign-out with a 3-second
+network timeout and clears only that attempt's local Auth cookies. An error or
+timeout leaves provider revocation uncertain; even a successful sign-out does
+not itself prove immediate invalidation of issued access JWTs. Context and
+provisional cookies expire after 24 hours, which is not provider revocation.
+Abandoned sessions still require an operational retention policy. No additional provider call is repeated
+when a password-update result is unknown.
+
+The SDK namespace race test uses mocked transport and an in-memory cookie jar;
+it does not establish actual browser response ordering, Supabase/GoTrue or SMTP
+behavior. Before release, review the shared `clients.ts` signature, historical
+and cross-device paths, source manifests/pins, QA-provider behavior and a real
+two-tab flow. Gates remain closed and no migration or server was changed.
+
+If the provider reports an error during explicit provisional sign-out, the SSR
+SDK may already have removed the local session. The review page therefore also
+offers a new email link without claiming the provider session was revoked.
+Post-admission cookie enumeration/write failures are best-effort and cannot turn
+a confirmed admission into a 503; such failures do not prove local cleanup or
+provider revocation. These error cases are simulated in tests, not certified
+against a hosted provider.

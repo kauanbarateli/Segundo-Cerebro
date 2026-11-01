@@ -1,5 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
+import {readSignupContext,signupProvisionalCookie} from "./signup-provisional";
 import { createPrivilegedClient, createRequestClient, type AuthCookieJar } from "./clients";
 import type { SupabaseAuthConfig } from "./config";
 import { secureCookieOptions } from "./cookie-policy";
@@ -16,7 +17,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export function createSignupCompletionPorts(config: SupabaseAuthConfig, jar: AuthCookieJar, responseHeaders?: Headers): SignupCompletionPorts {
   const confirmation = createSignupConfirmationPorts(config, jar, responseHeaders);
   let client: ReturnType<typeof createRequestClient> | undefined;
-  const requestClient = () => client ??= createRequestClient(config, jar, true, responseHeaders);
+  const requestClient = () => {const scope=readSignupContext(jar,config.stateSecret)?.scope;if(!scope)throw Error("Missing provisional session.");return client ??= createRequestClient(config, jar, true, responseHeaders,signupProvisionalCookie(scope));};
   return {
     // signupEnabled contains an unconditional false release gate in this draft.
     reservationEnabled: () => signupEnabled(config),
