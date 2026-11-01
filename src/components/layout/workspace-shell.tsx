@@ -1,5 +1,6 @@
 "use client";
 
+import { QuickCapture } from "@/components/features/capturar/quick-capture";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
@@ -12,6 +13,7 @@ import { useDemoApplication } from "@/lib/demo/demo-provider";
 import { resolveAccess } from "@/core/access/resolve-access";
 import { getMobileRoutes, getRouteByPath, getVisibleRoutes, type WorkspaceRoute } from "@/lib/navigation/routes";
 import { groupNavigationRoutes } from "@/lib/navigation/groups";
+import { resolveOptionalNavigation, type OptionalDestinations } from "@/lib/navigation/optional-destinations";
 import {
   applySidebarState, readSidebarChoice, resolveSidebarState, saveSidebarChoice,
   SIDEBAR_COMPACT_QUERY, SIDEBAR_MOBILE_QUERY,
@@ -73,8 +75,13 @@ function BottomLink({ route, pathname }: { route: WorkspaceRoute; pathname: stri
   );
 }
 
-export function WorkspaceShell({ children, avatarId = null, displayName = null }: { children: ReactNode; avatarId?: string | null; displayName?: string | null }) {
+const CLOSED_DESTINATIONS: OptionalDestinations = { feedback: false, updates: false };
+
+export function WorkspaceShell({ children, avatarId = null, displayName = null, destinations = CLOSED_DESTINATIONS }: {
+  children: ReactNode; avatarId?: string | null; displayName?: string | null; destinations?: OptionalDestinations;
+}) {
   const pathname = usePathname();
+  const optional = resolveOptionalNavigation(destinations);
   const { policy, connected } = useDemoAccess();
   const { logout, userId } = useDemoApplication();
   const collapsed = useSyncExternalStore(subscribeSidebar, sidebarCollapsedSnapshot, () => false);
@@ -312,8 +319,8 @@ export function WorkspaceShell({ children, avatarId = null, displayName = null }
         </nav>
 
         <div className="shell-sidebar-footer">
-          <Link className="shell-nav-link" href="/ajuda" aria-label="Ajuda" data-nav-tip="Ajuda" aria-current={pathname === "/ajuda" ? "page" : undefined}>
-            <Icons.Help /><span className="shell-nav-label">Ajuda</span>
+          <Link className="shell-nav-link" href={optional.help.href} aria-label={optional.help.label} data-nav-tip={optional.help.label} aria-current={pathname === optional.help.href ? "page" : undefined}>
+            {optional.help.kind === "feedback" ? <Icons.Inbox /> : <Icons.Help />}<span className="shell-nav-label">{optional.help.label}</span>
           </Link>
           <button type="button" className="shell-profile-trigger" popoverTarget="shell-profile"
             aria-label={connected ? "Abrir opções da conta" : "Abrir perfil de demonstração"} data-nav-tip={connected ? "Sua conta" : "Perfil de demonstração"}>
@@ -323,10 +330,12 @@ export function WorkspaceShell({ children, avatarId = null, displayName = null }
           </button>
           <div id="shell-profile" ref={profilePopover} popover="auto" className="shell-profile">
             <p className="shell-profile-title">{connected ? "Sua conta" : "Perfil de demonstração"}</p>
-            <p>{connected ? "Seus registros são salvos na sua conta." : "Nenhuma conta está conectada."}</p>
+            {!connected && <p>Nenhuma conta está conectada.</p>}
             {activityAllowed && <Link href="/atividade" className="shell-menu-link" onClick={closeProfile}><Icons.Activity /><span>Atividade</span></Link>}
             <Link href="/configuracoes" className="shell-menu-link" onClick={closeProfile}><Icons.Settings /><span>Configurações</span></Link>
-            <Link href="/ajuda" className="shell-menu-link" onClick={closeProfile}><Icons.Help /><span>Ajuda</span></Link>
+            <Link href={optional.help.href} className="shell-menu-link" onClick={closeProfile}>{optional.help.kind === "feedback" ? <Icons.Inbox /> : <Icons.Help />}<span>{optional.help.label}</span></Link>
+            {optional.helpPage && <Link href={optional.helpPage.href} className="shell-menu-link" onClick={closeProfile}><Icons.Help /><span>{optional.helpPage.label}</span></Link>}
+            {optional.support && <a href={optional.support.href} className="shell-menu-link" onClick={closeProfile}><Icons.Inbox /><span>{optional.support.label}</span></a>}
             {connected && <Link href="/trocar-senha" className="shell-menu-link" onClick={closeProfile}><Icons.Lock /><span>Trocar senha</span></Link>}
             <ExitControl connected={connected} onExit={leaveDemo} />
           </div>
@@ -353,13 +362,14 @@ export function WorkspaceShell({ children, avatarId = null, displayName = null }
             <strong className="shell-breadcrumb-current">{context}</strong>
           </div>
           <div className="shell-top-actions">
-            <span className="shell-mode"><span className="shell-mode-dot" aria-hidden="true" /><span className="shell-demo-label">{connected ? "Conta conectada" : "Demonstração"}</span></span>
+            {!connected && <span className="shell-mode"><span className="shell-mode-dot" aria-hidden="true" /><span className="shell-demo-label">Demonstração</span></span>}
             <Button variant="ghost" className="shell-top-search" onClick={openSearch} aria-label="Buscar informações" aria-keyshortcuts="Control+k Meta+k">
               <Icons.Search />
             </Button>
             <ThemeToggle />
+            {optional.updates && <Link className="shell-icon-link" href={optional.updates.href} aria-label={optional.updates.label} title={optional.updates.label} aria-current={pathname === optional.updates.href ? "page" : undefined}><Icons.Bell /></Link>}
             {activityAllowed && <Link className="shell-icon-link" href="/atividade" aria-label="Atividade" title="Atividade" aria-current={pathname === "/atividade" ? "page" : undefined}><Icons.Activity /></Link>}
-            {captureAllowed && <Link className="shell-capture" href="/capturar"><Icons.Capture /><span>Capturar</span></Link>}
+            {captureAllowed && <QuickCapture />}
             <Link className="shell-top-avatar" href="/configuracoes#perfil" aria-label="Abrir meu perfil">
               <AccountAvatar userId={userId} fileId={connected ? avatarId : null} name={profileName} />
             </Link>
@@ -369,7 +379,7 @@ export function WorkspaceShell({ children, avatarId = null, displayName = null }
         <main id="conteudo" ref={main} tabIndex={-1} className="shell-main"><ConnectedCommandFeedback>{children}</ConnectedCommandFeedback></main>
         <footer className="shell-footer">
           <span>Um lugar para pensar com clareza.</span>
-          <span className="shell-status">{connected ? "Seus registros são salvos na sua conta." : "Demonstração · Alterações guardadas somente nesta visita."}</span>
+          {!connected && <span className="shell-status">Demonstração · Alterações guardadas somente nesta visita.</span>}
         </footer>
       </div>
 

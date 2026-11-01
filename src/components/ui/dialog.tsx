@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useLayoutEffect, useRef, type ReactNode, type RefObject } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, type ReactNode, type RefObject } from "react";
 import { Button } from "./button";
 import { Icons } from "./icons";
 import { containDialogTab, isTopDialog, registerDialog } from "./focus-stack";
@@ -14,6 +14,8 @@ export interface DialogProps {
   children?: ReactNode;
   footer?: ReactNode;
   variant?: "dialog" | "drawer" | "sheet";
+  /** Width by use: confirmations stay small, long editors get room. */
+  size?: "sm" | "md" | "lg";
   initialFocusRef?: RefObject<HTMLElement | null>;
   returnFocusRef?: RefObject<HTMLElement | null>;
   className?: string;
@@ -25,7 +27,7 @@ export interface DialogProps {
 
 /** One native modal contract for dialogs, drawers, sheets and confirmations. */
 export function Dialog({
-  open, onClose, title, description, children, footer, variant = "dialog",
+  open, onClose, title, description, children, footer, variant = "dialog", size = "md",
   initialFocusRef, returnFocusRef, className = "", closeLabel = "Fechar",
   closeOnBackdrop = true, dismissible = true,
 }: DialogProps) {
@@ -44,6 +46,17 @@ export function Dialog({
     return unregister;
   }, [open, initialFocusRef, returnFocusRef]);
 
+  // The virtual keyboard shrinks the visual viewport, not the layout one: follow it so the
+  // active field and the footer actions stay above the keyboard (CSS reads the variable).
+  useEffect(() => {
+    const element = dialogRef.current, viewport = window.visualViewport;
+    if (!open || !element || !viewport) return;
+    const sync = () => element.style.setProperty("--ui-visual-height", `${Math.round(viewport.height)}px`);
+    sync();
+    viewport.addEventListener("resize", sync);
+    return () => { viewport.removeEventListener("resize", sync); element.style.removeProperty("--ui-visual-height"); };
+  }, [open]);
+
   const requestClose = () => {
     if (dismissible && dialogRef.current && isTopDialog(dialogRef.current)) onClose();
   };
@@ -55,7 +68,7 @@ export function Dialog({
   return (
     <dialog
       ref={dialogRef}
-      className={`ui-dialog ui-dialog--${variant} ${className}`.trim()}
+      className={`ui-dialog ui-dialog--${variant} ui-dialog--${size} ${className}`.trim()}
       aria-labelledby={titleId}
       aria-describedby={description ? descriptionId : undefined}
       aria-modal="true"
@@ -130,6 +143,7 @@ export function ConfirmDialog({
   return (
     <Dialog
       {...props}
+      size="sm"
       initialFocusRef={cancelRef}
       dismissible={!loading}
       closeOnBackdrop={false}

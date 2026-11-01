@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Extension, Node, mergeAttributes, type Editor } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -78,20 +78,21 @@ const normalized = (value: string) => value.normalize("NFD").replace(/[\u0300-\u
 /** One editor/schema for both surfaces; no feature, storage, HTML payload or SDK. */
 export default function DocumentEditor({ document, references, referenceKind, disabled, label, onChange, onCreateReference, onReferenceCommand }: DocumentEditorProps) {
   const [suggestion, setSuggestion] = useState<Suggestion | null>(null), [linkOpen, setLinkOpen] = useState(false), [href, setHref] = useState(""), [error, setError] = useState("");
-  const [, renderToolbar] = useState(0);
-  const linkInput = useRef<HTMLInputElement>(null), openLink = useRef<() => void>(() => {});
+  const [, renderToolbar] = useState(0), [formatOpen, setFormatOpen] = useState(false), formatId = useId();
+  const linkInput = useRef<HTMLInputElement>(null), openLink = useRef<() => void>(() => {}), closeFormat = useRef<() => boolean>(() => false);
   const updateSuggestion = (current: Editor) => { const { $from } = current.state.selection; const before = $from.parent.textBetween(0, $from.parentOffset, "", "\ufffc"), match = /\[\[([^\]\n]{0,200})$/.exec(before);
     setSuggestion(match ? { query: match[1]!, from: $from.pos - match[0].length, to: $from.pos } : null); };
   const editor = useEditor({
     extensions: [StarterKit.configure({ heading: { levels: [1, 2, 3] }, link: false }), DocumentLink.configure({ openOnClick: false, autolink: false, linkOnPaste: false, isAllowedUri: url => safeDocumentLink(url) !== null, HTMLAttributes: { rel: "noopener noreferrer", target: "_blank" } }), Alignment, TaskList, TaskItem, WikiLink, CaptureLink],
     content: document, immediatelyRender: false, editable: !disabled,
     editorProps: { attributes: { "aria-label": label, role: "textbox", "aria-multiline": "true", spellcheck: "true" },
-      handleKeyDown(_view, event) { if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") { event.preventDefault(); event.stopPropagation(); openLink.current(); return true; } return false; },
+      handleKeyDown(_view, event) { if (event.key === "Escape" && closeFormat.current()) { event.preventDefault(); event.stopPropagation(); return true; } if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") { event.preventDefault(); event.stopPropagation(); openLink.current(); return true; } return false; },
     },
     onUpdate({ editor: current }) { onChange(current.getJSON() as DocumentoPagina); updateSuggestion(current); },
     onSelectionUpdate({ editor: current }) { updateSuggestion(current); },
     onTransaction() { renderToolbar(value => value + 1); },
   });
+  closeFormat.current = () => { if (!formatOpen) return false; setFormatOpen(false); return true; };
   openLink.current = () => { if (!editor || disabled) return; setHref(String(editor.getAttributes("link").href ?? "")); setError(""); setLinkOpen(true); };
   useEffect(() => {
     if (!editor || editor.isDestroyed) return;
@@ -123,8 +124,12 @@ export default function DocumentEditor({ document, references, referenceKind, di
     { label: "Checklist", glyph: <Icons.Check />, group: "lists", active: editor?.isActive("taskList"), run: () => { editor?.chain().focus().toggleList("taskList", "taskItem").run(); } },
     { label: "Citação", glyph: <span>Citação</span>, group: "lists", active: editor?.isActive("blockquote"), run: () => { editor?.chain().focus().toggleBlockquote().run(); } },
   ];
+  // The menu only shows/hides commands: the editor stays mounted, the selection is kept
+  // (mouse-down never steals focus) and opening or closing never emits onChange.
+  const formatToggle = <Button variant="ghost" className="document-format-toggle" aria-expanded={formatOpen} aria-controls={formatId} disabled={disabled || !editor} onMouseDown={event => event.preventDefault()} onClick={() => setFormatOpen(open => !open)}><Icons.ChevronDown aria-hidden="true" className="document-format-toggle__icon" />Formatação</Button>;
   return <div className="document-editor">
-    <div className="document-toolbar" role="toolbar" aria-label="Formatação do texto">
+    <div className="document-format-bar">{formatToggle}</div>
+    {formatOpen && <div id={formatId} className="document-toolbar" role="toolbar" aria-label="Formatação do texto" onKeyDown={event => { if (event.key === "Escape") { event.stopPropagation(); setFormatOpen(false); editor?.commands.focus(); } }}>
       <Field as="select" wrapperClassName="document-block-style" label="Estilo do bloco" visuallyHiddenLabel value={editor?.isActive("heading") ? String(editor.getAttributes("heading").level) : editor?.isActive("codeBlock") ? "code" : "paragraph"} disabled={disabled || !editor} onChange={event => { const value = event.target.value; const chain = editor?.chain().focus(); if (value === "paragraph") chain?.setParagraph().run(); else if (value === "code") chain?.setCodeBlock().run(); else chain?.setHeading({ level: Number(value) as 1 | 2 | 3 }).run(); }}><option value="paragraph">Texto</option><option value="1">Título 1</option><option value="2">Título 2</option><option value="3">Título 3</option><option value="code">Código</option></Field>
       {(["marks", "lists"] as const).map(group => <div className="document-command-group" role="group" aria-label={group === "marks" ? "Formatação de caracteres" : "Listas e citação"} key={group}>{commands.filter(command => command.group === group).map(command => <Button key={command.label} variant="ghost" className="document-format-button" aria-label={command.label} title={command.label} disabled={disabled || !editor} aria-pressed={command.active ?? false} onMouseDown={event => event.preventDefault()} onClick={command.run}>{command.glyph}</Button>)}</div>)}
       <Field as="select" wrapperClassName="document-alignment" label="Alinhamento" visuallyHiddenLabel aria-label="Alinhamento do parágrafo" value={editor?.getAttributes("paragraph").textAlign ?? editor?.getAttributes("heading").textAlign ?? "left"} disabled={disabled || !editor} onChange={event => { const type = editor?.isActive("heading") ? "heading" : "paragraph"; editor?.chain().focus().updateAttributes(type, { textAlign: event.target.value }).run(); }}><option value="left">À esquerda</option><option value="center">Centralizado</option><option value="right">À direita</option><option value="justify">Justificado</option></Field>
@@ -132,7 +137,7 @@ export default function DocumentEditor({ document, references, referenceKind, di
       <Button variant="ghost" disabled={disabled || !editor} aria-label="Limpar formatação" title="Remove negrito, itálico, sublinhado, tachado e código da seleção; preserva links, referências e blocos." onMouseDown={event => event.preventDefault()} onClick={() => editor?.chain().focus().unsetBold().unsetItalic().unsetUnderline().unsetStrike().unsetCode().run()}>Limpar</Button>
       <Button variant="ghost" disabled={disabled || !editor || !editor.can().undo()} onMouseDown={event => event.preventDefault()} onClick={() => editor?.chain().focus().undo().run()}>Desfazer</Button>
       <Button variant="ghost" disabled={disabled || !editor || !editor.can().redo()} onMouseDown={event => event.preventDefault()} onClick={() => editor?.chain().focus().redo().run()}>Refazer</Button>
-    </div>
+    </div>}
     {linkOpen && <div className="document-link" role="group" aria-label="Editar link" onKeyDown={event => { if (event.key === "Escape") { event.stopPropagation(); setLinkOpen(false); editor?.commands.focus(); } }}>
       <Field ref={linkInput} label="Endereço do link" type="url" value={href} onChange={event => setHref(event.target.value)} error={error || undefined} disabled={disabled} />
       <Button disabled={disabled} onClick={link}>Aplicar link</Button><Button variant="ghost" disabled={disabled} onClick={() => { editor?.chain().focus().extendMarkRange("link").unsetLink().run(); setLinkOpen(false); }}>Remover link</Button><Button variant="ghost" onClick={() => { setLinkOpen(false); editor?.commands.focus(); }}>Cancelar link</Button>

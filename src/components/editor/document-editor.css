@@ -1,5 +1,10 @@
 .document-editor { min-width: 0; color: var(--ink); }
-.document-toolbar { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px; border: 1px solid var(--line); border-radius: 12px 12px 0 0; background: var(--surface-muted); }
+.document-format-bar { display: flex; justify-content: flex-start; padding-bottom: 8px; }
+.document-format-toggle { min-height: var(--target); gap: 6px; }
+.document-format-toggle__icon { width: 16px; height: 16px; transition: transform var(--motion-fast, 120ms) ease; }
+.document-format-toggle[aria-expanded="true"] .document-format-toggle__icon { transform: rotate(180deg); }
+@media (prefers-reduced-motion: reduce) { .document-format-toggle__icon { transition: none; } }
+.document-toolbar { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; padding: 8px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-muted); }
 .document-toolbar .ui-button { flex-shrink: 0; min-height: 44px; white-space: nowrap; }
 .document-toolbar [aria-pressed="true"] { background: var(--surface-hover); color: var(--ink); }
 .document-command-group { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; padding-inline: 4px; border-inline-start: 1px solid var(--line); }
@@ -8,7 +13,7 @@
 .document-block-style select { min-height: var(--target); font-size: 16px; }
 .document-alignment { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; }
 .document-alignment select { min-height: 44px; max-width: 100%; padding-inline: 8px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: var(--surface); font: inherit; font-size: 16px; }
-.document-editor .tiptap { min-height: 300px; padding: 20px; border: 1px solid var(--line); border-top: 0; border-radius: 0 0 12px 12px; background: var(--surface); font-size: 16px; line-height: 1.8; overflow-wrap: anywhere; }
+.document-editor .tiptap { min-height: 300px; padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); font-size: 16px; line-height: 1.8; overflow-wrap: anywhere; }
 .document-editor .tiptap > * + * { margin-top: 12px; }
 .document-editor .tiptap h1, .document-editor .tiptap h2, .document-editor .tiptap h3 { line-height: 1.35; margin-top: 24px; }
 .document-editor .tiptap h1 { font-size: 28px; }.document-editor .tiptap h2 { font-size: 24px; }.document-editor .tiptap h3 { font-size: 20px; }

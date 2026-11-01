@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { DemoAccessProvider } from "@/lib/navigation/demo-access-provider";
 import { WorkspaceShell } from "@/components/layout/workspace-shell";
+import { readOptionalDestinations } from "@/lib/navigation/optional-destinations";
 import { DemoApplicationProvider } from "@/lib/demo/demo-provider";
 import { readAuthConfiguration } from "@/lib/auth/config";
 import { resolveStorageOrigin } from "@/lib/files/storage-origin-server";
@@ -29,5 +30,5 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
     avatarId = account?.user_id === identity.userId ? account.profile.avatar_file_id : null;
     displayName = account?.user_id === identity.userId ? account.profile.display_name : null;
   }
-  return <DemoAccessProvider serverPolicy={serverPolicy}><DemoApplicationProvider serverUserId={serverUserId} accountValuesHidden={valuesHidden} storageOrigin={storageOrigin}><WorkspaceShell avatarId={avatarId} displayName={displayName}>{children}</WorkspaceShell></DemoApplicationProvider></DemoAccessProvider>;
+  return <DemoAccessProvider serverPolicy={serverPolicy}><DemoApplicationProvider serverUserId={serverUserId} accountValuesHidden={valuesHidden} storageOrigin={storageOrigin}><WorkspaceShell avatarId={avatarId} displayName={displayName} destinations={readOptionalDestinations()}>{children}</WorkspaceShell></DemoApplicationProvider></DemoAccessProvider>;
 }

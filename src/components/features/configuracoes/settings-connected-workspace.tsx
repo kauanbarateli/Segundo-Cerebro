@@ -9,7 +9,6 @@ import { settingsPreferences, validAccountSettings, type AccountSettings } from 
 import { MVP_WORKSPACE_ROUTES as WORKSPACE_ROUTES } from "@/lib/navigation/routes";
 import { useTheme } from "@/components/theme/theme-provider";
 import { ThemeModelPicker } from "@/components/theme/theme-models";
-import { InstallHelp } from "@/components/pwa/install-help";
 import { Button } from "@/components/ui/button";
 import { Collapsible } from "@/components/ui/data-display";
 import { Field } from "@/components/ui/field";
@@ -76,7 +75,7 @@ export function SettingsConnectedWorkspace() {
   const initial = (data.profile.display_name ?? data.profile.email ?? "?").trim().slice(0, 1).toUpperCase() || "?";
   return <div className="settings-workspace" data-access="allowed">
     <p className="settings-intro">Ajuste o Segundo Cérebro ao seu jeito de organizar a vida. Cada seção salva na sua conta.</p>
-    <nav className="settings-links" aria-label="Nesta página"><a href="#perfil">Perfil</a><a href="#aparencia">Aparência</a><a href="#imagem-do-inicio">Imagem do Início</a><a href="#lembretes">Preferências</a><a href="#modulos">Módulos</a><a href="#sessoes">Sessões</a><a href="#dados">Meus dados</a><a href="#privacidade-e-termos">Privacidade e termos</a></nav>
+    <nav className="settings-links" aria-label="Nesta página"><a href="#perfil">Perfil</a><a href="#aparencia">Aparência</a><a href="#imagem-do-inicio">Imagem do Início</a><a href="#lembretes">Preferências</a><a href="#modulos">Módulos</a><a href="#sessoes">Sessões</a><a href="#privacidade-e-termos">Privacidade e termos</a></nav>
     {error && <p role="alert" className="settings-alert">{error}</p>}<p role="status" className="settings-feedback">{message}</p>
     <section id="perfil" className="settings-panel settings-primary-panel" aria-labelledby="settings-profile-title"><div className="settings-heading"><h2 id="settings-profile-title">Perfil</h2></div><div className="settings-primary-content">
       <div className="settings-profile">{data.profile.avatar_file_id
@@ -107,9 +106,8 @@ export function SettingsConnectedWorkspace() {
     <section id="lembretes" className="settings-panel settings-primary-panel" aria-labelledby="settings-preferences-title"><div className="settings-heading"><h2 id="settings-preferences-title">Preferências</h2><p>Pequenos ajustes para o seu dia a dia.</p></div><div className="settings-primary-content">
       <div className="settings-toggle-row"><Switch label="Ocultar valores financeiros ao entrar" checked={preferences.values_hidden} onCheckedChange={values_hidden => setPreferences({ ...preferences, values_hidden })} /></div>
       <div className="settings-toggle-row"><Switch label="Lembrar de reuniões no aplicativo" checked={preferences.meeting_reminders_enabled} onCheckedChange={meeting_reminders_enabled => setPreferences({ ...preferences, meeting_reminders_enabled })} /></div>
-      <div className="settings-form-grid"><Field as="select" label="Visão inicial" value={preferences.default_calendar_view} onChange={event => setPreferences({ ...preferences, default_calendar_view: event.target.value as "day" | "week" | "month" | "list" })}><option value="day">Dia</option><option value="week">Semana</option><option value="month">Mês</option><option value="list">Lista</option></Field>
-        <Field as="select" label="Antecedência" value={preferences.meeting_reminder_minutes} onChange={event => setPreferences({ ...preferences, meeting_reminder_minutes: Number(event.target.value) })}>{[5, 10, 15, 30].map(minutes => <option key={minutes} value={minutes}>{minutes} minutos</option>)}</Field></div>
-      <Button variant="primary" loading={saving} onClick={() => void save("settings.preferences.update", { patch: { values_hidden: preferences.values_hidden, default_calendar_view: preferences.default_calendar_view, meeting_reminders_enabled: preferences.meeting_reminders_enabled, meeting_reminder_minutes: preferences.meeting_reminder_minutes } })}>Salvar preferências</Button>
+      <div className="settings-form-grid"><Field as="select" label="Antecedência" value={preferences.meeting_reminder_minutes} onChange={event => setPreferences({ ...preferences, meeting_reminder_minutes: Number(event.target.value) })}>{[5, 10, 15, 30].map(minutes => <option key={minutes} value={minutes}>{minutes} minutos</option>)}</Field></div>
+      <Button variant="primary" loading={saving} onClick={() => void save("settings.preferences.update", { patch: { values_hidden: preferences.values_hidden, meeting_reminders_enabled: preferences.meeting_reminders_enabled, meeting_reminder_minutes: preferences.meeting_reminder_minutes } })}>Salvar preferências</Button>
     </div></section>
     {resolveAccess("integracoes", policy).allowed && resolveAccess("integracoes", policy).visible && <section className="settings-panel settings-panel--row"><div className="settings-heading"><h2>Calendários conectados</h2><p>Gerencie as contas Google e as fontes que aparecem na sua agenda.</p></div><Link className="settings-button-link" href="/integracoes">Gerenciar integrações</Link></section>}
     <section id="modulos" className="settings-panel settings-panel--collapsible"><Collapsible defaultOpen title="Módulos"><p className="settings-text">Escolha o que aparece e a ordem da navegação. Início, Capturar e Configurações ficam sempre disponíveis.</p>
@@ -117,8 +115,6 @@ export function SettingsConnectedWorkspace() {
       <Button variant="primary" loading={saving} onClick={() => void save("settings.modules.update", { modules })}>Salvar módulos</Button>
     </Collapsible></section>
     <OwnSessionsSection scopeKey={app.userId} read={readSessions} />
-    <section id="dados" className="settings-panel settings-panel--collapsible"><Collapsible defaultOpen title="Meus dados"><p className="settings-text">Seus registros pertencem à sua conta. A administração acompanha contas e ações administrativas; conteúdos pessoais permanecem isolados.</p><p className="settings-text">Exportação de dados e notificações push ficam para a fase 2.</p></Collapsible></section>
     <SettingsLegalSection />
-    <section className="settings-panel" aria-label="Instalação do aplicativo"><InstallHelp /></section>
   </div>;
 }

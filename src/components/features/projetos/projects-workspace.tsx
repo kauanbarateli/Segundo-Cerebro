@@ -119,7 +119,7 @@ function ProjectsWorkspaceContent() {
         const linked = containers.filter((row) => row.project_id === item.id && row.deleted_at === null);
         const counts = ([["capture", "captura", "capturas"], ["notebook", "caderno", "cadernos"]] as const).map(([kind, one, many]) => { const total = linked.filter((row) => row.kind === kind).length; return total ? `${total} ${total === 1 ? one : many}` : null; }).filter(Boolean);
         return <Link className="project-card" key={item.id} href={"/projetos?project=" + encodeURIComponent(item.id)}>
-          <PrivateImage fileId={item.cover_file_id} userId={app.userId} className="project-cover" />
+          {item.cover_file_id && <PrivateImage fileId={item.cover_file_id} userId={app.userId} className="project-cover" />}
           <div className="project-card-top"><span className={`project-symbol${toneOf(item.color_key)}`} aria-hidden="true"><Icons.Folder width={24} height={24} /></span><Icons.ArrowUpRight width={20} height={20} /></div>
           <h2>{item.name}</h2>
           <p>{item.description || "Um contexto para reunir informações."}</p>

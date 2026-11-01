@@ -13,6 +13,7 @@ import tailwind from "@tailwindcss/postcss";
 import { createLocalCanonicalSql } from "../helpers/local-canonical-sql";
 import type { CaptureTaskOperation, CaptureTaskRpc, CaptureTaskRpcArguments } from "../../src/adapters/db/capture-task-gateway";
 import type { Captura } from "../../src/core/capturas";
+import { openFormatting } from "./helpers/editor";
 
 type Product = typeof import("./fixtures/issue23-sql-server.entry");
 const origin = "https://issue22-capture-sql.test", now = "2030-01-10T02:30:00.000Z";
@@ -361,6 +362,7 @@ test("E4: resposta perdida após commit conserva o mesmo envio no reload e confi
     await page.getByLabel("Título da nota", { exact: true }).fill(title);
     const editor = page.getByRole("textbox", { name: "Sua anotação", exact: true });
     await editor.fill(text); await editor.press("ControlOrMeta+A");
+    await openFormatting(page);
     await page.getByRole("button", { name: "Negrito", exact: true }).click();
     await expect(editor.locator("strong")).toHaveText(text);
     const [failedRequest] = await Promise.all([

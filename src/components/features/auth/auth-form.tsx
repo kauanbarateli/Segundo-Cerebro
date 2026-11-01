@@ -41,7 +41,7 @@ export function AuthForm({ kind, available, requiresCurrentPassword = false, com
   const [email, setEmail] = useState("");
   const [legalAcknowledged, setLegalAcknowledged] = useState(false);
   const legalAcknowledgedRef = useRef(false);
-  const legalId = useId();
+  const legalId = useId(), newTabId = useId();
   const formRef = useRef<HTMLFormElement>(null), feedbackRef = useRef<HTMLDivElement>(null);
   const words = copy[kind], fixedNotice = authNotice(notice, kind);
   const passwordChange = kind === "change" || kind === "reset";
@@ -97,12 +97,13 @@ export function AuthForm({ kind, available, requiresCurrentPassword = false, com
             }} />
             <span className="auth-legal-mark" aria-hidden="true"><Icons.Check /></span>
           </span>
-          <span>Li os Termos de Serviço e a Política de Privacidade.</span>
+          <span>Li os{" "}
+            <Link className="auth-legal-link" href="/termos-de-servico" target="_blank" rel="noopener noreferrer" aria-describedby={newTabId}>Termos de Serviço</Link>
+            {" "}e a{" "}
+            <Link className="auth-legal-link" href="/privacidade" target="_blank" rel="noopener noreferrer" aria-describedby={newTabId}>Política de Privacidade</Link>.
+          </span>
         </label>
-        <div className="auth-policy-links">
-          <Link href="/termos-de-servico" aria-label="Ler os Termos de Serviço (abre em nova aba)" target="_blank" rel="noopener noreferrer">Ler termos <Icons.ArrowUpRight /></Link>
-          <Link href="/privacidade" aria-label="Ler a Política de Privacidade (abre em nova aba)" target="_blank" rel="noopener noreferrer">Ler política <Icons.ArrowUpRight /></Link>
-        </div>
+        <span id={newTabId} className="auth-legal-hint">Os documentos abrem em uma nova aba; o formulário continua como está.</span>
       </div>}
       <Button type="submit" variant="primary" loading={pending} disabled={!available}>{finishing ? pending ? "Concluindo…" : "Concluir proteção da conta" : pending ? words.pending : words.submit}</Button>
     </form>}
