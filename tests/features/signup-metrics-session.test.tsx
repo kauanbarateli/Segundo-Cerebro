@@ -13,7 +13,7 @@ vi.mock("@/components/ui/button",()=>({Button:"metrics-button"}));
 import { SignupMetricsWorkspace } from "../../src/components/features/metricas/signup-metrics-workspace";
 const owner="10000000-0000-4000-8000-000000000001",secret="ORIGEM_PRIVADA_SINTETICA";
 const json=(status:number,value:unknown)=>new Response(JSON.stringify(value),{status,headers:{"content-type":"application/json"}});
-const valid=(path:string)=>{const params=new URL(path,"https://example.invalid").searchParams,q=Object.fromEntries(params),rows=[{kind:"value",value:secret,count:5},{kind:"other",value:null,count:2}];return {ok:true,originDistribution:'withheld',result:{...q,totalPublic:7,stock:{total:7,legacy:0,admin:0,public:7,unclassified:0},series:[{period:q.start,count:7}],distributions:Object.fromEntries(["utm_source","utm_medium","utm_campaign","utm_term","utm_content"].map(key=>[key,rows]))}};};
+const valid=(path:string)=>{const params=new URL(path,"https://example.invalid").searchParams,q=Object.fromEntries(params),rows=[{kind:"other",value:null,count:7}];return {ok:true,originDistribution:'withheld',result:{...q,totalPublic:7,stock:{total:7,legacy:0,admin:0,public:7,unclassified:0},series:[{period:q.start,count:7}],distributions:Object.fromEntries(["utm_source","utm_medium","utm_campaign","utm_term","utm_content"].map(key=>[key,rows]))}};};
 const settle=async()=>{for(let i=0;i<20;i++)await Promise.resolve();};
 function find(node:ReactNode,predicate:(element:ReactElement<Record<string,unknown>>)=>boolean):ReactElement<Record<string,unknown>>|undefined{for(const child of Children.toArray(node)){if(!isValidElement<Record<string,unknown>>(child))continue;if(predicate(child))return child;const found=find(child.props.children as ReactNode,predicate);if(found)return found;}}
 const text=(tree:ReactNode)=>JSON.stringify(tree,(_key,value)=>typeof value==="function"?undefined:value);
@@ -40,6 +40,10 @@ describe("métricas: sessão Master",()=>{
  });
  it("não reabre com envelope ok falso e permite nova verificação",async()=>{
   let calls=0;const app=fixture(async path=>{calls++;return calls===2?json(200,{...valid(String(path)),ok:false}):json(200,valid(String(path)));});app.render();await settle();app.render();window.dispatchEvent(new Event("focus"));await settle();const tree=app.render();expect(text(tree)).toContain("Confirme sua conta");expect(text(tree)).not.toContain("Cadastros ao longo do tempo");click(tree,"Verificar sessão");await settle();expect(text(app.render())).toContain("Cadastros ao longo do tempo");app.unmount();
+ });
+ it("não reabre com valores livres sob a marca withheld ou envelope antigo",async()=>{
+  let calls=0;const app=fixture(async path=>{const body=valid(String(path));calls++;if(calls===2){Object.assign(body.result.distributions,{utm_source:[{kind:"value",value:secret,count:7}]});}if(calls===3){return json(200,{ok:body.ok,result:body.result});}return json(200,body);});
+  app.render();await settle();app.render();window.dispatchEvent(new Event("focus"));await settle();let tree=app.render();expect(text(tree)).toContain("Confirme sua conta");expect(text(tree)).not.toContain(secret);click(tree,"Verificar sessão");await settle();tree=app.render();expect(text(tree)).toContain("Confirme sua conta");expect(text(tree)).not.toContain(secret);click(tree,"Verificar sessão");await settle();expect(text(app.render())).toContain("Cadastros ao longo do tempo");app.unmount();
  });
  it("mantém fechamento após timeout e permite nova tentativa",async()=>{
   const controllers:AbortController[]=[];vi.spyOn(AbortSignal,"timeout").mockImplementation(()=>{const c=new AbortController();controllers.push(c);return c.signal;});let calls=0;

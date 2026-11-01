@@ -41,6 +41,24 @@ export function parseSignupMetrics(value: unknown, query: MetricQuery): SignupMe
   return value as SignupMetrics;
 }
 
+/** The browser accepts only the specific withheld representation sent by the API.
+ * This check cannot retract bytes already received; the server must suppress them.
+ */
+export function parseWithheldSignupMetrics(value: unknown, query: MetricQuery): SignupMetrics | null {
+  const metrics = parseSignupMetrics(value, query);
+  if (!metrics) return null;
+  for (const dimension of METRIC_DIMENSIONS) {
+    const rows = metrics.distributions[dimension];
+    if (metrics.totalPublic === 0) {
+      if (rows.length !== 0) return null;
+    } else {
+      const row = rows[0];
+      if (rows.length !== 1 || !row || row.kind !== "other" || row.value !== null || row.count !== metrics.totalPublic) return null;
+    }
+  }
+  return metrics;
+}
+
 /**
  * Reject incomplete or duplicated populations before consolidating small groups.
  * Suppression reduces disclosure but cannot guarantee anonymity across queries.

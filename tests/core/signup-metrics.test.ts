@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseMetricQuery, parseSignupMetrics, prepareOriginDistribution } from "../../src/core/acquisition/signup-metrics";
+import { parseMetricQuery, parseSignupMetrics, parseWithheldSignupMetrics, prepareOriginDistribution } from "../../src/core/acquisition/signup-metrics";
 
 describe("distribuição agregada de origens", () => {
   it("mantém a população completa e reúne grupos pequenos sem expor valores", () => {
@@ -39,5 +39,22 @@ describe('contrato do relatório',()=>{
   expect(parseSignupMetrics({...result,series:[{period:'2026-10-01',count:6}]},query)).toBeNull();
   expect(parseSignupMetrics({...result,distributions:{...result.distributions,utm_source:[{kind:'value',value:'individual',count:2},{kind:'other',value:null,count:5}]}},query)).toBeNull();
   expect(parseSignupMetrics({...result,email:'privado'},query)).toBeNull();
+ });
+});
+
+
+describe("contrato retido das métricas", () => {
+ const query={start:"2026-10-01",end:"2026-10-31",zone:"UTC" as const,bucket:"month" as const};
+ const dimensions=["utm_source","utm_medium","utm_campaign","utm_term","utm_content"] as const;
+ const report=(total:number) => ({...query,totalPublic:total,stock:{total,legacy:0,admin:0,public:total,unclassified:0},series:[{period:query.start,count:total}],distributions:Object.fromEntries(dimensions.map(d=>[d,total?[{kind:"other",value:null,count:total}]:[]]))});
+ it("aceita apenas populações retidas, inclusive quando vazias", () => {
+  expect(parseWithheldSignupMetrics(report(7),query)).toEqual(report(7));
+  expect(parseWithheldSignupMetrics(report(0),query)).toEqual(report(0));
+ });
+ it("recusa valores livres ou grupos de ausência em qualquer dimensão", () => {
+  for(const dimension of dimensions) for(const rows of [[{kind:"value",value:"private@example.invalid",count:7}],[{kind:"not-informed",value:null,count:7}],[{kind:"other",value:null,count:2},{kind:"other",value:null,count:5}]]) {
+   const result=report(7); Object.assign(result.distributions,{[dimension]:rows});
+   expect(parseWithheldSignupMetrics(result,query)).toBeNull();
+  }
  });
 });

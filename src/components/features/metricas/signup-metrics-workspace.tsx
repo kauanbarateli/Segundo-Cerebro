@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
-import { parseMetricQuery, parseSignupMetrics, type MetricQuery, type SignupMetrics } from '@/core/acquisition/signup-metrics';
+import { parseMetricQuery, parseWithheldSignupMetrics, type MetricQuery, type SignupMetrics } from '@/core/acquisition/signup-metrics';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import './signup-metrics-workspace.css';
@@ -29,7 +29,7 @@ export function SignupMetricsWorkspace({userId}:{userId:string}) {
    if([401,403,409].includes(response.status)){if(id===generation.current)closeIdentity();return;}
    const body:unknown=await response.json();
    const envelope=body && typeof body==='object' && !Array.isArray(body) ? body as Record<string,unknown> : null;
-   const result=envelope && Object.keys(envelope).sort().join(',')==='ok,originDistribution,result' && envelope.ok===true && envelope.originDistribution==='withheld' ? parseSignupMetrics(envelope.result,query):null;
+   const result=envelope && Object.keys(envelope).sort().join(',')==='ok,originDistribution,result' && envelope.ok===true && envelope.originDistribution==='withheld' ? parseWithheldSignupMetrics(envelope.result,query):null;
    if(!response.ok || !result) throw new Error('unavailable');
    if(id===generation.current) {if(verifying){closed.current=false;setIdentityClosed(false);}setData(result);}
   } catch { if(id===generation.current) setError('Não foi possível carregar as métricas. Tente novamente.'); }
