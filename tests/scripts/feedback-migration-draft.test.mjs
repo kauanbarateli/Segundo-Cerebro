@@ -13,7 +13,7 @@ test("feedback local: isolamento, replay, eventos e permissões", { timeout: 600
       assert.equal(createHash("sha256").update(source).digest("hex"), migration.sha256);
       await db.exec(source.toString("utf8"));
     }
-    await db.exec(await readFile(new URL("../../supabase/migrations/20261101013633_feedback_requests.sql", import.meta.url), "utf8"));
+    await db.exec(await readFile(new URL("../../supabase/operations/candidates/20261101013633_feedback_requests.sql", import.meta.url), "utf8"));
     await db.exec(`
       insert into auth.users(id,email) values ('10000000-0000-4000-8000-000000000001','a@example.invalid'),('10000000-0000-4000-8000-000000000002','b@example.invalid');
       insert into auth.sessions(id,user_id) values ('20000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000001'),('20000000-0000-4000-8000-000000000002','10000000-0000-4000-8000-000000000002');
