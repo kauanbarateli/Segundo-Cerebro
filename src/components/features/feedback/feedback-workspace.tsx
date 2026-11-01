@@ -43,12 +43,13 @@ export function FeedbackWorkspace({ userId, supportEmail, ownerBinding }: { user
   const [next, setNext] = useState<Cursor | null>(null);
   const [markerState,setMarkerState]=useState<'checking'|'none'|'pending'|'terminal'|'ready'|'blocked'|'different-owner'>('checking');
   const requestGeneration = useRef(0);
+  const retryCursor = useRef<Cursor | undefined>(undefined);
   const operationGeneration = useRef(0);
   const intent = useRef<Pending | null>(null);
   const terminalReceipt = useRef<BarrierResult | null>(null);
   const closed = useRef(false), submitting = useRef(false), mounted = useRef(true);
   const closeIdentity = useCallback(() => {
-    closed.current = true; terminalReceipt.current=null; requestGeneration.current++;operationGeneration.current++;
+    closed.current = true; terminalReceipt.current=null; retryCursor.current=undefined; requestGeneration.current++;operationGeneration.current++;
     submitting.current=false;if(intent.current){intent.current.uncertain=true;setUncertain(true);}
     setSending(false);setIdentityClosed(true); setItems([]); setNext(null); setLoading(false); setLoadError(false); setNotice(""); setError("");
   }, []);
@@ -67,10 +68,11 @@ export function FeedbackWorkspace({ userId, supportEmail, ownerBinding }: { user
       const page = response.ok ? feedbackPage(result) : null;
       if (!page) throw new Error("load");
       if (generation !== requestGeneration.current) return;
+      retryCursor.current=undefined;
       if (verifying) { closed.current = false; setIdentityClosed(false); }
       if(ownerBinding) { try { const marker=inspectMarker(sessionStorage,ownerBinding);setMarkerState(marker.status==='pending'&&marker.clientId===terminalReceipt.current?.clientId?'terminal':marker.status); } catch { setMarkerState('blocked'); } }
       setItems((current) => cursor ? [...current, ...page.items] : page.items); setNext(page.next);
-    } catch { if (generation === requestGeneration.current) setLoadError(true); }
+    } catch { if (generation === requestGeneration.current) { retryCursor.current=cursor; setLoadError(true); } }
     finally { if (generation === requestGeneration.current) setLoading(false); }
   }, [closeIdentity, ownerBinding, userId]);
   useEffect(() => { mounted.current = true; const generation = requestGeneration; void load(); return () => { mounted.current = false; generation.current++; }; }, [load]);
@@ -192,7 +194,7 @@ export function FeedbackWorkspace({ userId, supportEmail, ownerBinding }: { user
       <section className="feedback-panel" aria-labelledby="feedback-history"><h2 id="feedback-history">Suas mensagens</h2>
         <p className="feedback-hint">Precisa de ajuda? <a href={`mailto:${supportEmail}`}>Falar com o suporte</a></p>
         {items.length > 0 && <ul className="feedback-list">{items.map((item) => <li key={item.id}><strong>{categories.find(([key]) => key === item.category)?.[1] ?? "Mensagem"}</strong><span>Recebida</span><p>{item.text}</p><time dateTime={item.createdAt}>{new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium" }).format(new Date(item.createdAt))}</time></li>)}</ul>}
-        {loading ? <p>Carregando mensagens…</p> : loadError ? <><p role="alert">Não foi possível carregar suas mensagens.</p><button type="button" onClick={() => void load()}>Tentar novamente</button></> : items.length === 0 ? <p>Nenhuma mensagem enviada ainda.</p> : next && <button type="button" onClick={() => void load(next)}>Carregar mais</button>}
+        {loading ? <p>Carregando mensagens…</p> : loadError ? <><p role="alert">Não foi possível carregar suas mensagens.</p><button type="button" onClick={() => void load(retryCursor.current)}>Tentar novamente</button></> : items.length === 0 ? <p>Nenhuma mensagem enviada ainda.</p> : next && <button type="button" onClick={() => void load(next)}>Carregar mais</button>}
       </section>
     </div>
   </>;

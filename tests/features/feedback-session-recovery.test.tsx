@@ -131,3 +131,22 @@ it.each([401,403])('resposta %i sem corpo na reconciliação fecha identidade e 
  app.render();await settle();let tree=app.render();change(tree,'Mensagem privada aguardando estado');tree=app.render();await submit(tree);tree=app.render();click(tree,'Verificar novamente');await settle();tree=app.render();
  expect(rendered(tree)).toContain('Confirme sua conta');expect(rendered(tree)).not.toContain('Mensagem privada aguardando estado');expect(app.raw()).toContain(client);app.unmount();
 });
+
+
+it('ao falhar próxima página, mantém histórico e repete o mesmo cursor',async()=>{
+ const first={id:feedback,category:'suggestion',text:'PRIMEIRA_MENSAGEM',status:'received',createdAt:'2026-10-31T12:00:00Z'};
+ const second={...first,id:'a0000000-0000-4000-8000-000000000001',text:'SEGUNDA_MENSAGEM',createdAt:'2026-10-30T12:00:00Z'};
+ const urls:string[]=[];
+ const app=fixture(async url=>{urls.push(String(url));if(urls.length===1)return json(200,{ok:true,result:{items:[first],next:{before:first.createdAt,id:first.id}}});if(urls.length===2)return json(503,{ok:false});return json(200,{ok:true,result:{items:[second],next:null}});});
+ app.render();await settle();let tree=app.render();click(tree,'Carregar mais');await settle();tree=app.render();
+ expect(rendered(tree)).toContain('PRIMEIRA_MENSAGEM');expect(rendered(tree)).toContain('Não foi possível carregar suas mensagens.');
+ click(tree,'Tentar novamente');await settle();tree=app.render();expect(urls[1]).toBe(urls[2]);expect(urls[1]).toContain('before=');
+ expect(rendered(tree)).toContain('PRIMEIRA_MENSAGEM');expect(rendered(tree)).toContain('SEGUNDA_MENSAGEM');app.unmount();
+});
+it('falha antiga de paginação não reabre nem altera a verificação da identidade',async()=>{
+ const first={id:feedback,category:'suggestion',text:'HISTORICO_SENSIVEL_A',status:'received',createdAt:'2026-10-31T12:00:00Z'};
+ let reads=0,rejectOld!:(e:Error)=>void;const delayed=new Promise<Response>((_resolve,reject)=>{rejectOld=reject;});
+ const app=fixture(async()=>{reads++;if(reads===1)return json(200,{ok:true,result:{items:[first],next:{before:first.createdAt,id:first.id}}});if(reads===2)return delayed;return json(409,{code:'SESSION_CHANGED'});});
+ app.render();await settle();let tree=app.render();click(tree,'Carregar mais');window.dispatchEvent(new Event('focus'));await settle();tree=app.render();expect(rendered(tree)).toContain('Confirme sua conta');
+ rejectOld(Error('late'));await settle();tree=app.render();expect(rendered(tree)).toContain('Confirme sua conta');expect(rendered(tree)).not.toContain('HISTORICO_SENSIVEL_A');expect(rendered(tree)).not.toContain('Não foi possível carregar suas mensagens.');app.unmount();
+});

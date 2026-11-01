@@ -57,6 +57,7 @@
       "codex/front-b-metricas-contrato": false,
       "codex/front-b-atualizacoes-utf8": false,
       "codex/front-b-feedback-reconciliacao-duravel": false,
+      "codex/front-b-feedback-paginacao": false,
       "codex/front-b-historico-fontes": false,
       "codex/front-b-fontes-financeiras": false,
       "codex/front-b-restore-historico": false,
