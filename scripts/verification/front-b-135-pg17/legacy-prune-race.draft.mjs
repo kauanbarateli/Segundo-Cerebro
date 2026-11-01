@@ -4,9 +4,9 @@ const fail=()=>{throw Error('LEGACY_PRUNE_RACE_REFUSED');};
 const exact=(x,k)=>x&&typeof x==='object'&&!Array.isArray(x)&&Object.keys(x).length===k.length&&k.every(n=>Object.hasOwn(x,n));
 const pid=x=>Number.isSafeInteger(x)&&x>1;
 export function legacyPruneRacePlan(ctx,composition){
- if(!exact(ctx,['nonce','systemIdentifier'])||!/^[a-f0-9]{32}$/.test(ctx.nonce)||!/^\d{16,20}$/.test(ctx.systemIdentifier)||typeof composition!=='string'||!composition.startsWith('BEGIN;\n')||!composition.trimEnd().endsWith('COMMIT;'))fail();
+ if(!exact(ctx,['nonce','systemIdentifier'])||!/^[a-f0-9]{32}$/.test(ctx.nonce)||!/^\d{16,20}$/.test(ctx.systemIdentifier)||typeof composition!=='string'||composition.split('BEGIN;\n').length!==2||!composition.trimEnd().endsWith('COMMIT;'))fail();
  const guard=`do $sc_guard$ begin if current_user<>'postgres' or current_database()<>'postgres' or inet_server_addr() is not null or inet_client_addr() is not null or current_setting('server_version_num')::integer<170000 or current_setting('server_version_num')::integer>=180000 or (select system_identifier::text from pg_control_system())<>'${ctx.systemIdentifier}' or (select count(*) from sc_front_b_observation.marker where nonce='${ctx.nonce}' and system_identifier='${ctx.systemIdentifier}')<>1 then raise exception 'OFFLINE_INSTANCE_REFUSED';end if;end $sc_guard$;`;
- const body=composition.slice('BEGIN;\n'.length,composition.lastIndexOf('COMMIT;'));
+ const body=composition.slice(composition.indexOf('BEGIN;\n')+'BEGIN;\n'.length,composition.lastIndexOf('COMMIT;'));
  const prefix=`sc.fb.legacy.${ctx.nonce}`;
  return Object.freeze({
   preflight:`begin read only;${guard} select json_build_object('kind','preflight','empty',not exists(select 1 from app_private.signup_intents) and not exists(select 1 from app_private.signup_completion_fences_draft));rollback;`,
