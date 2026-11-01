@@ -11,6 +11,7 @@ const messages: Record<string, string> = {
   invalid: "Confira o e-mail, a senha e a confirmação dos termos.",
   "invalid-link": "Não foi possível confirmar o link.",
   repeat: "Para continuar com segurança, solicite uma nova confirmação.",
+  review: "Não foi possível continuar mantendo os dados desta tentativa. Procure o suporte antes de iniciar outra.",
   "other-browser": "Abra o link no navegador em que iniciou o cadastro. O link ainda pode ser usado nesse navegador.",
   wait: "Aguarde um pouco antes de tentar novamente.",
   unavailable: "Não foi possível iniciar o cadastro. Tente novamente mais tarde.",

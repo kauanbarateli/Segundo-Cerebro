@@ -18,7 +18,7 @@ function parseIntent(result: unknown): { intentId: string; termsVersion: string;
 }
 
 /** No route invokes this candidate until the confirmation and QA gates pass. */
-export function createSignupConfirmationPorts(config: SupabaseAuthConfig, jar: AuthCookieJar, responseHeaders?: Headers, purpose: "signup" | "continuation" = "signup"): SignupConfirmationPorts {
+export function createSignupConfirmationPorts(config: SupabaseAuthConfig, jar: AuthCookieJar, responseHeaders?: Headers, purpose: "signup" | "continuation" = "signup", strictBound = false): SignupConfirmationPorts {
   let client: ReturnType<typeof createRequestClient> | undefined;
   return {
     now: Date.now,
@@ -48,6 +48,7 @@ export function createSignupConfirmationPorts(config: SupabaseAuthConfig, jar: A
       return parseIntent(result);
     },
     async recoverVerifiedIntent(userId, sessionId, hash, terms, privacy) {
+      if(strictBound) return parseIntent(await signupRpc(config,"signup_browser_recover_bound",{p_user:userId,p_session:sessionId,p_subject:hash,p_terms:terms,p_privacy:privacy}));
       const args = { p_user: userId, p_session: sessionId, p_subject_hash: hash, p_terms: terms, p_privacy: privacy };
       // Only called after a fresh OTP. The candidate returns null when no fence
       // exists, and fails closed for every unacknowledged or unrevoked attempt.

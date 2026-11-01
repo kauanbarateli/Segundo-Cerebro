@@ -12,6 +12,7 @@ vi.mock("@supabase/supabase-js", () => ({ createClient: doubles.provider }));
 vi.mock("@/lib/auth/signup-http", async () => import("../fixtures/signup-http-enabled"));
 import { createSignupRequestPorts } from "../../src/lib/auth/signup-runtime";
 import { requestPublicSignup } from "../../src/lib/auth/signup-service";
+import { signupSameBrowserEnabled, signupRpc as simulatedSignupRpc } from "../fixtures/signup-http-enabled";
 
 const config: SupabaseAuthConfig = { mode: "supabase", appOrigin: "https://app.example.invalid", supabaseUrl: "https://db.example.invalid", publishableKey: "sb_publishable_test", secretKey: "sb_secret_private", rateLimitSecret: "r".repeat(32), stateSecret: "s".repeat(32), secureCookies: true };
 const input = { email: "a@example.invalid", password: "senha longa de teste", acceptedLegal: true, termsVersion: "v1", privacyVersion: "v2" };
@@ -38,6 +39,10 @@ describe("adaptador servidor para solicitação de cadastro", () => {
     vi.stubEnv("PUBLIC_SIGNUP_ENABLED", "true"); doubles.trusted.mockReturnValue(false);
     expect(await requestPublicSignup(createSignupRequestPorts(config), input, legal)).toEqual({ status: "unavailable" });
     expect(doubles.signup).not.toHaveBeenCalled();
+  });
+  it("mantém a guarda de duplicatas fechada mesmo se o gate transacional for simulado como aberto",async()=>{
+    expect(signupSameBrowserEnabled(config)).toBe(false);
+    await expect(simulatedSignupRpc(config,"signup_browser_find",{p_browser:"a".repeat(64)})).rejects.toThrow("Signup unavailable.");expect(fetch).not.toHaveBeenCalled();
   });
   it("cria intenção sem credenciais e usa somente o destino fixo de confirmação", async () => {
     expect(await requestPublicSignup(createSignupRequestPorts(config), input, legal)).toEqual({ status: "accepted" });

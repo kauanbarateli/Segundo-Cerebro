@@ -5,7 +5,7 @@ import type { AuthCookieJar } from "./clients";
 import { readAuthConfiguration } from "./config";
 import { AUTH_COOKIE_NAME, noStoreHeaders, secureCookieOptions } from "./cookie-policy";
 import { sameOrigin } from "./policy";
-import { SIGNUP_OTP_COOKIE, SIGNUP_CONTINUATION_COOKIE, SIGNUP_BROWSER_COOKIE, signupRedirect } from "./signup-channel";
+import { SIGNUP_OTP_COOKIE, SIGNUP_CONTINUATION_COOKIE, signupRedirect } from "./signup-channel";
 import { readSignupBrowserCookie } from "./signup-browser-secret";
 import { createSameBrowserConfirmationPorts, hasAuthCookieHeader } from "./signup-same-browser-runtime";
 import { confirmSameBrowserSignup } from "./signup-same-browser-service";
@@ -55,9 +55,9 @@ export async function submitSignupEmailLink(request: NextRequest, purpose: Purpo
     const browser=readSignupBrowserCookie(request.headers.get("cookie"));
     const legal={terms:LEGAL_DOCUMENTS.termos.version,privacy:LEGAL_DOCUMENTS.privacidade.version,originVersion:SIGNUP_ORIGIN_CONSENT_VERSION};
     const passwordFallback=async()=>{
-      const fallback=await verifySignupConfirmation(createSignupConfirmationPorts(config,jar,headers,purpose),proof.token,legal);
+      const fallback=await verifySignupConfirmation(createSignupConfirmationPorts(config,jar,headers,purpose,true),proof.token,legal);
       store.set(cookieName(purpose), "", secureCookieOptions(config.secureCookies, { maxAge: 0 }));
-      const response=signupRedirect(config,fallback.status==="ready"?"/cadastro/definir-senha":"/cadastro?status=repeat");
+      const response=signupRedirect(config,fallback.status==="ready"?"/cadastro/definir-senha":"/cadastro?status=review");
       for(const [name,value] of headers) response.headers.set(name,value);
       return response;
     };
@@ -71,9 +71,8 @@ export async function submitSignupEmailLink(request: NextRequest, purpose: Purpo
     if(result.status==="other-browser") return passwordFallback();
     store.set(cookieName(purpose), "", secureCookieOptions(config.secureCookies, { maxAge: 0 }));
     const response = signupRedirect(config, result.status === "completed" ? "/onboarding" : result.status === "password-required" ? "/cadastro/definir-senha" : "/cadastro?status=repeat");
-    // Do not clear on failure: the original browser must be able to request a
-    // fresh OTP if the preceding Auth or admission response was lost.
-    if(result.status==="completed") response.cookies.set(SIGNUP_BROWSER_COOKIE,"",secureCookieOptions(config.secureCookies,{maxAge:0}));
+    // Never overwrite the browser cookie here: another tab may have started a
+    // newer attempt after this request captured its cookie. Its TTL is bounded.
     for (const [name, value] of headers) response.headers.set(name, value);
     return response;
   } catch { return new NextResponse(null, { status: 503, headers: noStoreHeaders() }); }

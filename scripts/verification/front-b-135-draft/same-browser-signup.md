@@ -1,8 +1,9 @@
-# Same-browser signup candidate — closed and unintegrated
+# Same-browser signup candidate — integrated draft, closed
 
 This candidate reduces the normal signup path to one initial password submission
-to Auth and a subsequent email confirmation. It never repeats or updates the
-password after OTP. A separate server-issued random browser secret must already
+to Auth and a subsequent email confirmation. The matching-browser path does not
+update the password after OTP; the other-device/older-attempt fallback uses the
+existing fenced password update. A separate server-issued random browser secret must already
 be present in an HttpOnly, Secure, SameSite cookie before the signup POST; its
 domain-separated HMAC is bound to the intent in the same transaction that
 creates the intent. It is different from the pointer sent to Auth. Only the
@@ -10,39 +11,45 @@ real Auth INSERT can bind that intent to a new identity. Neither a duplicate
 signup nor an Auth response or timeout is proof of creation.
 
 Issue a fresh secret for each *new* attempt in a prior response, before the
-password POST. Do not regenerate it while the person follows the email link or
-retries the same attempt. Expiry, confirmed success or an explicitly requested
-new attempt ends its usable life; deleting/rotating it earlier breaks recovery.
+password POST. A new submission rotates the cookie; following an email link or
+requesting a continuation does not. If an earlier link is opened after
+rotation, it uses the existing password-after-OTP fence: when the current
+cookie resolves to a different Auth identity, the verified OTP identity is
+reused for that fallback without verifying the token a second time. It never
+directly admits an identity merely because it shares the current browser.
 The unique hash refuses reuse. The draft includes an unscheduled, bounded
 `signup_browser_prune` for expired rows; it requires a separately reviewed
 retention/monitoring process and coordination with intent and origin cleanup.
-**Open usability blocker:** the single cookie is preserved for recovery and a
-second attempt cannot reuse its unique hash while the first row is live. This
-includes a neutral duplicate-email result or an ambiguous preparation. There
-is no implemented rotation that preserves access to every pending attempt, and
-cookie expiry can precede intent expiry. The existing password-after-OTP
-fallback is used when a confirmation has no matching live browser attempt, but
-it does not make a new signup attempt immediately available. Do not rotate or
-delete a possibly live attempt automatically; implement and qualify a bounded
-multi-attempt or other safe reconciliation design before opening signup.
+The preparation response also carries a domain-separated HMAC tag tied to the
+HttpOnly secret. The signup POST checks the tag against its current cookie
+before creating any intent or calling Auth. When two tabs race and the cookie
+changes between those requests, the stale tab is refused; the tag is not the
+secret and must not be logged or placed in a URL.
 
-**Cross-browser uncertainty blocker:** the current uniqueness constraint is on
-the browser hash, not on the email-subject hash. Two browsers can prepare
-different intents for the same email and issue two signup requests even while
-the first provider outcome is unknown. A multi-cookie rotation alone does not
-fix that race. An indefinitely retained per-subject fence could prevent a
-second call, but could also be used to deny signup for somebody else's email;
-expiring it does not prove an in-flight Auth request cannot finish later. An
-acceptable release design must establish an authoritative provider outcome or a
-reviewed idempotency/serialization contract, define abuse and retention
-handling, and test races across sessions. The available Supabase docs do not
-establish an idempotency key for this signup call. Rate limits and timeouts are
-not proof of cancellation. The release gate remains closed.
+**Provider qualification blocker:** issue #135 requires duplicate signup calls
+not to change an existing password, permissions, profile or consent; it does
+not prohibit a second signup request. The source for GoTrue 2.197.0 used by the
+local CLI leaves an existing unconfirmed user unchanged, but may resend email;
+its partial unique email index excludes SSO identities. That local source is
+not evidence of the hosted QA version, deployed constraints, configuration,
+hooks or behavior. Direct/parallel duplicate, confirmation rotation, legacy and
+SSO cases need provider-level qualification. `SIGNUP_DUPLICATE_CONTRACT_QUALIFIED`
+is a second, code-controlled **false** guard and cannot be enabled by environment
+variables. It is not an automatic hosted-version drift detector. Before any
+change to it, explicitly verify and monitor hosted Auth version/configuration;
+if these diverge or cannot be established, leave signup closed. The existing
+fence must still never repeat an uncertain post-OTP password change.
 
 The confirmation channel checks that the original browser cookie matches a
 live bound intent **before** verifying the token. Another device without that
 cookie uses the existing fenced workflow: verify OTP and require a fresh
 password chosen by the email holder. Its uncertain Auth outcomes remain blocked.
+This fallback now uses `signup_browser_recover_bound`: it accepts only a live
+already-bound intent with unchanged legal versions and no completion fence. It
+never creates an intent, rewrites accepted versions or drops the pending UTM.
+Expired or missing intents, changed legal versions and existing fences fail
+closed and require a separate recovery/support workflow; this narrower behavior
+does not by itself complete #135's interrupted-signup recovery requirement.
 Immediately after OTP verification, getUser/getClaims
 must establish identity and session; only the trusted server can invoke the
 admission function. It checks the subject, intent, browser hash, current legal
@@ -68,9 +75,10 @@ Define and test a fresh, purpose-bound recovery OTP with the same live browser
 secret, verified identity and an idempotent admission read; account for pending
 versus already admitted status and an independently lost response. If that
 cannot be proven, present a safe recovery path instead of reporting success.
-Loss/expiry of the original cookie, an expired or missing intent, an existing
-account, and moving devices require a separately designed recovery process; do
-not adopt an old password or silently create a replacement intent.
+Loss/expiry of the original cookie or moving devices uses the fenced password
+fallback; an expired/missing intent, existing account or uncertain password
+update can still require recovery or support. Never adopt an old password or
+silently create a replacement intent merely because email addresses match.
 
 `signup-resend-runtime.ts` requests a fixed continuation link through
 `resetPasswordForEmail`. The candidate verifies a *new* recovery OTP on the
@@ -81,8 +89,11 @@ Test the hosted Auth behavior, recovery token
 expiry, overlapping calls, already admitted account, changed legal versions,
 cookie expiry and new lost response; no recovery is claimed before that work.
 
-The branch provisions the cookie before the signup POST and expires it only
-after confirmed admission; an ambiguous result preserves it for recovery.
+The branch provisions the cookie before the signup POST and leaves it to expire
+after at most 30 minutes; confirmation never clears it, because a response for
+one tab could otherwise erase the secret of a newer attempt in another tab. A
+new attempt rotates it. The value is random and HttpOnly; its server-side HMAC
+is retained only under the separately reviewed attempt-retention policy.
 Disabled JavaScript prevents new signup and is explained on the form; email
 confirmation and the cross-device password path remain server-rendered. The
 legal publishing protocol, operator retention, generated types, reviewed SQL,

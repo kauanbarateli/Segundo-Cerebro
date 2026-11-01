@@ -62,6 +62,23 @@ CREATE FUNCTION app_private.signup_browser_find(p_browser text) RETURNS jsonb LA
   AND i.state IN ('bound','consumed') AND i.user_id IS NOT NULL
 $$;
 
+-- After a fresh OTP, fallback may only use the already bound, live intent.
+-- It must not replace legal versions, discard UTM, or create another intent.
+CREATE FUNCTION app_private.signup_browser_recover_bound(p_user uuid,p_session uuid,p_subject text,p_terms text,p_privacy text) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE i app_private.signup_intents; v_intent uuid;
+BEGIN
+ SELECT id INTO v_intent FROM app_private.signup_intents WHERE user_id=p_user AND subject_hash=p_subject AND state='bound';
+ IF NOT FOUND THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ PERFORM app_private.draft_completion_context(p_user,p_session,v_intent,p_subject,true,true);
+ PERFORM 1 FROM app_private.signup_browser_legal_versions WHERE singleton AND terms_version=p_terms AND privacy_version=p_privacy FOR SHARE;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ SELECT * INTO i FROM app_private.signup_intents WHERE id=v_intent FOR UPDATE;
+ IF NOT FOUND OR i.expires_at IS NULL OR i.expires_at<=pg_catalog.clock_timestamp() OR i.terms_version IS DISTINCT FROM p_terms OR i.privacy_version IS DISTINCT FROM p_privacy
+  OR EXISTS(SELECT 1 FROM app_private.signup_completion_fences_draft WHERE user_id=p_user)
+  THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ RETURN pg_catalog.jsonb_build_object('intentId',i.id,'termsVersion',i.terms_version,'privacyVersion',i.privacy_version,'state',i.state,'originPending',i.origin IS NOT NULL);
+END $$;
+
 -- Server only: p_user/p_session MUST come from getUser/getClaims immediately
 -- after verifying the OTP, and p_browser from the original HttpOnly cookie.
 CREATE FUNCTION app_private.signup_browser_admit(p_user uuid,p_session uuid,p_intent uuid,p_subject text,p_browser text,p_terms text,p_privacy text,p_accept_origin boolean,p_origin_version text)
@@ -114,12 +131,13 @@ BEGIN
  RETURN true;
 END $$;
 
-REVOKE ALL ON FUNCTION app_private.signup_browser_prepare(text,text,text,text,text,timestamptz,jsonb,text),app_private.signup_browser_find(text),app_private.signup_browser_admit(uuid,uuid,uuid,text,text,text,text,boolean,text),app_private.signup_browser_prune(integer) FROM PUBLIC,anon,authenticated,service_role;
-GRANT EXECUTE ON FUNCTION app_private.signup_browser_prepare(text,text,text,text,text,timestamptz,jsonb,text),app_private.signup_browser_find(text),app_private.signup_browser_admit(uuid,uuid,uuid,text,text,text,text,boolean,text),app_private.signup_browser_prune(integer) TO service_role;
+REVOKE ALL ON FUNCTION app_private.signup_browser_prepare(text,text,text,text,text,timestamptz,jsonb,text),app_private.signup_browser_find(text),app_private.signup_browser_recover_bound(uuid,uuid,text,text,text),app_private.signup_browser_admit(uuid,uuid,uuid,text,text,text,text,boolean,text),app_private.signup_browser_prune(integer) FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION app_private.signup_browser_prepare(text,text,text,text,text,timestamptz,jsonb,text),app_private.signup_browser_find(text),app_private.signup_browser_recover_bound(uuid,uuid,text,text,text),app_private.signup_browser_admit(uuid,uuid,uuid,text,text,text,text,boolean,text),app_private.signup_browser_prune(integer) TO service_role;
 CREATE FUNCTION public.signup_browser_prepare(p_binding text,p_browser text,p_subject text,p_terms text,p_privacy text,p_expires timestamptz,p_origin jsonb,p_origin_version text) RETURNS uuid LANGUAGE sql SECURITY INVOKER SET search_path='' AS $$ SELECT app_private.signup_browser_prepare(p_binding,p_browser,p_subject,p_terms,p_privacy,p_expires,p_origin,p_origin_version) $$;
 CREATE FUNCTION public.signup_browser_find(p_browser text) RETURNS jsonb LANGUAGE sql SECURITY INVOKER SET search_path='' AS $$ SELECT app_private.signup_browser_find(p_browser) $$;
+CREATE FUNCTION public.signup_browser_recover_bound(p_user uuid,p_session uuid,p_subject text,p_terms text,p_privacy text) RETURNS jsonb LANGUAGE sql SECURITY INVOKER SET search_path='' AS $$ SELECT app_private.signup_browser_recover_bound(p_user,p_session,p_subject,p_terms,p_privacy) $$;
 CREATE FUNCTION public.signup_browser_admit(p_user uuid,p_session uuid,p_intent uuid,p_subject text,p_browser text,p_terms text,p_privacy text,p_accept_origin boolean,p_origin_version text) RETURNS boolean LANGUAGE sql SECURITY INVOKER SET search_path='' AS $$ SELECT app_private.signup_browser_admit(p_user,p_session,p_intent,p_subject,p_browser,p_terms,p_privacy,p_accept_origin,p_origin_version) $$;
 CREATE FUNCTION public.signup_browser_prune(p_limit integer) RETURNS integer LANGUAGE sql SECURITY INVOKER SET search_path='' AS $$ SELECT app_private.signup_browser_prune(p_limit) $$;
-REVOKE ALL ON FUNCTION public.signup_browser_prepare(text,text,text,text,text,timestamptz,jsonb,text),public.signup_browser_find(text),public.signup_browser_admit(uuid,uuid,uuid,text,text,text,text,boolean,text),public.signup_browser_prune(integer) FROM PUBLIC,anon,authenticated,service_role;
-GRANT EXECUTE ON FUNCTION public.signup_browser_prepare(text,text,text,text,text,timestamptz,jsonb,text),public.signup_browser_find(text),public.signup_browser_admit(uuid,uuid,uuid,text,text,text,text,boolean,text),public.signup_browser_prune(integer) TO service_role;
+REVOKE ALL ON FUNCTION public.signup_browser_prepare(text,text,text,text,text,timestamptz,jsonb,text),public.signup_browser_find(text),public.signup_browser_recover_bound(uuid,uuid,text,text,text),public.signup_browser_admit(uuid,uuid,uuid,text,text,text,text,boolean,text),public.signup_browser_prune(integer) FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION public.signup_browser_prepare(text,text,text,text,text,timestamptz,jsonb,text),public.signup_browser_find(text),public.signup_browser_recover_bound(uuid,uuid,text,text,text),public.signup_browser_admit(uuid,uuid,uuid,text,text,text,text,boolean,text),public.signup_browser_prune(integer) TO service_role;
 COMMIT;

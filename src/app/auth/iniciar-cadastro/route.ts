@@ -3,7 +3,7 @@ import { readAuthConfiguration } from "@/lib/auth/config";
 import { noStoreHeaders } from "@/lib/auth/cookie-policy";
 import { sameOrigin } from "@/lib/auth/policy";
 import { signupRedirect } from "@/lib/auth/signup-channel";
-import { readSignupBrowserCookie } from "@/lib/auth/signup-browser-secret";
+import { readSignupBrowserCookie, matchesSignupBrowserPostTag } from "@/lib/auth/signup-browser-secret";
 import { readSignupForm } from "@/lib/auth/signup-form-body";
 import { signupSameBrowserEnabled } from "@/lib/auth/signup-http";
 import { createSameBrowserStartPorts } from "@/lib/auth/signup-same-browser-runtime";
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     const form = await readSignupForm(request, fields);
     if (!form) return resultResponse(request, config, "invalid");
     const all=request.cookies.getAll(), browser=readSignupBrowserCookie(request.headers.get("cookie"));
-    if(browser.status!=="ready") return resultResponse(request,config,"unavailable");
+    if(browser.status!=="ready" || !matchesSignupBrowserPostTag(browser.value,config.stateSecret,request.headers.get("x-signup-attempt"))) return resultResponse(request,config,"unavailable");
     const result = await startSameBrowserSignup(createSameBrowserStartPorts(config,all,request.headers.get("cookie")), { email: form.email, password: form.password, acceptedLegal: form.acceptedLegal === "yes", termsVersion: form.termsVersion, privacyVersion: form.privacyVersion }, browser.value, { terms: LEGAL_DOCUMENTS.termos.version, privacy: LEGAL_DOCUMENTS.privacidade.version }, { consented: form.consentedOrigin === "yes", candidate: form });
     const status = result.status === "accepted" ? "sent" : result.status === "rate-limited" ? "wait" : result.status;
     return resultResponse(request, config, status);

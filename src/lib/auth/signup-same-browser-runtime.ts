@@ -26,7 +26,7 @@ export function createSameBrowserStartPorts(config:SupabaseAuthConfig, cookies:{
 }
 
 export function createSameBrowserConfirmationPorts(config:SupabaseAuthConfig,jar:AuthCookieJar,headers:Headers,purpose:"signup"|"continuation"):SameBrowserSignupPorts {
- const base=createSignupConfirmationPorts(config,jar,headers,purpose);
+ const base=createSignupConfirmationPorts(config,jar,headers,purpose,true);
  return {
   canBegin:base.canBegin,browserHash:secret=>signupBrowserSecretHash(secret,config.stateSecret),limitToken:base.limitToken,
   verifyEmailProof:base.verifyEmailProof,subjectHash:base.subjectHash,clearProvisionalSession:base.clearProvisionalSession,

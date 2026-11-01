@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { createSignupEmailLink, readSignupEmailLink } from "../../src/lib/auth/signup-email-link";
+import { signupBrowserPostTag } from "../../src/lib/auth/signup-browser-secret";
 
 const fake = vi.hoisted(() => ({ enabled: vi.fn(), request: vi.fn(), verify: vi.fn(), legacy:vi.fn(), complete: vi.fn(), cookieSet: vi.fn(), cookieGetAll: vi.fn(), signOut: vi.fn() }));
 const config = { mode: "supabase" as const, appOrigin: "https://app.example.invalid", supabaseUrl: "https://db.example.invalid", publishableKey: "sb_publishable_test", secretKey: "sb_secret_test", rateLimitSecret: "r".repeat(32), stateSecret: "s".repeat(32), secureCookies: true };
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/auth/config", () => ({ readAuthConfiguration: () => config }));
-vi.mock("@/lib/auth/signup-http", () => ({ signupEnabled: fake.enabled }));
+vi.mock("@/lib/auth/signup-http", () => ({ signupEnabled: fake.enabled,signupSameBrowserEnabled:fake.enabled }));
 vi.mock("@/lib/auth/signup-same-browser-runtime", () => ({ createSameBrowserStartPorts: () => ({}),createSameBrowserConfirmationPorts:()=>({}),hasAuthCookieHeader:(header:string|null)=>/(?:^|;\s*)sc-auth(?:[.\-][^=;]*)?=[^;]+/.test(header??"") }));
 vi.mock("@/lib/auth/signup-same-browser-start", () => ({ startSameBrowserSignup: fake.request }));
 vi.mock("@/lib/auth/signup-same-browser-service", () => ({ confirmSameBrowserSignup: fake.verify }));
@@ -24,7 +25,7 @@ import { POST as complete } from "../../src/app/auth/finalizar-cadastro/route";
 
 const hash = "a".repeat(64);
 let proof: ReturnType<typeof createSignupEmailLink>;
-const post = (url: string, body = "", origin = config.appOrigin, browser=true) => new NextRequest(url, { method: "POST", headers: { origin, "content-type": "application/x-www-form-urlencoded", ...(browser?{cookie:`sc-signup-browser=${"x".repeat(43)}`}:{}) }, body });
+const post = (url: string, body = "", origin = config.appOrigin, browser=true) => new NextRequest(url, { method: "POST", headers: { origin, "content-type": "application/x-www-form-urlencoded", ...(browser?{cookie:`sc-signup-browser=${"x".repeat(43)}`,"x-signup-attempt":signupBrowserPostTag("x".repeat(43),config.stateSecret)}:{}) }, body });
 describe("canais de cadastro ainda fechados por configuração", () => {
   beforeEach(() => {
     vi.clearAllMocks(); fake.enabled.mockReturnValue(true); fake.request.mockResolvedValue({ status: "accepted" });

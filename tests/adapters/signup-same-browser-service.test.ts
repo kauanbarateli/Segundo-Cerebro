@@ -9,7 +9,7 @@ const secret="a".repeat(43), token="b".repeat(48), hash="c".repeat(64);
 const current={terms:"terms-v1",privacy:"privacy-v1",originVersion:"utm-v1"};
 const input={browserSecret:secret,token,terms:current.terms,privacy:current.privacy};
 function setup() {
- const ports={canBegin:vi.fn(()=>true),browserHash:vi.fn(()=>hash),findAttempt:vi.fn(async()=>({intentId,originPending:true})),limitToken:vi.fn(async()=>({allowed:true})),verifyEmailProof:vi.fn(async()=>({userId,sessionId,email:"person@example.invalid"})),subjectHash:vi.fn(()=>hash),admit:vi.fn(async()=>true),clearProvisionalSession:vi.fn(async()=>{})};
+ const ports={canBegin:vi.fn(()=>true),browserHash:vi.fn(()=>hash),findAttempt:vi.fn(async()=>({intentId,userId,originPending:true})),limitToken:vi.fn(async()=>({allowed:true})),verifyEmailProof:vi.fn(async()=>({userId,sessionId,email:"person@example.invalid"})),subjectHash:vi.fn(()=>hash),continueVerified:vi.fn(async()=>true),admit:vi.fn(async()=>true),clearProvisionalSession:vi.fn(async()=>{})};
  return ports satisfies SameBrowserSignupPorts;
 }
 describe("same-browser signup candidate",()=>{
@@ -33,6 +33,17 @@ describe("same-browser signup candidate",()=>{
   const ports=setup();ports.canBegin.mockReturnValue(false);
   expect(await confirmSameBrowserSignup(ports,input,current)).toEqual({status:"unavailable"});
   expect(ports.verifyEmailProof).not.toHaveBeenCalled();expect(ports.clearProvisionalSession).not.toHaveBeenCalled();
+ });
+ it("recupera uma tentativa anterior com OTP já verificado e não admite o usuário do cookie atual",async()=>{
+  const ports=setup(),oldUser="10000000-0000-4000-8000-000000000002";
+  ports.verifyEmailProof.mockResolvedValueOnce({userId:oldUser,sessionId,email:"old@example.invalid"});
+  expect(await confirmSameBrowserSignup(ports,input,current)).toEqual({status:"password-required"});
+  expect(ports.verifyEmailProof).toHaveBeenCalledOnce();expect(ports.continueVerified).toHaveBeenCalledWith({userId:oldUser,sessionId,email:"old@example.invalid"},{terms:current.terms,privacy:current.privacy});
+  expect(ports.admit).not.toHaveBeenCalled();expect(ports.clearProvisionalSession).not.toHaveBeenCalled();
+ });
+ it("fecha a sessão provisória se a retomada da tentativa anterior falha",async()=>{
+  const ports=setup();ports.verifyEmailProof.mockResolvedValueOnce({userId:"10000000-0000-4000-8000-000000000002",sessionId,email:"old@example.invalid"});ports.continueVerified.mockResolvedValueOnce(false);
+  expect(await confirmSameBrowserSignup(ports,input,current)).toEqual({status:"unavailable"});expect(ports.admit).not.toHaveBeenCalled();expect(ports.clearProvisionalSession).toHaveBeenCalledOnce();
  });
  it("fails closed and clears a provisional session when provider or admission fails",async()=>{
   const ports=setup();ports.admit.mockResolvedValueOnce(false);

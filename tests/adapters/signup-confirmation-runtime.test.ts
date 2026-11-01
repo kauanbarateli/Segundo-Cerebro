@@ -49,6 +49,18 @@ describe("adaptador de confirmação de cadastro", () => {
     expect(mocks.signupRpc).toHaveBeenNthCalledWith(2, config, "signup_rebind_verified_ack", expect.objectContaining({ p_user: userId, p_session: sessionId, p_terms: "v1", p_privacy: "v2" }));
     expect(mocks.signupRpc).toHaveBeenNthCalledWith(3, config, "signup_recover_verified_intent", expect.objectContaining({ p_user: userId, p_session: sessionId, p_terms: "v1", p_privacy: "v2" }));
   });
+  it("no fallback estrito consulta somente intenção vinculada sem recriação ou troca de termos",async()=>{
+    const {jar}=cookies();
+    expect(await verifySignupConfirmation(createSignupConfirmationPorts(config,jar,undefined,"continuation",true),token,legal)).toEqual({status:"ready"});
+    expect(mocks.signupRpc.mock.calls.map(call=>call[1])).toEqual(["signup_find_bound_intent","signup_browser_recover_bound"]);
+  });
+  it("no fallback estrito não recria intenção ausente nem emite checkpoint",async()=>{
+    mocks.signupRpc.mockResolvedValueOnce(null).mockRejectedValueOnce(Error("missing or expired"));
+    const {jar,set}=cookies();
+    expect(await verifySignupConfirmation(createSignupConfirmationPorts(config,jar,undefined,"continuation",true),token,legal)).toEqual({status:"unavailable"});
+    expect(mocks.signupRpc.mock.calls.map(call=>call[1])).toEqual(["signup_find_bound_intent","signup_browser_recover_bound"]);
+    expect(set.mock.calls.filter(call=>call[0]===SIGNUP_CHECKPOINT_COOKIE).every(call=>call[1]==="")).toBe(true);
+  });
   it("retoma prova reconhecida somente depois da verificação OTP, sem recuperar outra intenção", async () => {
     const intent = { intentId, termsVersion: "v1", privacyVersion: "v2", state: "bound", originPending: true };
     mocks.signupRpc.mockResolvedValue(intent);

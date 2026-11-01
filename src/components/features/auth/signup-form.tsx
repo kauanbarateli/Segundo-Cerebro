@@ -27,10 +27,12 @@ export function SignupForm({ termsVersion, privacyVersion, initialMessage, initi
     try {
       // Rotate the HttpOnly attempt secret before a new password POST. Older
       // links continue via OTP plus the password-reset fence.
-      const preparation = await fetch("/auth/preparar-cadastro", { method:"GET", cache:"no-store", redirect:"error", referrerPolicy:"no-referrer", signal:AbortSignal.timeout(10_000) });
+      const preparation = await fetch("/auth/preparar-cadastro", { method:"POST", cache:"no-store", redirect:"error", referrerPolicy:"no-referrer", signal:AbortSignal.timeout(10_000) });
       if (!preparation.ok) { setReply("unavailable"); return; }
+      const prepared:unknown=await preparation.json();
+      if(!prepared || typeof prepared!=="object" || Array.isArray(prepared) || Object.keys(prepared).sort().join(",")!=="attempt,ok" || (prepared as {ok?:unknown}).ok!==true || typeof (prepared as {attempt?:unknown}).attempt!=="string" || !/^[a-f0-9]{64}$/.test((prepared as {attempt:string}).attempt)) {setReply("unavailable");return;}
       submitted = true;
-      const response = await fetch("/auth/iniciar-cadastro", { method:"POST", headers:{"Content-Type":"application/x-www-form-urlencoded",Accept:"application/json"}, body, cache:"no-store", redirect:"error", referrerPolicy:"no-referrer", signal:AbortSignal.timeout(30_000) });
+      const response = await fetch("/auth/iniciar-cadastro", { method:"POST", headers:{"Content-Type":"application/x-www-form-urlencoded",Accept:"application/json","X-Signup-Attempt":(prepared as {attempt:string}).attempt}, body, cache:"no-store", redirect:"error", referrerPolicy:"no-referrer", signal:AbortSignal.timeout(30_000) });
       let payload: unknown = null;
       try { payload = await response.json(); } catch { /* malformed response stays uncertain */ }
       const result = classifySignupReply(response.ok, payload);
