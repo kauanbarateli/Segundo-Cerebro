@@ -16,16 +16,13 @@ for (const width of [320, 390, 768, 1280]) {
   });
 }
 
-test("calendário navega mês/lista e abre o mesmo evento do Início", async ({ page }) => {
+test("calendário navega pela lista e abre o mesmo evento do Início", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  // Layout Codex: up to 680px the month reads as an agenda; the detail names day and time.
-  await page.goto("/calendario?view=month&date=2026-09-23");
-  await expect(page.getByLabel("Agenda do dia selecionado", { exact: true })).toBeVisible();
-  await expect(page.locator(".calendar-month")).toBeHidden();
-  const agenda = page.getByLabel("Agenda do dia selecionado", { exact: true });
-  const appointment = agenda.getByRole("button", { name: /^Reunião Central VOE, 15:00 – 16:00/ });
-  await appointment.click();
-  await agenda.getByRole("button", { name: "Ver detalhes", exact: true }).click();
+  await page.goto("/calendario?date=2026-09-23");
+  const list = page.getByRole("region", { name: "Próximos eventos" });
+  await expect(list).toBeVisible();
+  await expect(page.locator(".calendar-month")).toHaveCount(0);
+  await list.getByRole("button", { name: /^Reunião Central VOE,/ }).click();
   const detail = page.getByRole("dialog", { name: "Reunião Central VOE", exact: true });
   await expect(detail).toBeVisible();
   await expect(detail.getByText("quarta-feira, 23 de setembro", { exact: true })).toBeVisible();
@@ -35,78 +32,11 @@ test("calendário navega mês/lista e abre o mesmo evento do Início", async ({ 
   await page.getByRole("button", { name: "Próximo período", exact: true }).click();
   await expect(page).toHaveURL(/date=2026-10-01/);
   await page.reload();
-  await expect(page.getByLabel("Data do calendário")).toHaveValue("2026-10-01");
+  await expect(page.getByRole("region", { name: "Próximos eventos" })).toBeVisible();
   await page.getByRole("button", { name: "Hoje", exact: true }).click();
-  await page.getByRole("button", { name: "Semana", exact: true }).click();
-  await expect(page.getByRole("region", { name: "Agenda do dia selecionado" })).toBeVisible();
+  await expect(page).toHaveURL(/date=2026-09-23/);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
-
-// Layout Codex: the grid exists above 680px (700px keeps an internal horizontal scroll),
-// starts at 07:00 with 80px per hour; only day headers and hours are sticky (spec §6).
-for (const width of [700, 1280]) {
-  test("calendário conserva dias, dia inteiro e horas ao rolar em " + width + "px", async ({ page }) => {
-    await page.setViewportSize({ width, height: 900 });
-    for (const view of ["day", "week"]) {
-      await page.goto("/calendario?view=" + view + "&date=2026-09-23");
-      if (view === "day") {
-        const day = page.getByRole("region", { name: "Agenda do dia", exact: true });
-        await expect(day).toBeVisible();
-        await expect(day.locator(".calendar-appointment-toggle")).toHaveCount(3);
-        const appointment = day.getByRole("button", { name: "Reunião Central VOE, 15:00 – 16:00, Trabalho de exemplo", exact: true });
-        await appointment.focus(); await page.keyboard.press("Enter");
-        await expect(appointment).toHaveAttribute("aria-expanded", "true");
-        const details = day.getByRole("button", { name: "Ver detalhes", exact: true });
-        await details.click(); await expect(page.getByRole("dialog", { name: "Reunião Central VOE", exact: true })).toBeVisible();
-        await page.keyboard.press("Escape"); await expect(details).toBeFocused();
-        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-        continue;
-      }
-      const region = page.getByRole("region", { name: "Grade semanal com rolagem interna" });
-      await expect(region).toBeVisible();
-      await expect.poll(() => region.evaluate((element) => element.scrollTop)).toBe(0);
-      await region.scrollIntoViewIfNeeded();
-      expect(await region.evaluate((element) => {
-        const band = element.querySelector(".calendar-all-day-label")!.getBoundingClientRect();
-        const hit = document.elementFromPoint(band.left + band.width / 2, band.top + band.height / 2);
-        return hit !== null && element.querySelector(".calendar-all-day-label")!.contains(hit);
-      })).toBe(true);
-      await region.evaluate((element) => { element.scrollTop = 400; element.scrollLeft = 300; });
-      const geometry = await region.evaluate((element) => {
-        const viewport = element.getBoundingClientRect();
-        const top = viewport.top + element.clientTop, left = viewport.left + element.clientLeft;
-        const right = left + element.clientWidth;
-        const hours = element.querySelector(".calendar-hours")!;
-        const headings = Array.from(element.querySelectorAll(".calendar-time-day .calendar-day-label"));
-        const heading = headings.find((item) => {
-          const rect = item.getBoundingClientRect();
-          return rect.left >= left + 58 && rect.right <= right + 1;
-        })!;
-        const hour = Array.from(hours.querySelectorAll("span")).find((item) => item.textContent === "12:00")!;
-        const exposed = (item: Element | null | undefined) => {
-          if (!item) return false;
-          const rect = item.getBoundingClientRect();
-          const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
-          return hit !== null && item.contains(hit);
-        };
-        return {
-          headerOffset: heading ? heading.getBoundingClientRect().top - top : null,
-          hoursOffset: hours.getBoundingClientRect().left - left,
-          headerExposed: exposed(heading), hourExposed: exposed(hour),
-          overflowX: element.scrollWidth > element.clientWidth,
-          scrollX: element.scrollLeft, scrollY: element.scrollTop,
-          timelineHeight: element.querySelector(".calendar-timeline")!.getBoundingClientRect().height,
-        };
-      });
-      expect(geometry.headerOffset).toBeCloseTo(0, 0);
-      expect(geometry.hoursOffset).toBeCloseTo(0, 0);
-      expect(geometry.headerExposed && geometry.hourExposed).toBe(true);
-      expect(geometry.scrollY).toBe(400);
-      if (view === "week" && width < 1000) { expect(geometry.overflowX).toBe(true); expect(geometry.scrollX).toBeGreaterThan(0); }
-      expect(geometry.timelineHeight).toBe(1120);
-    }
-  });
-}
 
 test("hábitos permite marcação passada e pausa pelo Núcleo", async ({ page }) => {
   await page.goto("/habitos");
