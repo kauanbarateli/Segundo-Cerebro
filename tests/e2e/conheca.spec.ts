@@ -203,11 +203,11 @@ test.describe("apresentação pública /conheca", () => {
       await expect(page.locator(`article${destino}`).getByRole("heading", { level: 3 })).toHaveCount(1);
     }
 
-    // D-065/D-077: login existente, legais e Configurações são destinos internos aprovados.
-    // O checkout continua planejado, sem destino comercial ou formulário.
+    // Com o cadastro fechado, os únicos destinos são o login existente, os legais e o suporte.
+    // Sem checkout, preço, login social, Configurações do aplicativo ou formulário.
     const destinos = await page.locator("a[href]").evaluateAll((links) => links.map((link) => link.getAttribute("href") ?? ""));
     expect(destinos.length).toBeGreaterThan(0);
-    expect(destinos.filter((href) => !href.startsWith("#"))).toEqual(["/entrar", "/privacidade", "/termos-de-servico", "/configuracoes"]);
+    expect(destinos.filter((href) => !href.startsWith("#"))).toEqual(["/entrar", "/entrar", "/privacidade", "/termos-de-servico", "mailto:suporte@segundocerebroapp.com.br"]);
     await expect(page.locator("form")).toHaveCount(0);
 
     for (const imagem of await page.locator("main img").all()) {
@@ -215,29 +215,32 @@ test.describe("apresentação pública /conheca", () => {
     }
   });
 
-  test("a ação de acesso informa o estado sem sair da página", async ({ page }) => {
+  test("com o cadastro fechado o acesso leva a Entrar e a página não promete criação, preço ou Princípios", async ({ page }) => {
     await page.goto("/conheca");
-    const botao = page.getByRole("button", { name: "Quero acesso" });
-    await expect(botao).toHaveAttribute("aria-expanded", "false");
-    const aviso = page.locator(`[id="${await botao.getAttribute("aria-controls")}"]`);
-    await expect(aviso).toHaveAttribute("role", "status");
-    await expect(aviso).toHaveText("");
-    await botao.click();
-    await expect(botao).toHaveAttribute("aria-expanded", "true");
-    await expect(aviso).toHaveText(/Ainda não há como pedir acesso/);
-    expect(new URL(page.url()).pathname).toBe("/conheca");
-    await botao.click();
-    await expect(aviso).toHaveText("");
+    const cabecalho = page.getByRole("banner");
+    await expect(cabecalho.getByRole("link", { name: "Entrar", exact: true })).toHaveAttribute("href", "/entrar");
+    await expect(cabecalho.getByRole("link", { name: "Criar conta gratuita" })).toHaveCount(0);
+    const acesso = page.locator("#acesso");
+    await expect(acesso.getByRole("link", { name: "Entrar", exact: true })).toHaveAttribute("href", "/entrar");
+    await expect(acesso).toContainText("gratuito nesta fase");
+    await expect(acesso).toContainText("ainda não está aberta");
+    await expect(page.getByRole("button", { name: "Quero acesso" })).toHaveCount(0);
+    await expect(page.locator("#principios")).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Princípios" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Configurações do aplicativo" })).toHaveCount(0);
+    const texto = (await page.locator("body").innerText()).toLocaleLowerCase("pt-BR");
+    for (const proibido of ["r$", "cartão", "assine", "checkout", "continuar com google", "vitalíci"]) expect(texto).not.toContain(proibido);
   });
 
   test("uma conta existente pode chegar ao login pelo teclado sem abrir inscrição", async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 900 });
     await page.goto("/conheca");
-    const entrar = page.getByRole("link", { name: "Já tem uma conta? Entrar", exact: true });
-    await entrar.scrollIntoViewIfNeeded();
+    const entrar = page.getByRole("banner").getByRole("link", { name: "Entrar", exact: true });
+    await expect(entrar).toBeVisible();
     await expect(entrar).toHaveAttribute("href", "/entrar");
     const tamanho = await entrar.boundingBox();
     expect(tamanho?.height).toBeGreaterThanOrEqual(44);
+    expect(tamanho?.width).toBeGreaterThanOrEqual(44);
     await entrar.focus();
     await expect(entrar).toBeFocused();
     await page.keyboard.press("Enter");
@@ -287,41 +290,42 @@ test.describe("apresentação pública /conheca", () => {
     });
   }
 
-  test("o menu de seções no celular abre, leva à seção e fecha com Escape", async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 844 });
+  for (const width of [320, 390]) {
+    test(`o cabeçalho mantém marca, tema e Entrar visíveis em ${width}px, sem menu a abrir`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await page.goto("/conheca");
+      const cabecalho = page.getByRole("banner");
+      await expect(page.getByRole("button", { name: /seções/i })).toHaveCount(0);
+      const itens = [
+        cabecalho.getByRole("link", { name: "Segundo Cérebro, início da página" }),
+        cabecalho.getByLabel("Tema"),
+        cabecalho.getByRole("link", { name: "Entrar", exact: true }),
+      ];
+      for (const item of itens) {
+        await expect(item).toBeVisible();
+        const caixa = await item.boundingBox();
+        expect(caixa!.x).toBeGreaterThanOrEqual(0);
+        expect(caixa!.x + caixa!.width).toBeLessThanOrEqual(width);
+        expect(caixa!.height).toBeGreaterThanOrEqual(44);
+      }
+      // Marca em duas linhas, como no login: Segundo acima de Cérebro.
+      const linhas = await cabecalho.locator(".sb-brand__first, .sb-brand__second").evaluateAll(nos => nos.map(no => no.getBoundingClientRect().top));
+      expect(linhas).toHaveLength(2);
+      expect(linhas[1]!).toBeGreaterThan(linhas[0]!);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBe(0);
+    });
+  }
+
+  test("em telas largas Recursos aparece no cabeçalho e leva à seção", async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
     await page.goto("/conheca");
-    const secoes = page.getByRole("navigation", { name: "Seções" });
-    await expect(secoes.getByRole("link", { name: "Princípios" })).toBeHidden();
-
-    await page.getByRole("button", { name: "Abrir seções" }).click();
-    await expect(secoes.getByRole("link", { name: "Princípios" })).toBeVisible();
-    await page.keyboard.press("Escape");
-    await expect(page.getByRole("button", { name: "Abrir seções" })).toBeFocused();
-    await expect(secoes.getByRole("link", { name: "Princípios" })).toBeHidden();
-
-    await page.getByRole("button", { name: "Abrir seções" }).click();
-    await secoes.getByRole("link", { name: "Recursos" }).click();
+    const recursos = page.getByRole("navigation", { name: "Seções" }).getByRole("link", { name: "Recursos", exact: true });
+    await expect(recursos).toBeVisible();
+    await recursos.click();
     await expect(page).toHaveURL(/#recursos$/);
-    await expect(secoes.getByRole("link", { name: "Recursos" })).toBeHidden();
     await expect(page.getByRole("heading", { name: "Uma ideia não precisa ficar só na cabeça.", exact: true })).toBeInViewport();
-  });
-
-  test("teclado no celular alcança a primeira seção e retorna com Escape", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/conheca");
-    const abrir = page.getByRole("button", { name: "Abrir seções" });
-    const perguntas = page.getByRole("navigation", { name: "Seções" }).getByRole("link", { name: "Recursos", exact: true });
-
-    await abrir.focus();
-    await expect(abrir).toBeFocused();
-    await page.keyboard.press("Enter");
-    await expect(page.getByRole("button", { name: "Fechar seções" })).toHaveAttribute("aria-expanded", "true");
-    await page.keyboard.press("Tab");
-    await expect(perguntas).toBeFocused();
-    await page.keyboard.press("Escape");
-    await expect(abrir).toBeFocused();
-    await expect(abrir).toHaveAttribute("aria-expanded", "false");
-    await expect(perguntas).toBeHidden();
+    await expect(recursos).toBeHidden();
   });
 
   for (const width of [320, 390, 768, 1024, 1280, 1440]) {
@@ -378,7 +382,7 @@ test.describe("apresentação pública /conheca", () => {
     expect(depois.pergunta).toBeLessThan(juntas.pergunta);
   });
 
-  test("as telas seguem o tema do aparelho e o tema escolhido no rodapé", async ({ page }) => {
+  test("as telas seguem o tema do aparelho e o tema escolhido no cabeçalho", async ({ page }) => {
     await page.emulateMedia({ colorScheme: "dark" });
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/conheca");

@@ -88,3 +88,14 @@ Em 12/10/2026, sobre um build de produção em modo demonstração, no Windows 1
 - Analytics: a CSP atual não permite serviços de terceiros.
 - Link para `/conheca` a partir de outras páginas públicas, se desejado.
 - Revisão humana em aparelhos físicos Android e iOS.
+
+## Atualização A01 — landing e login mais simples (#128, 01/11/2026)
+
+Entrega do doc20 (`docs/planejamento/20-entrega-inicial-20261031/`), sem tocar em Auth, banco ou cadastro. Substitui, nesta página, o que as seções acima dizem sobre Princípios, menu de seções, seletor de tema no rodapé, "Configurações do aplicativo" e o botão "Quero acesso".
+
+- **Retirado:** seção Princípios e sua âncora; menu de seções e painel no celular; seletor de tema e link para Configurações no rodapé; aviso "Ainda não há como pedir acesso".
+- **Cabeçalho:** marca em duas linhas como no login (`Brand stacked`), Recursos (a partir de 768 px), tema (`ThemeToggle` compartilhado) e Entrar sempre na barra, inclusive a 320 px. Não há mais menu a abrir.
+- **Acesso:** contrato `src/lib/access/signup-capability.ts`, lido só no servidor e fechado por padrão. Fechado, o CTA é **Entrar** para `/entrar`; aberto (decisão da Frente B), vira **Criar conta gratuita** para `/criar-conta`, com Entrar preservado no cabeçalho. Nenhuma query string ou cookie decide isso. Copy: "gratuito nesta fase", sem preço, cartão, prazo ou promessa vitalícia.
+- **Rodapé:** marca, aviso das capturas, legais e suporte (`suporte@segundocerebroapp.com.br`).
+- **Login:** os links de Termos de Serviço e Política de Privacidade ficam dentro do texto da caixa de ciência, abrem em nova aba e não marcam a caixa nem enviam o formulário. O nome acessível da caixa continua "Li os Termos de Serviço e a Política de Privacidade.". Links em linha dentro de uma frase usam a exceção de alvo em texto corrido (WCAG 2.5.8); a linha da caixa mantém 44 px.
+- **Não alterado:** favicon e metadata (conferidos), três capítulos, capturas, prévia Projetos/Kanban, coreografia de rolagem e `INDEXACAO_PUBLICA=false`.

@@ -1,4 +1,5 @@
 import type { StaticImageData } from "next/image";
+import { LOGIN_PATH, SIGNUP_PATH } from "@/lib/access/signup-capability";
 import capturarCelularEscuro from "./telas/capturar-celular-escuro.webp";
 import capturarCelular from "./telas/capturar-celular.webp";
 import capturarEscuro from "./telas/capturar-escuro.webp";
@@ -121,30 +122,34 @@ export const previaKanban = {
   formato: "janela",
 } satisfies Tela;
 
-export const principios = {
-  titulo: "Feito para ser só seu.",
-  texto: "Capturas e notas, tarefas e projetos, calendário, hábitos, financeiro e Cofre no mesmo espaço pessoal.",
-  itens: [
-    { titulo: "Contas isoladas", texto: "Cada pessoa tem a própria conta, separada no banco de dados. Não existe espaço compartilhado." },
-    { titulo: "Cofre cifrado no navegador", texto: "Senha mestra e kit de recuperação ficam com você. Sem eles, nem o servidor recupera os dados." },
-    { titulo: "Painel administrativo sem conteúdo", texto: "O painel administrativo mostra dados da conta, sem exibir suas notas, tarefas, finanças ou o Cofre." },
-    { titulo: "Agenda somente leitura", texto: "O Calendário lê até duas contas Google e não cria, altera nem apaga eventos." },
-  ],
-} as const;
-
-/** Integração comercial futura, sem preço, cadastro ou pagamento neste recorte. */
-export type DestinoDeAcesso =
-  | { tipo: "aviso"; rotulo: string; mensagem: string }
-  | { tipo: "link"; rotulo: string; href: string };
-export const acesso = {
-  titulo: "Comece pela próxima ideia.",
-  texto: "O Segundo Cérebro está em validação com um grupo pequeno de pessoas. O acesso ainda não está aberto ao público.",
-  destino: {
-    tipo: "aviso",
-    rotulo: "Quero acesso",
-    mensagem: "Ainda não há como pedir acesso. Quando as inscrições abrirem, esta página vai mostrar como participar.",
-  } as DestinoDeAcesso,
-} as const;
+/** Acesso gratuito desta fase, sem preço, cartão ou prazo. O destino acompanha a capacidade real de cadastro. */
+export interface DestinoDeAcesso { href: string; rotulo: string }
+export interface ConteudoDeAcesso {
+  titulo: string;
+  texto: string;
+  principal: DestinoDeAcesso;
+  /** Só existe quando o cadastro está aberto; senão o principal já é Entrar. */
+  conta: DestinoDeAcesso | null;
+  /** Acesso do cabeçalho: Entrar sempre; criar conta só com cadastro aberto. */
+  cabecalho: { entrar: DestinoDeAcesso; criar: DestinoDeAcesso | null };
+}
+const entrar: DestinoDeAcesso = { href: LOGIN_PATH, rotulo: "Entrar" };
+const criarConta: DestinoDeAcesso = { href: SIGNUP_PATH, rotulo: "Criar conta gratuita" };
+export function acessoPara(cadastroAberto: boolean): ConteudoDeAcesso {
+  return cadastroAberto ? {
+    titulo: "Comece pela próxima ideia.",
+    texto: "O Segundo Cérebro é gratuito nesta fase. Crie sua conta com e-mail e senha e comece a capturar.",
+    principal: criarConta,
+    conta: { href: LOGIN_PATH, rotulo: "Já tem uma conta? Entrar" },
+    cabecalho: { entrar, criar: criarConta },
+  } : {
+    titulo: "Comece pela próxima ideia.",
+    texto: "O Segundo Cérebro é gratuito nesta fase. A criação de novas contas ainda não está aberta; quem já tem conta pode entrar.",
+    principal: entrar,
+    conta: null,
+    cabecalho: { entrar, criar: null },
+  };
+}
 export const rodape = {
   lema: "Capture, conecte, reencontre.",
   aviso: "As telas desta página são capturas do aplicativo em modo demonstração, com dados fictícios.",
