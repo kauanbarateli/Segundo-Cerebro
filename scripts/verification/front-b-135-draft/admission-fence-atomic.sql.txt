@@ -3,7 +3,7 @@
 BEGIN;
 DO $scratch_guard$ BEGIN RAISE EXCEPTION 'UNREVIEWED SCRATCH SQL: DO NOT APPLY'; END $scratch_guard$;
 
--- BEGIN REVIEWED COMPONENT admission (sha256 8d3e6421435b7c6552bd9541c2f0fb5d3aede6e914aaf132be64f6a460976666)
+-- BEGIN REVIEWED COMPONENT admission (sha256 7f74cad88fa6e4bff01dd7bcf37e3de5eb94c581f6e11ade372e8c7e82b1946c)
 -- DRAFT ONLY. No public signup, promotion, remote application or release is authorized.
 -- Requires full review of legacy cohorts, Admin and Auth recovery before promotion.
 
@@ -218,12 +218,12 @@ language plpgsql security definer set search_path='' as $$ declare i app_private
  if found then
   if exists(select 1 from app_private.signup_completion_fences_draft f where f.intent_id=i.id) then raise exception 'Signup unavailable.' using errcode='42501'; end if;
   if i.state<>'bound' or i.subject_hash is distinct from p_subject_hash then raise exception 'Signup unavailable.' using errcode='42501'; end if;
-  if i.expires_at<=now() then delete from app_private.signup_intents where id=i.id; i:=null;
-  else update app_private.signup_intents set terms_version=p_terms,privacy_version=p_privacy,expires_at=now()+interval '30 minutes' where id=i.id returning * into i; end if;
+  if i.expires_at<=pg_catalog.clock_timestamp() then delete from app_private.signup_intents where id=i.id; i:=null;
+  else update app_private.signup_intents set terms_version=p_terms,privacy_version=p_privacy where id=i.id returning * into i; end if;
  end if;
  if i.id is null then
   insert into app_private.signup_intents(binding_hash,subject_hash,terms_version,privacy_version,expires_at,state,user_id)
-   values(null,p_subject_hash,p_terms,p_privacy,now()+interval '30 minutes','bound',p_user) returning * into i;
+   values(null,p_subject_hash,p_terms,p_privacy,pg_catalog.clock_timestamp()+interval '30 minutes','bound',p_user) returning * into i;
  end if;
  return jsonb_build_object('intentId',i.id,'termsVersion',i.terms_version,'privacyVersion',i.privacy_version,'state',i.state,'originPending',i.origin is not null);
 end $$;

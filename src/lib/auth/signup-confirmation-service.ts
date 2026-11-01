@@ -35,9 +35,12 @@ export async function verifySignupConfirmation(ports: SignupConfirmationPorts, t
     if (!validEmail(email)) return { status: "invalid" };
     const hash = ports.subjectHash(email);
     if (!/^[a-f0-9]{64}$/.test(hash)) return { status: "unavailable" };
-    let intent = await ports.findBoundIntent(identity.userId, identity.sessionId, hash);
+    const existing = await ports.findBoundIntent(identity.userId, identity.sessionId, hash);
     if (!legal.terms || !legal.privacy) return { status: "invalid" };
-    if (!intent || intent.state === "bound" && (intent.termsVersion !== legal.terms || intent.privacyVersion !== legal.privacy)) intent = await ports.recoverVerifiedIntent(identity.userId, identity.sessionId, hash, legal.terms, legal.privacy);
+    if (existing && existing.state !== "bound") return { status: "invalid" };
+    // Recheck the durable fence after every new email proof, even while the
+    // existing intent is live. Recovery must never rebind an in-flight fence.
+    const intent = await ports.recoverVerifiedIntent(identity.userId, identity.sessionId, hash, legal.terms, legal.privacy);
     if (!intent || intent.state !== "bound" || !UUID.test(intent.intentId) || !legal.terms || !legal.privacy || intent.termsVersion !== legal.terms || intent.privacyVersion !== legal.privacy) return { status: "invalid" };
     const now = ports.now();
     if (!Number.isSafeInteger(now) || now < 0 || !Number.isSafeInteger(now + 600_000)) return { status: "unavailable" };

@@ -13,6 +13,8 @@ describe("confirmação explícita de cadastro", () => {
     const p = ports(); expect(await verifySignupConfirmation(p, token, legal)).toEqual({ status: "ready" });
     expect(p.subjectHash).toHaveBeenCalledWith("pessoa@example.com");
     expect(p.findBoundIntent).toHaveBeenCalledWith(identity.userId, identity.sessionId, "b".repeat(64));
+    expect(p.recoverVerifiedIntent).toHaveBeenCalledWith(identity.userId, identity.sessionId, "b".repeat(64), "v1", "v2");
+    expect(vi.mocked(p.verifyEmailProof).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(p.recoverVerifiedIntent).mock.invocationCallOrder[0]!);
     expect(p.putCheckpoint).toHaveBeenCalledWith({ userId: identity.userId, sessionId: identity.sessionId, intentId: intent.intentId, issuedAt: 1000, expiresAt: 601000, passwordConfirmed: false, originPending: false });
     expect(p.clearProvisionalSession).not.toHaveBeenCalled();
   });
@@ -41,7 +43,8 @@ describe("confirmação explícita de cadastro", () => {
     expect(p.clearProvisionalSession).toHaveBeenCalledTimes(2);
   });
   it("não informa confirmação quando a limpeza da sessão provisória falha", async () => {
-    const p = ports(); vi.mocked(p.findBoundIntent).mockResolvedValue(null); vi.mocked(p.recoverVerifiedIntent).mockRejectedValue(new Error("privado")); vi.mocked(p.clearProvisionalSession).mockRejectedValue(new Error("privado"));
+    const p = ports(); vi.mocked(p.recoverVerifiedIntent).mockRejectedValue(new Error("privado")); vi.mocked(p.clearProvisionalSession).mockRejectedValue(new Error("privado"));
     expect(await verifySignupConfirmation(p, token, legal)).toEqual({ status: "unavailable" });
+    expect(p.putCheckpoint).not.toHaveBeenCalled(); expect(p.recoverVerifiedIntent).toHaveBeenCalledOnce();
   });
 });
