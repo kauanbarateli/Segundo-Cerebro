@@ -96,6 +96,11 @@ it('recupera após falha de verificação sem apagar o marcador',async()=>{
  app.render();await settle();let tree=app.render();change(tree,'Mensagem para recuperar');tree=app.render();await submit(tree);tree=app.render();click(tree,'Verificar novamente');await settle();tree=app.render();expect(rendered(tree)).toContain('Não foi possível verificar a tentativa.');expect(app.raw()).toContain(client);
  click(tree,'Verificar novamente');await settle();tree=app.render();expect(rendered(tree)).toContain('Esta tentativa foi encerrada.');expect(rendered(tree)).toContain('Mensagem para recuperar');app.unmount();
 });
+it('indisponibilidade 503 na reconciliação preserva identidade, texto e marcador',async()=>{
+ const app=fixture(async (url,options)=>{if(options?.method!=='POST')return json(200,{ok:true,result:{items:[],next:null}});if(String(url)==='/api/feedback')throw Error('lost');return json(503,{ok:false,code:'UNAVAILABLE'});});
+ app.render();await settle();let tree=app.render();change(tree,'Rascunho privado para recuperar');tree=app.render();await submit(tree);tree=app.render();click(tree,'Verificar novamente');await settle();tree=app.render();
+ expect(rendered(tree)).toContain('Não foi possível verificar a tentativa.');expect(rendered(tree)).toContain('Rascunho privado para recuperar');expect(rendered(tree)).not.toContain('Confirme sua conta');expect(app.raw()).toContain(client);app.unmount();
+});
 it('timeout do POST não confirma nem inicia segundo POST ao verificar o estado',async()=>{
  const controllers:AbortController[]=[];vi.spyOn(AbortSignal,'timeout').mockImplementation(()=>{const controller=new AbortController();controllers.push(controller);return controller.signal;});let posts=0,checks=0;
  const app=fixture(async (url,options)=>{if(options?.method!=='POST')return json(200,{ok:true,result:{items:[],next:null}});if(String(url)==='/api/feedback'){posts++;return new Promise<Response>((_resolve,reject)=>options.signal!.addEventListener('abort',()=>reject(new DOMException('aborted','AbortError')),{once:true}));}checks++;return json(200,{ok:true,result:{status:'cancelled',clientId:client}});});

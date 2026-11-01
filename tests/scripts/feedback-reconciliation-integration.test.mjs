@@ -110,7 +110,7 @@ test('reconciliation route enforces gate, origin and identity with synthetic Nex
   let code=compile(await source('src/app/api/feedback/reconciliation/route.ts')).outputText;
   for(const [needle,stub] of [
     ['"next/server"',data('export const NextResponse={json:(body,init)=>Response.json(body,init)};')],
-    ['"@/adapters/db/feedback-gateway"',data('export class FeedbackGatewayError extends Error{constructor(code){super(code);this.code=code}};export async function feedbackBarrierRpc(config,actor,command){globalThis.__feedbackRecorded={actor,command};if(globalThis.__feedbackForbidden)throw new FeedbackGatewayError("FORBIDDEN");return {status:"unknown",clientId:command.clientId};}')],
+    ['"@/adapters/db/feedback-gateway"',data('export class FeedbackGatewayError extends Error{constructor(code){super(code);this.code=code}};export async function feedbackBarrierRpc(config,actor,command){globalThis.__feedbackRecorded={actor,command};if(globalThis.__feedbackForbidden)throw new FeedbackGatewayError("FORBIDDEN");if(globalThis.__feedbackUnavailable)throw new FeedbackGatewayError("UNAVAILABLE");return {status:"unknown",clientId:command.clientId};}')],
     ['"@/core/feedback/barrier-contract"',contractUrl],
     ['"@/lib/auth/config"',data('export const readAuthConfiguration=()=>({mode:"supabase",appOrigin:"https://app.example"});')],
     ['"@/lib/auth/policy"',data('export const sameOrigin=(value,expected)=>value===expected;')],
@@ -134,7 +134,10 @@ test('reconciliation route enforces gate, origin and identity with synthetic Nex
   globalThis.__feedbackForbidden=true;
   assert.equal((await enabled.POST(request('https://app.example',actor.userId))).status,403);
   globalThis.__feedbackForbidden=false;
+  globalThis.__feedbackUnavailable=true;
+  assert.equal((await enabled.POST(request('https://app.example',actor.userId))).status,503);
+  globalThis.__feedbackUnavailable=false;
   globalThis.__feedbackActor={...actor,userId:'user-b'};globalThis.__feedbackRecorded=null;
   assert.equal((await enabled.POST(request('https://app.example',actor.userId))).status,409);assert.equal(globalThis.__feedbackRecorded,null);
- }finally{delete globalThis.__feedbackActor;delete globalThis.__feedbackRecorded;delete globalThis.__feedbackForbidden;}
+ }finally{delete globalThis.__feedbackActor;delete globalThis.__feedbackRecorded;delete globalThis.__feedbackForbidden;delete globalThis.__feedbackUnavailable;}
 });

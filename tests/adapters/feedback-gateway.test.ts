@@ -8,7 +8,7 @@ vi.mock("server-only", () => ({}));
 vi.mock("../../src/lib/environment/application-destination", () => ({ authDeploymentAllowed: () => true }));
 vi.mock("../../src/lib/auth/database-origin-server", () => ({ isTrustedHostedDatabaseOrigin: () => true }));
 vi.mock("../../src/lib/feedback/reconciliation-gate", () => ({feedbackReconciliationReady:()=>state.enabled}));
-import { feedbackRpc } from "../../src/adapters/db/feedback-gateway";
+import { feedbackRpc, feedbackBarrierRpc } from "../../src/adapters/db/feedback-gateway";
 
 const config = { supabaseUrl: "https://database.example.invalid", secretKey: "fixture-secret" } as SupabaseAuthConfig;
 const actor = { userId: "10000000-0000-4000-8000-000000000001", sessionId: "20000000-0000-4000-8000-000000000001" } as AuthenticatedIdentity;
@@ -67,6 +67,12 @@ describe("transporte privilegiado de feedback", () => {
       vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(json(value)));
       await expect(feedbackRpc(config, actor, input)).rejects.toMatchObject({ code: "COMMIT_UNKNOWN" });
     }
+  });
+  it('SQLSTATE 55000 em inconsistência não é tratado como sessão inválida',async()=>{
+    const transport=vi.fn<typeof fetch>().mockImplementation(async()=>new Response(JSON.stringify({code:'55000'}),{status:400,headers:{'content-type':'application/json'}}));vi.stubGlobal('fetch',transport);
+    await expect(feedbackBarrierRpc(config,actor,{action:'status',clientId:input.clientId})).rejects.toMatchObject({code:'UNAVAILABLE'});
+    await expect(feedbackBarrierRpc(config,actor,{action:'cancel',clientId:input.clientId})).rejects.toMatchObject({code:'COMMIT_UNKNOWN'});
+    await expect(feedbackBarrierRpc(config,actor,{action:'submit',input})).rejects.toMatchObject({code:'COMMIT_UNKNOWN'});
   });
 
   it("mantém a leitura de páginas e seu cursor sem exigir igualdade com uma intenção", async () => {

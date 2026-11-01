@@ -4,6 +4,9 @@ import { readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { createCatalogueFixture } from "./helpers/catalogue-fixture.mjs";
 import { CURRENT27_CANONICAL_REVIEW } from "../helpers/canonical-release-source.mjs";
+import { compose } from "../../scripts/verification/front-b-feedback-reconciliation-draft/wrapper-composition.mjs";
+import { withLegacyAdoption } from "../../scripts/verification/front-b-feedback-reconciliation-draft/legacy-adoption.mjs";
+import { removeScratchGuard } from "../../scripts/verification/front-b-feedback-reconciliation-draft/feedback-pglite-guard.mjs";
 
 test("feedback local: isolamento, replay, eventos e permissões", { timeout: 60000 }, async () => {
   const db = await createCatalogueFixture();
@@ -43,5 +46,40 @@ test("feedback local: isolamento, replay, eventos e permissões", { timeout: 600
     await assert.rejects(db.query("select public.feedback_list($1,$2,$3,null)", [a, sa, last.createdAt]), (error) => error.code === "22023");
     await db.query("update public.user_moderation set status='blocked' where user_id=$1", [a]);
     await assert.rejects(db.query("select public.feedback_list($1,$2,null,null)", [a, sa]), (error) => error.code === "42501");
+    // Reuse this same disposable fixture; no external connection or second database.
+    await db.query("update public.user_moderation set status='active' where user_id=$1", [a]);
+    const path = "../../scripts/verification/front-b-feedback-reconciliation-draft/";
+    const [barrier, wrappers, combined, legacy] = await Promise.all(["candidate-feedback-barrier.sql.txt", "wrappers.sql.txt", "candidate-with-wrappers.sql.txt", "candidate-legacy.sql.txt"].map((name) => readFile(new URL(path + name, import.meta.url))));
+    assert.deepEqual(compose(barrier, wrappers), combined);assert.deepEqual(withLegacyAdoption(combined), legacy);
+    await db.exec(removeScratchGuard(legacy.toString("utf8")));
+    const states=async()=> (await db.query("select (select count(*)::int from app_private.feedback_requests) as messages,(select count(*)::int from public.domain_events where entity_type='feedback_request') as events,(select count(*)::int from app_private.feedback_barriers_draft) as barriers")).rows[0];
+    const before=await states();
+    const status=(await db.query("select public.feedback_barrier_status($1,$2,$3) as value",[a,sa,client])).rows[0].value;
+    assert.deepEqual(status,{status:'submitted',clientId:client,feedbackId:first.id});
+    assert.deepEqual(await states(),{...before,barriers:before.barriers+1});
+    assert.deepEqual((await db.query("select public.feedback_barrier_cancel($1,$2,$3) as value",[a,sa,client])).rows[0].value,status);
+    assert.deepEqual((await db.query("select public.feedback_barrier_submit($1,$2,$3,'suggestion',$4) as value",[a,sa,client,'Sugestão de teste'])).rows[0].value,status);
+    const adopted=await states();
+    await assert.rejects(db.query("select public.feedback_barrier_submit($1,$2,$3,'suggestion',$4)",[a,sa,client,'Outra mensagem válida']),(error)=>error.code==='23505');
+    assert.deepEqual(await states(),adopted);
+    assert.deepEqual((await db.query("select public.feedback_barrier_status($1,$2,$3) as value",[b,sb,client])).rows[0].value,{status:'unknown',clientId:client});
+    await assert.rejects(db.query("select public.feedback_barrier_status($1,$2,$3)",[a,sb,client]),(error)=>error.code==='42501');
+    await db.exec('set role service_role');
+    try{
+      await assert.rejects(db.query("select public.feedback_submit($1,$2,$3,$4,$5)",[a,sa,client,'suggestion','Sugestão de teste']),(error)=>error.code==='42501');
+      assert.deepEqual((await db.query("select public.feedback_barrier_status($1,$2,$3) as value",[a,sa,client])).rows[0].value,status);
+    }finally{await db.exec('reset role');}
+    assert.deepEqual(await states(),adopted);
+    const inconsistent='30000000-0000-4000-8000-000000000004';
+    await db.exec('set role service_role');
+    try{assert.deepEqual((await db.query('select public.feedback_barrier_cancel($1,$2,$3) as value',[a,sa,inconsistent])).rows[0].value,{status:'cancelled',clientId:inconsistent});}finally{await db.exec('reset role');}
+    await db.query("insert into app_private.feedback_requests(user_id,client_id,category,message) values ($1,$2,'other','mensagem legada inconsistente')",[a,inconsistent]);
+    const beforeInconsistent=await states();await db.exec('set role service_role');
+    try{
+      await assert.rejects(db.query('select public.feedback_barrier_status($1,$2,$3)',[a,sa,inconsistent]),(error)=>error.code==='55000');
+      await assert.rejects(db.query('select public.feedback_barrier_cancel($1,$2,$3)',[a,sa,inconsistent]),(error)=>error.code==='55000');
+      await assert.rejects(db.query("select public.feedback_barrier_submit($1,$2,$3,'other',$4)",[a,sa,inconsistent,'mensagem legada inconsistente']),(error)=>error.code==='55000');
+    }finally{await db.exec('reset role');}
+    assert.deepEqual(await states(),beforeInconsistent);
   } finally { await db.close(); }
 });
