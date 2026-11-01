@@ -3,7 +3,7 @@
 export const PERSONAL_DATABASE_ORIGIN = "https://rishenjoikgmfubmnfiu.supabase.co";
 export const HOMOLOGATION_DATABASE_ORIGIN = "https://twrydxsdemaykgvdlpyd.supabase.co";
 // QA-only overlay: never merge this branch substitution into product branches.
-export const HOMOLOGATION_BRANCH = "codex/qa-cadastro-browser-f19a550";
+export const HOMOLOGATION_BRANCH = "codex/homologacao-twry-20261022";
 export const HOMOLOGATION_PROJECT = "prj_68nPrMlzdTLhvhXF2zWvNK6BFaW2";
 export type HostedDatabaseOrigin = typeof PERSONAL_DATABASE_ORIGIN | typeof HOMOLOGATION_DATABASE_ORIGIN;
 type Fields = Readonly<Record<string, unknown>>;

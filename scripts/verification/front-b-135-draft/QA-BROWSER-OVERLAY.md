@@ -15,7 +15,7 @@ experimento. Ele só é possível com todas estas condições simultâneas:
 - projeto Supabase QA `twrydxsdemaykgvdlpyd` e URL exatamente
   `https://twrydxsdemaykgvdlpyd.supabase.co`;
 - projeto Vercel de homologação `prj_68nPrMlzdTLhvhXF2zWvNK6BFaW2`, ambiente
-  Preview, branch **exclusiva** `codex/qa-cadastro-browser-f19a550`, repositório
+  Preview, branch de homologação existente `codex/homologacao-twry-20261022`, repositório
   GitHub e dono conferidos pelo guard existente;
 - `APP_DEPLOYMENT_TARGET=homologation`, `APP_MODE=supabase`, `NODE_ENV=production`,
   `VERCEL=1`, URL HTTPS de branch Vercel exatamente igual a `APP_URL`, com
@@ -25,8 +25,8 @@ experimento. Ele só é possível com todas estas condições simultâneas:
   `SC_FRONT_B_SCHEMA_READY=true` é necessária para a apresentação no login;
   verificar outros recursos afetados por ela. Nenhuma dessas flags é credencial.
 
-O patch troca a branch permitida **somente nessa cópia experimental**. O guard
-normal e as duas constantes de produto não são alterados; o desvio não significa
+Esta cópia reaproveita a branch de homologação do guard original, sem trocar
+ou copiar suas variáveis. As duas constantes de produto não são alteradas; o desvio não significa
 que a versão/comportamento do GoTrue esteja qualificado. A exatidão da branch,
 dos metadados Vercel e da URL de Preview precisa ser conferida em um deployment
 real protegido antes de permitir a janela. Mudança no destino ou SHA invalida
