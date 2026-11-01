@@ -46,11 +46,15 @@ BEGIN
  END IF;
  SELECT * INTO v_intent FROM app_private.signup_intents WHERE id=p_intent FOR UPDATE;
  IF NOT FOUND OR v_intent.user_id IS DISTINCT FROM p_user OR v_intent.subject_hash IS DISTINCT FROM p_subject_hash
-  OR v_intent.state IS DISTINCT FROM 'bound' OR v_intent.expires_at IS NULL OR (p_require_live AND v_intent.expires_at<=pg_catalog.now()) THEN
+  OR v_intent.state IS DISTINCT FROM 'bound' OR v_intent.expires_at IS NULL OR (p_require_live AND v_intent.expires_at<=pg_catalog.clock_timestamp()) THEN
   RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501';
  END IF;
  SELECT * INTO v_admission FROM app_private.user_admission WHERE user_id=p_user FOR UPDATE;
  IF NOT FOUND OR v_admission.origin IS DISTINCT FROM 'unclassified' OR v_admission.state IS DISTINCT FROM 'pending' THEN
+  RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501';
+ END IF;
+ -- The admission lock may itself wait beyond the intent deadline.
+ IF p_require_live AND (v_intent.expires_at IS NULL OR v_intent.expires_at<=pg_catalog.clock_timestamp()) THEN
   RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501';
  END IF;
 END $$;

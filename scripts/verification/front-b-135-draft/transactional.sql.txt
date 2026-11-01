@@ -80,9 +80,15 @@ BEGIN
  IF f.origin_accepted AND NOT f.origin_withdrawn AND NOT f.origin_expired AND i.origin IS NOT NULL AND
   (p_current_origin IS NULL OR f.origin_consent_version IS DISTINCT FROM p_current_origin
    OR i.origin_consent_version IS DISTINCT FROM f.origin_consent_version) THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
- UPDATE app_private.signup_password_proofs SET consumed_at=pg_catalog.now()
-  WHERE intent_id=i.id AND user_id=p_user AND session_id=p_session AND consumed_at IS NULL AND expires_at>pg_catalog.now();
+ -- The proof row may be contended; check its expiry only after acquiring it.
+ PERFORM 1 FROM app_private.signup_password_proofs WHERE intent_id=i.id FOR UPDATE;
  IF NOT FOUND THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ UPDATE app_private.signup_password_proofs SET consumed_at=pg_catalog.now()
+  WHERE intent_id=i.id AND user_id=p_user AND session_id=p_session AND consumed_at IS NULL AND expires_at>pg_catalog.clock_timestamp();
+ IF NOT FOUND THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ -- Recheck after all locks and proof work. A deadline crossed while waiting
+ -- must not turn a stale consent into a newly persisted attribution.
+ IF i.expires_at IS NULL OR i.expires_at<=pg_catalog.clock_timestamp() THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
  IF f.origin_accepted AND NOT f.origin_withdrawn AND NOT f.origin_expired AND i.origin IS NOT NULL THEN
   INSERT INTO app_private.signup_origins(user_id,origin,consent_version,consented_at,expires_at)
    VALUES(p_user,i.origin,i.origin_consent_version,pg_catalog.now(),pg_catalog.now()+interval '12 months');

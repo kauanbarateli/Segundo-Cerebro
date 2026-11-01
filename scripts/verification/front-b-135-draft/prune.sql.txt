@@ -6,55 +6,53 @@ DO $scratch_guard$ BEGIN RAISE EXCEPTION 'UNREVIEWED SCRATCH SQL: DO NOT APPLY';
 -- Keep current grants on CREATE OR REPLACE; audit all direct/inherited grants.
 CREATE OR REPLACE FUNCTION app_private.signup_prune() RETURNS jsonb
 LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
-DECLARE r record; locked_id uuid; f app_private.signup_completion_fences_draft;
+DECLARE r record; locked_id uuid; cutoff timestamptz;
  removed integer:=0; scrubbed integer:=0; origins_removed integer:=0; protected integer:=0; expired_origins integer:=0; n integer;
 BEGIN
   IF pg_catalog.current_setting('transaction_isolation') IS DISTINCT FROM 'read committed' THEN
     RAISE EXCEPTION 'signup_prune requires read committed';
   END IF;
+ cutoff:=pg_catalog.clock_timestamp();
  -- Read candidates without row locks, then take the per-user advisory lock
  -- before locking bound rows. Try/skip avoids waiting on competing holders.
  FOR r IN SELECT i.id,i.user_id,i.state FROM app_private.signup_intents i
-  WHERE i.state IN ('pending','bound') AND i.expires_at<=pg_catalog.now()
+  WHERE i.state IN ('pending','bound') AND i.expires_at<=cutoff
    AND (i.origin IS NOT NULL OR NOT EXISTS(SELECT 1 FROM app_private.signup_completion_fences_draft f WHERE f.intent_id=i.id OR (i.user_id IS NOT NULL AND f.user_id=i.user_id)))
   ORDER BY i.expires_at,i.id LIMIT 500 LOOP
   IF r.state='bound' THEN
    IF r.user_id IS NULL OR NOT pg_catalog.pg_try_advisory_xact_lock(pg_catalog.hashtextextended(r.user_id::text || ':signup',0)) THEN CONTINUE; END IF;
-   SELECT i.id INTO locked_id FROM app_private.signup_intents i WHERE i.id=r.id AND i.user_id=r.user_id AND i.state='bound' AND i.expires_at<=pg_catalog.now() FOR UPDATE SKIP LOCKED;
+   SELECT i.id INTO locked_id FROM app_private.signup_intents i WHERE i.id=r.id AND i.user_id=r.user_id AND i.state='bound' AND i.expires_at<=pg_catalog.clock_timestamp() FOR UPDATE SKIP LOCKED;
    IF NOT FOUND THEN CONTINUE; END IF;
    -- Separate statement after lock acquisition; every new writer must obey
    -- the same advisory lock. Old or owner-level bypass remains a cutover gate.
-   SELECT * INTO f FROM app_private.signup_completion_fences_draft WHERE user_id=r.user_id OR intent_id=r.id FOR UPDATE;
-   IF FOUND THEN
+   IF EXISTS(SELECT 1 FROM app_private.signup_completion_fences_draft WHERE user_id=r.user_id OR intent_id=r.id) THEN
     protected:=protected+1;
     -- Even when existing identifiers disagree, remove expired attribution
     -- from this locked intent; never change a mismatched fence.
     UPDATE app_private.signup_intents SET origin=NULL,origin_consent_version=NULL,origin_consented_at=NULL WHERE id=r.id AND origin IS NOT NULL;
     GET DIAGNOSTICS n=ROW_COUNT; expired_origins:=expired_origins+n;
-    IF f.user_id=r.user_id AND f.intent_id=r.id THEN
-     UPDATE app_private.signup_completion_fences_draft SET origin_expired=true,updated_at=pg_catalog.now() WHERE user_id=r.user_id AND intent_id=r.id AND NOT origin_expired;
-    END IF;
+    UPDATE app_private.signup_completion_fences_draft SET origin_expired=true,updated_at=pg_catalog.now() WHERE user_id=r.user_id AND intent_id=r.id AND NOT origin_expired;
     CONTINUE;
    END IF;
-   DELETE FROM app_private.signup_intents WHERE id=r.id AND user_id=r.user_id AND state='bound' AND expires_at<=pg_catalog.now()
+   DELETE FROM app_private.signup_intents WHERE id=r.id AND user_id=r.user_id AND state='bound' AND expires_at<=pg_catalog.clock_timestamp()
     AND NOT EXISTS(SELECT 1 FROM app_private.signup_completion_fences_draft WHERE user_id=r.user_id OR intent_id=r.id);
   ELSE
    -- Unbound intent: lock row directly; it cannot have a normal fence until
    -- binding, which also needs that row. Recheck state and absence after lock.
-   SELECT i.id INTO locked_id FROM app_private.signup_intents i WHERE i.id=r.id AND i.user_id IS NULL AND i.state='pending' AND i.expires_at<=pg_catalog.now() FOR UPDATE SKIP LOCKED;
+   SELECT i.id INTO locked_id FROM app_private.signup_intents i WHERE i.id=r.id AND i.user_id IS NULL AND i.state='pending' AND i.expires_at<=pg_catalog.clock_timestamp() FOR UPDATE SKIP LOCKED;
    IF NOT FOUND THEN CONTINUE; END IF;
-   DELETE FROM app_private.signup_intents WHERE id=r.id AND user_id IS NULL AND state='pending' AND expires_at<=pg_catalog.now()
+   DELETE FROM app_private.signup_intents WHERE id=r.id AND user_id IS NULL AND state='pending' AND expires_at<=pg_catalog.clock_timestamp()
     AND NOT EXISTS(SELECT 1 FROM app_private.signup_completion_fences_draft WHERE intent_id=r.id);
   END IF;
   GET DIAGNOSTICS n=ROW_COUNT; removed:=removed+n;
  END LOOP;
  UPDATE app_private.signup_intents SET subject_hash=NULL WHERE id IN (
-  SELECT id FROM app_private.signup_intents WHERE state='consumed' AND subject_hash IS NOT NULL AND consumed_at<=pg_catalog.now()-interval '24 hours'
+  SELECT id FROM app_private.signup_intents WHERE state='consumed' AND subject_hash IS NOT NULL AND consumed_at<=cutoff-interval '24 hours'
   ORDER BY consumed_at,id FOR UPDATE SKIP LOCKED LIMIT 500
  );
  GET DIAGNOSTICS scrubbed=ROW_COUNT;
  DELETE FROM app_private.signup_origins WHERE user_id IN (
-  SELECT user_id FROM app_private.signup_origins WHERE expires_at<=pg_catalog.now() ORDER BY expires_at,user_id FOR UPDATE SKIP LOCKED LIMIT 500
+  SELECT user_id FROM app_private.signup_origins WHERE expires_at<=cutoff ORDER BY expires_at,user_id FOR UPDATE SKIP LOCKED LIMIT 500
  );
  GET DIAGNOSTICS origins_removed=ROW_COUNT;
  RETURN pg_catalog.jsonb_build_object('expiredRemoved',removed,'consumedScrubbed',scrubbed,'originsRemoved',origins_removed,'fencedExamined',protected,'expiredOriginsCleared',expired_origins);
