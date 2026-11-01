@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 import { parseMetricQuery, parseSignupMetrics, parseWithheldSignupMetrics, parseCatalogSignupMetrics, catalogOriginLabel, prepareOriginDistribution } from "../../src/core/acquisition/signup-metrics";
 
 describe("distribuição agregada de origens", () => {
@@ -71,8 +72,22 @@ describe('catálogo aprovado',()=>{
   expect(ORIGIN_DICTIONARY_VERSION).toBe('sha256:'+createHash('sha256').update(bytes).digest('hex'));
   expect(ORIGIN_DICTIONARY).toEqual(JSON.parse(bytes.toString('utf8')).dimensions);
   const sql=readFileSync('scripts/verification/front-b-metrics-dictionary-draft/catalog-integration.sql.txt','utf8');
-  expect(createHash('sha256').update(sql).digest('hex')).toBe('0aedd039e38e03ce61469ee97268f5ced3419cfb8bc6bfa32f9d3054e7009f67');
+  expect(() => execFileSync(process.execPath, ['scripts/verification/front-b-metrics-dictionary-draft/catalog.mjs','--check'], {stdio:'pipe'})).not.toThrow();
   expect(sql).toContain(ORIGIN_DICTIONARY_VERSION);expect(sql).toMatch(/begin;\s*do \$\$ begin raise exception 'DRAFT_ONLY/);
+ });
+ it('aceita identificadores versionados e recusa aliases conflitantes ou sensíveis',async()=>{
+  const url=new URL('../../scripts/verification/front-b-metrics-dictionary-draft/catalog.mjs',import.meta.url).href;
+  const {compileApprovedCatalog}=await import(/* @vite-ignore */ url) as {compileApprovedCatalog:(bytes:Buffer,base:Buffer)=>unknown};
+  const base=readFileSync('supabase/operations/candidates/20261101030000_signup_metrics.sql');
+  const dictionary=JSON.parse(readFileSync('scripts/verification/front-b-metrics-dictionary-draft/origin-dictionary.json','utf8'));
+  dictionary.dimensions.utm_campaign=[{code:'lancamento_2027',label:'Lançamento Campanha',aliases:['lancamento_2027','campanha_2027']}];
+  expect(()=>compileApprovedCatalog(Buffer.from(JSON.stringify(dictionary)),base)).not.toThrow();
+  dictionary.dimensions.utm_campaign.push({code:'outra',label:'Outra',aliases:['outra','campanha_2027']});
+  expect(()=>compileApprovedCatalog(Buffer.from(JSON.stringify(dictionary)),base)).toThrow();
+  dictionary.dimensions.utm_campaign=[{code:'pessoal',label:'Pessoal',aliases:['pessoal','pessoa@example.invalid']}];
+  expect(()=>compileApprovedCatalog(Buffer.from(JSON.stringify(dictionary)),base)).toThrow();
+  dictionary.dimensions.utm_campaign=[{code:'pessoal',label:'Outros',aliases:['pessoal']}];
+  expect(()=>compileApprovedCatalog(Buffer.from(JSON.stringify(dictionary)),base)).toThrow();
  });
  it('aceita códigos conhecidos e distingue ausência de Outros',()=>{expect(parseCatalogSignupMetrics(good,query)).toEqual(good);expect(catalogOriginLabel('utm_source',source[0]!)).toBe('Google');expect(catalogOriginLabel('utm_source',source[1]!)).toBe('Não informada');});
  it('recusa versão antiga, códigos livres, grupos duplicados e contagens divergentes',()=>{
