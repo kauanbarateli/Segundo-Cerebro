@@ -22,12 +22,27 @@ export const DRIVE_INFRA_KEYS = Object.freeze(["pg17","instanceBound","container
 // Shared AuthFrame now imports AuthThemeSwitcher; only this Git path is added.
 // D-032/doc18 route closure after removing the offered Drive UI. HIST026 stays
 // historical; this inventory never qualifies execution or CURRENT27 coverage.
-export const DRIVE_SOURCE_COUNTS = Object.freeze({git:292,dependencies:50});
+// Frentes A/B added eleven reviewed transitive sources; no Drive route was enabled.
+export const DRIVE_SOURCE_COUNTS = Object.freeze({git:303,dependencies:50});
 // Public c781efe Git sources reached from uploads/route.ts:8, then helper:3.
 // Closed provenance metadata; it neither enables Drive nor proves hosted use.
 export const DRIVE_UPLOAD_AVAILABILITY_SOURCES = Object.freeze([
   Object.freeze({path:"src/adapters/db/finance-goals-images-availability.ts",bytes:768,sha256:"be1e4a534a0c20f70da098d498ea830b5e4a43b800ea3d705084c4fcecc44018"}),
   Object.freeze({path:"src/adapters/db/finance-goals-availability.ts",bytes:465,sha256:"6ed708fd40fc1e1ea8b3cce1545220e4dfc08fa8c91160cc4bed5b9c1aa86c8d"}),
+]);
+// Closed source bytes for the additional transitive A/B imports, not execution proof.
+export const DRIVE_FRONT_AB_SOURCES = Object.freeze([
+  Object.freeze({path:"src/components/features/capturar/drafts.ts",bytes:4757,sha256:"73073f45c760930e4103101d65e7b34decee1659d3e9ecd5fad44756fca859c9"}),
+  Object.freeze({path:"src/components/features/capturar/image-preview.tsx",bytes:1266,sha256:"e711a8fa20afb67cc773579f10ddc6689f60bb57596debabdb5895208fcdd34e"}),
+  Object.freeze({path:"src/components/features/capturar/image-rules.ts",bytes:1538,sha256:"719e95f40e4f4bbcea4d16080d568d6fda60bfcd1def3743402f4b697341564f"}),
+  Object.freeze({path:"src/components/features/capturar/images.ts",bytes:2199,sha256:"82d0e93da890ebf0c4a87d1c5fb0b60487099018b2abb12d3742065e6ee19086"}),
+  Object.freeze({path:"src/components/features/capturar/model.ts",bytes:6169,sha256:"4cd9225163a4dbd74b1448df18db35ab0312bc6d41412580c2fdcd50511861fa"}),
+  Object.freeze({path:"src/components/features/capturar/quick-capture.tsx",bytes:12567,sha256:"b1efb3e310455fc21bb0744a448aaa0e6c20420bd498a104aea84bdfc396edc9"}),
+  Object.freeze({path:"src/components/features/capturar/requests.ts",bytes:1457,sha256:"1a62a6ebe5880086da36a52f2216164f5cfc981c0f2f41860e92db57466d0e18"}),
+  Object.freeze({path:"src/components/features/capturar/use-image-attachments.ts",bytes:2924,sha256:"351fe757215ed69ef2000e765e313a5c80ef1ff5b0352d4f816da860c6ecbcea"}),
+  Object.freeze({path:"src/lib/access/front-b-capabilities-server.ts",bytes:593,sha256:"58f3a4affe0a27414295259e6f0b8dd60f103de52e9d0ef001b4c71150f44d5c"}),
+  Object.freeze({path:"src/lib/auth/signup-http.ts",bytes:2971,sha256:"d4b2ed8a43d13084e78df87018440e27b9aac1ed113271b1bade2a9df1631a11"}),
+  Object.freeze({path:"src/lib/navigation/optional-destinations.ts",bytes:1975,sha256:"8b1fa3518080d1a0f663f674eb9ec30769b0a10db2d7536276e16e4cb16b4cd3"}),
 ]);
 export function driveRefuse(code){const e=new Error(DRIVE_CODES.includes(code)?code:"BROWSER_REFUSED");e.name="DriveBrowserFailure";e.stack=e.name+": "+e.message;throw e;}
 export function isDriveAuthActionRequest(value,method){
@@ -66,7 +81,7 @@ export function validateDriveCiReport(input){const v=closedDriveValue(input),key
   if(!exact(v,keys)||v.schemaVersion!==1||v.scenario!=="drive-browser-local-ci"||!/^[a-f0-9]{40}$/.test(v.sourceSha)||!["passed","failed"].includes(v.status)||!DRIVE_CODES.includes(v.code)||typeof v.writeOutcomeUncertain!=="boolean"||!exact(v.infrastructure,DRIVE_INFRA_KEYS)||Object.values(v.infrastructure).some(b=>typeof b!=="boolean")||!Number.isSafeInteger(v.migrationsApplied)||v.migrationsApplied<0||v.migrationsApplied>26||![0,1720].includes(v.catalogueChecks)||!["NONE","SIGTERM","SIGKILL","UNCONFIRMED"].includes(v.nextStopSignal))driveRefuse("REPORT_REFUSED");
   const absent=Array.isArray(v.sourceHashes)&&Array.isArray(v.dependencyHashes)&&!v.sourceHashes.length&&!v.dependencyHashes.length;
   for(const[i,rows]of[v.sourceHashes,v.dependencyHashes].entries()){if(!Array.isArray(rows)||rows.length!==(absent?0:i?DRIVE_SOURCE_COUNTS.dependencies:DRIVE_SOURCE_COUNTS.git)||new Set(rows.map(r=>r.path)).size!==rows.length||rows.some(r=>!exact(r,["path","sha256","bytes"])||!/^[A-Za-z0-9_@()./-]+$/.test(r.path)||r.path.includes("..")||r.path.startsWith("/")||r.path.startsWith("node_modules/")!==!!i||!/^[a-f0-9]{64}$/.test(r.sha256)||!Number.isSafeInteger(r.bytes)||r.bytes<0||r.bytes>16777216||(r.path==="node_modules/server-only/empty.js"?r.bytes!==0||r.sha256!=="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855":r.bytes===0)))driveRefuse("REPORT_REFUSED");}
-  if(!absent)for(const expected of DRIVE_UPLOAD_AVAILABILITY_SOURCES){const row=v.sourceHashes.find(value=>value.path===expected.path);if(!row||row.bytes!==expected.bytes||row.sha256!==expected.sha256)driveRefuse("REPORT_REFUSED");}
+  if(!absent)for(const expected of [...DRIVE_UPLOAD_AVAILABILITY_SOURCES,...DRIVE_FRONT_AB_SOURCES]){const row=v.sourceHashes.find(value=>value.path===expected.path);if(!row||row.bytes!==expected.bytes||row.sha256!==expected.sha256)driveRefuse("REPORT_REFUSED");}
   const c=validateDriveCase(v.case);if(c.writeOutcomeUncertain&&!v.writeOutcomeUncertain||c.pendingRequests&&v.infrastructure.ioQuiet||c.pendingInspections&&v.infrastructure.ioQuiet||absent&&(v.status!=="failed"||c.status!=="not-run"||!["SOURCE_REFUSED","ENVIRONMENT_REFUSED","PROCESS_UNCONFIRMED"].includes(v.code)))driveRefuse("REPORT_REFUSED");
   if(v.status==="passed"&&(v.code!=="PASSED"||v.writeOutcomeUncertain||c.status!=="passed"||v.migrationsApplied!==26||v.catalogueChecks!==1720||Object.values(v.infrastructure).some(b=>!b)||!["SIGTERM","SIGKILL"].includes(v.nextStopSignal)))driveRefuse("REPORT_REFUSED");if(v.status==="failed"&&["PASSED","NOT_RUN"].includes(v.code))driveRefuse("REPORT_REFUSED");return v;
 }
