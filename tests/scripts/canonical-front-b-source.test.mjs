@@ -4,10 +4,17 @@ import { copyFile, lstat, mkdir, mkdtemp, readFile, realpath, rename, rm, symlin
 import { tmpdir } from "node:os";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { registerHooks } from "node:module";
 import { buildSqlEditor } from "../../scripts/build-sql-editor.mjs";
 import { CURRENT27_CANONICAL_REVIEW, readCurrent27CanonicalMigrations, readHistorical026CanonicalMigrations } from "../helpers/canonical-release-source.mjs";
 import { FRONT_B_30_DRAFT_REVIEW, readStagedFrontB30, readHistorical026FromStagedFrontB30, readHistorical027FromStagedFrontB30, readReviewedFrontBChain, readHistorical026FromReviewedFrontB, readHistorical027FromReviewedFrontB } from "../helpers/canonical-front-b-source.mjs";
 import { createHistorical026CanonicalSql } from "../helpers/local-canonical-sql.ts";
+
+// Mirror the narrowly scoped Node bridge used by onboarding-release-catalog.
+const onboardingHelper=new URL("../helpers/onboarding-candidate-sql.ts",import.meta.url),localHelper=new URL("../helpers/local-canonical-sql.ts",import.meta.url);
+const bridge=registerHooks({resolve(specifier,context,next){return specifier==="./local-canonical-sql"&&context.parentURL===onboardingHelper.href?next(localHelper.href,context):next(specifier,context);}});
+let createOnboardingCandidateSql;
+try{({createOnboardingCandidateSql}=await import(onboardingHelper.href));}finally{bridge.deregister();}
 
 const repository = fileURLToPath(new URL("../../",import.meta.url));
 const candidates = ["20261101020254_public_admission_gate.sql","20261101030000_signup_metrics.sql","20261101013633_feedback_requests.sql"];
@@ -115,14 +122,14 @@ test("despacho aceita somente a cadeia íntegra de 27 ou 30, nunca um fallback",
   await assert.rejects(readReviewedFrontBChain("relative"),code("SOURCE_FILE_REFUSED"));
 });
 
-test("fixture histórica qualifica 30 fontes e instala somente o prefixo 026",{timeout:60000},async t=>{
-  const root=await staged(t),db=await createHistorical026CanonicalSql(root);
+test("fixture de onboarding qualifica 30 fontes e instala somente o prefixo 026",{timeout:60000},async t=>{
+  const root=await staged(t),db=await createOnboardingCandidateSql(root);
   try{
-    const {rows}=await db.query("select to_regclass('app_private.onboarding_entries') is not null as onboarding, to_regclass('app_private.finance_series') is null as sem_financeiro_027, to_regclass('app_private.user_admission') is null as sem_admissao_028, to_regclass('app_private.feedback_requests') is null as sem_feedback_030");
-    assert.deepEqual(rows,[{onboarding:true,sem_financeiro_027:true,sem_admissao_028:true,sem_feedback_030:true}]);
+    const {rows}=await db.query("select to_regclass('app_private.onboarding_entries') is not null as onboarding, to_regclass('app_private.finance_series') is null as sem_financeiro_027, to_regclass('app_private.user_admission') is null as sem_admissao_028, to_regprocedure('public.signup_metrics(uuid,uuid,date,date,text,text)') is null as sem_metricas_029, to_regclass('app_private.feedback_requests') is null as sem_feedback_030");
+    assert.deepEqual(rows,[{onboarding:true,sem_financeiro_027:true,sem_admissao_028:true,sem_metricas_029:true,sem_feedback_030:true}]);
   }finally{await db.close();}
   const name=FRONT_B_30_DRAFT_REVIEW[29].file, source=join(root,"supabase/migrations",name), copy=join(root,"supabase/sql-editor/installation",`030_${name}`), bytes=await readFile(source),copyBytes=await readFile(copy),changed=Buffer.from(bytes);
   changed[0]^=1;
-  try{await writeFile(source,changed);await writeFile(copy,changed);await assert.rejects(createHistorical026CanonicalSql(root),code("MIGRATION_INTEGRITY_FAILED"));}
+  try{await writeFile(source,changed);await writeFile(copy,changed);await assert.rejects(createHistorical026CanonicalSql(root),code("MIGRATION_INTEGRITY_FAILED"));await assert.rejects(createOnboardingCandidateSql(root),code("MIGRATION_INTEGRITY_FAILED"));}
   finally{await writeFile(source,bytes);await writeFile(copy,copyBytes);}
 });
