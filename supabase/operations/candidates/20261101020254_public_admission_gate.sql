@@ -113,6 +113,21 @@ language sql stable security definer set search_path='' as $$
 $$;
 revoke all on function app_private.signup_pending_identity(uuid,uuid) from public,anon,authenticated,service_role;
 
+-- After OTP verification, the server can find only the intent bound to the
+-- verified Auth ID. The subject hash must be recomputed from verified identity.
+create function app_private.signup_find_bound_intent(p_user uuid,p_session uuid,p_subject_hash text) returns jsonb
+language plpgsql security definer set search_path='' as $$ declare i app_private.signup_intents; begin
+ if not app_private.signup_pending_identity(p_user,p_session) then raise exception 'Signup unavailable.' using errcode='42501'; end if;
+ if not exists(select 1 from app_private.signup_settings where singleton and enabled) then raise exception 'Signup unavailable.' using errcode='42501'; end if;
+ select * into i from app_private.signup_intents where user_id=p_user and subject_hash=p_subject_hash and state='bound' and expires_at>now();
+ if not found then return null; end if;
+ return jsonb_build_object('intentId',i.id,'termsVersion',i.terms_version,'privacyVersion',i.privacy_version);
+end $$;
+create function public.signup_find_bound_intent(p_user uuid,p_session uuid,p_subject_hash text) returns jsonb
+language sql security invoker set search_path='' as $$ select app_private.signup_find_bound_intent(p_user,p_session,p_subject_hash) $$;
+revoke all on function app_private.signup_find_bound_intent(uuid,uuid,text),public.signup_find_bound_intent(uuid,uuid,text) from public,anon,authenticated,service_role;
+grant execute on function app_private.signup_find_bound_intent(uuid,uuid,text),public.signup_find_bound_intent(uuid,uuid,text) to service_role;
+
 create function app_private.signup_attest_password_reset(p_user uuid,p_session uuid,p_intent uuid,p_subject_hash text) returns void
 language plpgsql security definer set search_path='' as $$ declare i app_private.signup_intents; begin
  perform 1 from auth.users where id=p_user for share;

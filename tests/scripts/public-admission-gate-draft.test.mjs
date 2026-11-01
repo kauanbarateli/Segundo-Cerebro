@@ -73,8 +73,13 @@ test("candidata local protege novas identidades e preserva os caminhos observado
     await db.query("insert into auth.sessions(id,user_id) values($1,$2),($3,$4)", [newSession, newcomer, otherSession, newcomer]);
     const attest = (user, session, key, hash) => db.query("select public.signup_attest_password_reset($1,$2,$3,$4)", [user, session, key, hash]);
     const finish = (user, session, key, hash, terms = "v1") => db.query("select public.signup_complete($1,$2,$3,$4,$5,'v1') as result", [user, session, key, hash, terms]);
+    const findIntent = (user, session, hash) => db.query("select public.signup_find_bound_intent($1,$2,$3) as result", [user, session, hash]);
     await assert.rejects(attest(newcomer, newSession, intent, subject), error => error.code === "42501");
+    await assert.rejects(findIntent(newcomer, newSession, subject), error => error.code === "42501");
     await db.query("update auth.users set email_confirmed_at=now() where id=$1", [newcomer]);
+    assert.equal((await findIntent(newcomer, newSession, "c".repeat(64))).rows[0].result, null);
+    assert.deepEqual((await findIntent(newcomer, newSession, subject)).rows[0].result, { intentId: intent, termsVersion: "v1", privacyVersion: "v1" });
+    await assert.rejects(findIntent(newcomer, directSession, subject), error => error.code === "42501");
     await assert.rejects(finish(newcomer, newSession, intent, subject), error => error.code === "42501");
     await assert.rejects(attest(newcomer, newSession, intent, "c".repeat(64)), error => error.code === "42501");
     // Synthetic server attestation only: the real channel must prove OTP and password reset.
