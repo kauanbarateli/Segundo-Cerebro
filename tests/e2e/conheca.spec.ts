@@ -1,5 +1,6 @@
 import { expect, test, type Page, type Request } from "@playwright/test";
 import { THEME_STORAGE_KEY } from "../../src/lib/theme";
+import { chooseTheme } from "./helpers/theme";
 
 const capitulos = ["captura", "agenda", "projetos"] as const;
 
@@ -389,9 +390,10 @@ test.describe("apresentação pública /conheca", () => {
     const exibida = () => page.locator(".conheca-hero__tela img").evaluateAll((lista) => lista.filter((imagem) => imagem.checkVisibility()).map((imagem) => decodeURIComponent((imagem as HTMLImageElement).currentSrc)));
     await expect.poll(exibida).toEqual([expect.stringContaining("inicio-escuro")]);
 
-    await page.getByRole("button", { name: "Ativar tema claro" }).click();
+    // A02: the header toggle switches light/dark in one click (Sistema stays in Settings and login).
+    await chooseTheme(page, "light");
     await expect.poll(exibida).toEqual([expect.not.stringContaining("escuro")]);
-    await page.getByRole("button", { name: "Ativar tema escuro" }).click();
+    await chooseTheme(page, "dark");
     await expect.poll(exibida).toEqual([expect.stringContaining("inicio-escuro")]);
   });
 

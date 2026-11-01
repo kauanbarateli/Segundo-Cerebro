@@ -301,6 +301,6 @@ export function HomeView() {
       {enabled("capturar") && captures && <div><dt>Capturas por organizar</dt><dd>{captures.inbox.length}</dd></div>}
       {enabled("calendario") && agenda && <div><dt>Compromissos hoje</dt><dd>{agenda.items.length}</dd>{agenda.next && <p>Próximo às {time(agenda.next.starts_at)}</p>}</div>}
     </dl>}
-    <p className="home-session"><Badge>{app.mode === "connected" ? "Conta conectada" : "Dados de exemplo"}</Badge> {app.mode === "connected" ? "Os blocos disponíveis usam os registros da sua conta." : "Suas alterações acompanham esta sessão."}</p>
+    {app.mode !== "connected" && <p className="home-session"><Badge>Dados de exemplo</Badge> Suas alterações acompanham esta sessão.</p>}
   </div>;
 }
