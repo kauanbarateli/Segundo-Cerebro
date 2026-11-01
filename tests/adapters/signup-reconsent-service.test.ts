@@ -24,6 +24,18 @@ describe("revisão explícita após novo OTP",()=>{
   expect(await renewSignupConsent(p,input,legal)).toEqual({status:"needs-verification"});expect(p.renew).not.toHaveBeenCalled();
   const expired={...p,now:()=>checkpoint.expiresAt};expect(await renewSignupConsent(expired,input,legal)).toEqual({status:"needs-verification"});expect(p.renew).not.toHaveBeenCalled();
  });
+ it("não inicia a renovação quando o OTP vence durante a verificação assíncrona",async()=>{
+  const p=setup(),clock=vi.fn().mockReturnValueOnce(2000).mockReturnValueOnce(checkpoint.expiresAt);
+  expect(await renewSignupConsent({...p,now:clock},input,legal)).toEqual({status:"needs-verification"});
+  expect(p.limit).toHaveBeenCalledOnce();expect(p.renew).not.toHaveBeenCalled();expect(p.writeCheckpoint).not.toHaveBeenCalled();
+ });
+ it("recusa relógio inválido ou retrocedido antes da renovação",async()=>{
+  for(const later of [Number.NaN,1999]){
+   const p=setup(),clock=vi.fn().mockReturnValueOnce(2000).mockReturnValueOnce(later);
+   expect(await renewSignupConsent({...p,now:clock},input,legal)).toEqual({status:"needs-verification"});
+   expect(p.renew).not.toHaveBeenCalled();
+  }
+ });
  it("não informa sucesso com resultado ou checkpoint incerto",async()=>{
   const p=setup();p.renew.mockRejectedValueOnce(Error("timeout"));expect(await renewSignupConsent(p,input,legal)).toEqual({status:"unknown"});expect(p.writeCheckpoint).not.toHaveBeenCalled();
   p.writeCheckpoint.mockRejectedValueOnce(Error("cookie failure"));expect(await renewSignupConsent(p,input,legal)).toEqual({status:"unknown"});

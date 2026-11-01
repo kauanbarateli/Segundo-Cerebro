@@ -22,6 +22,11 @@ export async function renewSignupConsent(ports:SignupReconsentPorts,input:{accep
   if(input.acceptedLegal!==true || input.termsVersion!==current.terms || input.privacyVersion!==current.privacy || typeof input.acceptedOrigin!=="boolean" || !current.terms || !current.privacy || !current.originVersion)return {status:"invalid"};
   if(!(await ports.limit(actor.userId)).allowed)return {status:"rate-limited"};
   const hash=ports.subjectHash(email);if(!/^[a-f0-9]{64}$/.test(hash))return {status:"unknown"};
+  // Identity and rate-limit lookups can outlast the OTP proof. Refuse to
+  // start a renewal with a stale proof; SQL must also check its deadline
+  // after acquiring locks to guarantee the deadline throughout the transaction.
+  const beforeRenew=ports.now();
+  if(!Number.isSafeInteger(beforeRenew) || beforeRenew<now || beforeRenew>=checkpoint.expiresAt)return {status:"needs-verification"};
   const result=await ports.renew({userId:actor.userId,sessionId:actor.sessionId,intentId:checkpoint.intentId,subjectHash:hash,terms:current.terms,privacy:current.privacy,keepOrigin:checkpoint.originPending&&input.acceptedOrigin===true,originVersion:current.originVersion});
   if(!result || typeof result!=="object" || Array.isArray(result) || Object.keys(result).sort().join(",")!=="originPending,status" || (result as {status:unknown}).status!=="renewed" || typeof (result as {originPending:unknown}).originPending!=="boolean")return {status:"unknown"};
   // Preserve the original OTP deadline; reflect a concurrent withdrawal.
