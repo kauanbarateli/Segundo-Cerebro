@@ -25,13 +25,15 @@ async function boundedJson(response: Response): Promise<unknown> {
 }
 
 /** Narrow server-only candidate transport; never log body, credentials or errors. */
-export async function signupRpc(config: SupabaseAuthConfig, name: "signup_intent_create" | "signup_find_bound_intent", body: object): Promise<unknown> {
-  if (!["signup_intent_create", "signup_find_bound_intent"].includes(name) || !signupEnabled(config)) return signupUnavailable();
+type SignupRpcName = "signup_intent_create" | "signup_find_bound_intent" | "signup_attest_password_reset" | "signup_complete";
+export async function signupRpc(config: SupabaseAuthConfig, name: SignupRpcName, body: object): Promise<unknown> {
+  if (!["signup_intent_create", "signup_find_bound_intent", "signup_attest_password_reset", "signup_complete"].includes(name) || !signupEnabled(config)) return signupUnavailable();
   const response = await fetch(new URL(`/rest/v1/rpc/${name}`, config.supabaseUrl), {
     method: "POST", cache: "no-store", redirect: "error", signal: AbortSignal.timeout(10_000),
     headers: { "Content-Type": "application/json", "Accept": "application/json", apikey: config.secretKey, Authorization: `Bearer ${config.secretKey}` },
     body: JSON.stringify(body),
   });
+  if (name === "signup_attest_password_reset" && response.status === 204) return null;
   if (!response.ok || response.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase() !== "application/json") return signupUnavailable();
   return boundedJson(response);
 }

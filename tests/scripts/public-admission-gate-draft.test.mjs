@@ -60,6 +60,7 @@ test("candidata local protege novas identidades e preserva os caminhos observado
     await db.query("insert into auth.users(id,email,raw_user_meta_data) values($1,'new@example.invalid',jsonb_build_object('sc_signup_pointer',$2::text))", [newcomer, pointer]);
     const bindingRow = (await db.query("select state,user_id from app_private.signup_intents where id=$1", [intent])).rows[0];
     assert.deepEqual(bindingRow, { state: "bound", user_id: newcomer });
+    assert.equal((await db.query("select binding_hash from app_private.signup_intents where id=$1", [intent])).rows[0].binding_hash, null);
     assert.equal((await db.query("select raw_user_meta_data ? 'sc_signup_pointer' as present from auth.users where id=$1", [newcomer])).rows[0].present, false);
     await db.query("insert into auth.users(id,email,raw_user_meta_data) values($1,'replay@example.invalid',jsonb_build_object('sc_signup_pointer',$2::text))", [replay, pointer]);
     assert.equal((await db.query("select user_id from app_private.signup_intents where id=$1", [intent])).rows[0].user_id, newcomer);
@@ -78,7 +79,7 @@ test("candidata local protege novas identidades e preserva os caminhos observado
     await assert.rejects(findIntent(newcomer, newSession, subject), error => error.code === "42501");
     await db.query("update auth.users set email_confirmed_at=now() where id=$1", [newcomer]);
     assert.equal((await findIntent(newcomer, newSession, "c".repeat(64))).rows[0].result, null);
-    assert.deepEqual((await findIntent(newcomer, newSession, subject)).rows[0].result, { intentId: intent, termsVersion: "v1", privacyVersion: "v1" });
+    assert.deepEqual((await findIntent(newcomer, newSession, subject)).rows[0].result, { intentId: intent, termsVersion: "v1", privacyVersion: "v1", state: "bound" });
     await assert.rejects(findIntent(newcomer, directSession, subject), error => error.code === "42501");
     await assert.rejects(finish(newcomer, newSession, intent, subject), error => error.code === "42501");
     await assert.rejects(attest(newcomer, newSession, intent, "c".repeat(64)), error => error.code === "42501");
@@ -102,6 +103,7 @@ test("candidata local protege novas identidades e preserva os caminhos observado
     assert.deepEqual((await finish(newcomer, newSession, intent, subject)).rows[0].result, { status: "admitted" });
     assert.deepEqual((await finish(newcomer, newSession, intent, subject)).rows[0].result, { status: "already_admitted" });
     await db.exec("reset role");
+    assert.equal((await findIntent(newcomer, newSession, subject)).rows[0].result.state, "consumed");
     assert.equal(await active(newcomer, newSession), true);
     assert.deepEqual((await db.query("select source_kind,source_operation,source_intent from app_private.onboarding_entries where user_id=$1", [newcomer])).rows[0], { source_kind: "public", source_operation: null, source_intent: intent });
     assert.equal((await db.query("select count(*)::int as count from public.domain_events where user_id=$1 and entity_type='signup_admission'", [newcomer])).rows[0].count, 1);
@@ -110,8 +112,17 @@ test("candidata local protege novas identidades e preserva os caminhos observado
     assert.deepEqual(signUpPrivileges.rows[0], { finish: false, attest: false });
     await db.exec("update app_private.signup_settings set enabled=false where singleton");
     assert.equal(await active(newcomer, newSession), true);
+    assert.equal((await findIntent(newcomer, newSession, subject)).rows[0].result.state, "consumed");
     assert.deepEqual((await finish(newcomer, newSession, intent, subject)).rows[0].result, { status: "already_admitted" });
     await assert.rejects(db.query("select public.signup_intent_create($1,$2,'v1','v1',now()+interval '20 minutes')", [binding, subject]), error => error.code === "42501");
+    await db.query("update app_private.signup_intents set consumed_at=now()-interval '25 hours' where id=$1", [intent]);
+    await db.exec("set role service_role");
+    assert.deepEqual((await db.query("select public.signup_prune() as result")).rows[0].result, { expiredRemoved: 1, consumedScrubbed: 1 });
+    await db.exec("reset role");
+    assert.equal((await db.query("select count(*)::int as count from app_private.signup_intents where id=$1", [expired])).rows[0].count, 0);
+    assert.equal((await db.query("select subject_hash from app_private.signup_intents where id=$1", [intent])).rows[0].subject_hash, null);
+    assert.equal((await db.query("select count(*)::int as count from app_private.onboarding_entries where user_id=$1", [newcomer])).rows[0].count, 1);
+    assert.equal(await active(newcomer, newSession), true);
     // Synthetic operator fixture exercises the completion trigger; it does not prove the real Admin saga.
     await db.query("insert into auth.users(id,email) values($1,'admin-created@example.invalid')", [admin]);
     await db.query("insert into auth.sessions(id,user_id) values($1,$2)", [adminSession, admin]);

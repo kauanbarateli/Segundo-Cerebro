@@ -40,18 +40,22 @@ revoke all on app_private.signup_settings from public,anon,authenticated,service
 -- The subject is a server-created HMAC, never an email or a client authority.
 create table app_private.signup_intents (
  id uuid primary key default gen_random_uuid(),
- binding_hash text not null unique check(binding_hash ~ '^[a-f0-9]{64}$'),
- subject_hash text not null check(subject_hash ~ '^[a-f0-9]{64}$'),
+ binding_hash text unique check(binding_hash is null or binding_hash ~ '^[a-f0-9]{64}$'),
+ subject_hash text check(subject_hash is null or subject_hash ~ '^[a-f0-9]{64}$'),
  terms_version text not null check(char_length(terms_version) between 1 and 100),
  privacy_version text not null check(char_length(privacy_version) between 1 and 100),
  expires_at timestamptz not null,
  state text not null default 'pending' check(state in ('pending','bound','consumed')),
  user_id uuid unique references auth.users(id) on delete cascade,
- created_at timestamptz not null default now(),
- check((state='pending')=(user_id is null))
+ created_at timestamptz not null default now(),consumed_at timestamptz,
+ check((state='pending' and user_id is null and binding_hash is not null and subject_hash is not null and consumed_at is null)
+    or (state='bound' and user_id is not null and binding_hash is null and subject_hash is not null and consumed_at is null)
+    or (state='consumed' and user_id is not null and binding_hash is null and consumed_at is not null))
 );
 alter table app_private.signup_intents enable row level security;
 revoke all on app_private.signup_intents from public,anon,authenticated,service_role;
+create index signup_intents_expiry on app_private.signup_intents(expires_at,id) where state in ('pending','bound');
+create index signup_intents_retention on app_private.signup_intents(consumed_at,id) where state='consumed' and subject_hash is not null;
 
 create function app_private.signup_intent_create(p_binding_hash text,p_subject_hash text,p_terms text,p_privacy text,p_expires timestamptz) returns uuid
 language plpgsql security definer set search_path='' as $$ declare v_id uuid; begin
@@ -118,10 +122,11 @@ revoke all on function app_private.signup_pending_identity(uuid,uuid) from publi
 create function app_private.signup_find_bound_intent(p_user uuid,p_session uuid,p_subject_hash text) returns jsonb
 language plpgsql security definer set search_path='' as $$ declare i app_private.signup_intents; begin
  if not app_private.signup_pending_identity(p_user,p_session) then raise exception 'Signup unavailable.' using errcode='42501'; end if;
- if not exists(select 1 from app_private.signup_settings where singleton and enabled) then raise exception 'Signup unavailable.' using errcode='42501'; end if;
- select * into i from app_private.signup_intents where user_id=p_user and subject_hash=p_subject_hash and state='bound' and expires_at>now();
+ select * into i from app_private.signup_intents where user_id=p_user and subject_hash=p_subject_hash and
+  ((state='bound' and expires_at>now()) or (state='consumed' and exists(select 1 from app_private.user_admission a where a.user_id=p_user and a.origin='public' and a.state='admitted')));
  if not found then return null; end if;
- return jsonb_build_object('intentId',i.id,'termsVersion',i.terms_version,'privacyVersion',i.privacy_version);
+ if i.state='bound' and not exists(select 1 from app_private.signup_settings where singleton and enabled) then raise exception 'Signup unavailable.' using errcode='42501'; end if;
+ return jsonb_build_object('intentId',i.id,'termsVersion',i.terms_version,'privacyVersion',i.privacy_version,'state',i.state);
 end $$;
 create function public.signup_find_bound_intent(p_user uuid,p_session uuid,p_subject_hash text) returns jsonb
 language sql security invoker set search_path='' as $$ select app_private.signup_find_bound_intent(p_user,p_session,p_subject_hash) $$;
@@ -166,7 +171,7 @@ language plpgsql security definer set search_path='' as $$ declare i app_private
   select 1 from app_private.signup_password_proofs p where p.intent_id=i.id and p.user_id=p_user and p.session_id=p_session and p.consumed_at is null and p.expires_at>now()
  ) then raise exception 'Signup unavailable.' using errcode='42501'; end if;
  update app_private.signup_password_proofs set consumed_at=now() where intent_id=i.id;
- update app_private.signup_intents set state='consumed' where id=i.id;
+ update app_private.signup_intents set state='consumed',consumed_at=now() where id=i.id;
  update app_private.user_admission set origin='public',state='admitted',admitted_at=now() where user_id=p_user;
  insert into app_private.onboarding_entries(user_id,source_operation,source_kind,source_intent) values(p_user,null,'public',i.id);
  perform app_private.append_event(p_user,'signup_admission',p_user,'created','web',null,jsonb_build_object('user_id',p_user,'origin','public'));
@@ -177,6 +182,25 @@ create function public.signup_complete(p_user uuid,p_session uuid,p_intent uuid,
 language sql security invoker set search_path='' as $$ select app_private.signup_complete(p_user,p_session,p_intent,p_subject_hash,p_terms,p_privacy) $$;
 revoke all on function app_private.signup_attest_password_reset(uuid,uuid,uuid,text),public.signup_attest_password_reset(uuid,uuid,uuid,text),app_private.signup_complete(uuid,uuid,uuid,text,text,text),public.signup_complete(uuid,uuid,uuid,text,text,text) from public,anon,authenticated,service_role;
 grant execute on function app_private.signup_attest_password_reset(uuid,uuid,uuid,text),public.signup_attest_password_reset(uuid,uuid,uuid,text),app_private.signup_complete(uuid,uuid,uuid,text,text,text),public.signup_complete(uuid,uuid,uuid,text,text,text) to service_role;
+
+-- Operator-invoked, bounded retention; no schedule is installed by this SQL.
+create function app_private.signup_prune() returns jsonb language plpgsql security definer set search_path='' as $$
+declare removed integer; scrubbed integer; begin
+ delete from app_private.signup_intents where id in (
+  select id from app_private.signup_intents where state in ('pending','bound') and expires_at<=now()
+  order by expires_at,id for update skip locked limit 500
+ );
+ get diagnostics removed=row_count;
+ update app_private.signup_intents set subject_hash=null where id in (
+  select id from app_private.signup_intents where state='consumed' and subject_hash is not null and consumed_at<=now()-interval '24 hours'
+  order by consumed_at,id for update skip locked limit 500
+ );
+ get diagnostics scrubbed=row_count;
+ return jsonb_build_object('expiredRemoved',removed,'consumedScrubbed',scrubbed);
+end $$;
+create function public.signup_prune() returns jsonb language sql security invoker set search_path='' as $$ select app_private.signup_prune() $$;
+revoke all on function app_private.signup_prune(),public.signup_prune() from public,anon,authenticated,service_role;
+grant execute on function app_private.signup_prune(),public.signup_prune() to service_role;
 
 -- Historical confirmed identities retain access; unconfirmed, non-Admin users
 -- remain pending until a separately reviewed proof-of-possession flow exists.
@@ -195,7 +219,7 @@ language plpgsql security definer set search_path='' as $$ declare pointer text;
  -- subsequent metadata updates or a duplicate signup cannot bind an old account.
  pointer:=new.raw_user_meta_data->>'sc_signup_pointer';
  if pointer is not null and pointer ~ '^[A-Za-z0-9_-]{43,128}$' then
-  update app_private.signup_intents set state='bound',user_id=new.id
+  update app_private.signup_intents set state='bound',user_id=new.id,binding_hash=null
    where binding_hash=encode(sha256(convert_to(pointer,'UTF8')),'hex') and state='pending' and expires_at>now();
  end if;
  -- Remove the transient pointer from this INSERT snapshot; Auth integration must

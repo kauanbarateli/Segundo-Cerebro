@@ -10,7 +10,7 @@ export interface SignupConfirmationPorts {
   /** Verifies a signup OTP, then independently verifies user and session with Auth. */
   verifySignupToken(tokenHash: string): Promise<{ userId: string; sessionId: string; email: string } | null>;
   subjectHash(email: string): string;
-  findBoundIntent(userId: string, sessionId: string, subjectHash: string): Promise<{ intentId: string; termsVersion: string; privacyVersion: string } | null>;
+  findBoundIntent(userId: string, sessionId: string, subjectHash: string): Promise<{ intentId: string; termsVersion: string; privacyVersion: string; state: "bound" | "consumed" } | null>;
   /** Signs the checkpoint and sets a secure, HttpOnly cookie; never exposes it to the UI. */
   putCheckpoint(value: SignupCheckpoint): Promise<void>;
   /** Clear any provisional Auth cookies and checkpoint on failure. */
@@ -34,10 +34,10 @@ export async function verifySignupConfirmation(ports: SignupConfirmationPorts, t
     const hash = ports.subjectHash(email);
     if (!/^[a-f0-9]{64}$/.test(hash)) return { status: "unavailable" };
     const intent = await ports.findBoundIntent(identity.userId, identity.sessionId, hash);
-    if (!intent || !UUID.test(intent.intentId) || !legal.terms || !legal.privacy || intent.termsVersion !== legal.terms || intent.privacyVersion !== legal.privacy) return { status: "invalid" };
+    if (!intent || intent.state !== "bound" || !UUID.test(intent.intentId) || !legal.terms || !legal.privacy || intent.termsVersion !== legal.terms || intent.privacyVersion !== legal.privacy) return { status: "invalid" };
     const now = ports.now();
     if (!Number.isSafeInteger(now) || now < 0 || !Number.isSafeInteger(now + 600_000)) return { status: "unavailable" };
-    await ports.putCheckpoint({ userId: identity.userId, sessionId: identity.sessionId, intentId: intent.intentId, issuedAt: now, expiresAt: now + 600_000 });
+    await ports.putCheckpoint({ userId: identity.userId, sessionId: identity.sessionId, intentId: intent.intentId, issuedAt: now, expiresAt: now + 600_000, passwordConfirmed: false });
     return { status: "ready" };
   } catch { return { status: "unavailable" }; }
   };

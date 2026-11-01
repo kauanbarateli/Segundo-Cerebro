@@ -39,10 +39,10 @@ export function createSignupConfirmationPorts(config: SupabaseAuthConfig, jar: A
     async findBoundIntent(userId, sessionId, hash) {
       const result = await signupRpc(config, "signup_find_bound_intent", { p_user: userId, p_session: sessionId, p_subject_hash: hash });
       if (result === null) return null;
-      if (!result || typeof result !== "object" || Array.isArray(result) || Object.keys(result).sort().join(",") !== "intentId,privacyVersion,termsVersion") return signupUnavailable();
+      if (!result || typeof result !== "object" || Array.isArray(result) || Object.keys(result).sort().join(",") !== "intentId,privacyVersion,state,termsVersion") return signupUnavailable();
       const value = result as Record<string, unknown>;
-      if (typeof value.intentId !== "string" || !UUID.test(value.intentId) || typeof value.termsVersion !== "string" || value.termsVersion.length > 100 || typeof value.privacyVersion !== "string" || value.privacyVersion.length > 100) return signupUnavailable();
-      return { intentId: value.intentId, termsVersion: value.termsVersion, privacyVersion: value.privacyVersion };
+      if (typeof value.intentId !== "string" || !UUID.test(value.intentId) || typeof value.termsVersion !== "string" || value.termsVersion.length > 100 || typeof value.privacyVersion !== "string" || value.privacyVersion.length > 100 || (value.state !== "bound" && value.state !== "consumed")) return signupUnavailable();
+      return { intentId: value.intentId, termsVersion: value.termsVersion, privacyVersion: value.privacyVersion, state: value.state };
     },
     async putCheckpoint(value) {
       if (!signupEnabled(config)) return signupUnavailable();

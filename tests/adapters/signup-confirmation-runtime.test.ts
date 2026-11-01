@@ -25,7 +25,7 @@ describe("adaptador de confirmação de cadastro", () => {
     mocks.enabled.mockReturnValue(true); mocks.rpc.mockResolvedValue({ data: { allowed: true }, error: null });
     mocks.verifyOtp.mockResolvedValue({ error: null }); mocks.getUser.mockResolvedValue({ data: { user: { id: userId, email: "a@example.invalid", email_confirmed_at: "2026-10-31T12:00:00Z", is_anonymous: false } }, error: null });
     mocks.getClaims.mockResolvedValue({ data: { claims: { sub: userId, session_id: sessionId } }, error: null });
-    mocks.signupRpc.mockResolvedValue({ intentId, termsVersion: "v1", privacyVersion: "v2" }); mocks.signOut.mockResolvedValue({ error: null });
+    mocks.signupRpc.mockResolvedValue({ intentId, termsVersion: "v1", privacyVersion: "v2", state: "bound" }); mocks.signOut.mockResolvedValue({ error: null });
   });
   afterEach(() => { vi.clearAllMocks(); });
   it("verifica somente OTP de cadastro e escreve checkpoint protegido", async () => {
