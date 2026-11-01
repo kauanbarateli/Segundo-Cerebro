@@ -143,7 +143,7 @@ absence of a fence are still required for renewal. A missing intent or attempt
 is refused; no old account is identified by email alone.
 
 This candidate pins the expected 028 cleanup and proposed browser-cleanup
-functions and legacy recovery writer, owner and privileges before replacing them. The candidate makes the legacy writer refuse a bound intent carrying the new browser-attempt provenance, while retaining its existing behavior for unmarked legacy intents. This does not stop an invocation that began before replacement or other writers; existing deployments and sessions must be drained. It needs an independent
+functions and legacy recovery writer, owner and privileges before replacing them. The candidate makes the legacy writer refuse every Auth identity inserted after the cutover, while retaining its existing behavior for pre-cutover pending identities. This does not stop an invocation that began before replacement or other writers; existing deployments and sessions must be drained. It needs an independent
 security and concurrency review, a new migration with its own authorization,
 and coordination with the existing scheduled cleanup and its monitoring. A second unconditional SQL blocker remains even if the scratch guard is removed; it must stay until a reviewed, enforceable protocol proves the scheduled job and every other cleanup caller paused and drained, controls concurrent writers (in particular the legacy `signup_recover_verified_intent`, which may delete an expired bound intent), drains old deployments, and coordinates health checks and new function hashes. The rollout must include a concurrent test proving legacy recovery cannot race retention or a new OTP. The candidate alone cannot guarantee the window. No
 cron is installed or enabled here. Health checks that count all expired intents
@@ -158,3 +158,68 @@ operation verifies the signed review proof and the current user/session first;
 it does not globally revoke an account session. Cross-tab cookie replacement
 between request and response cannot be made atomic with browser Set-Cookie and
 remains an integration limitation requiring review.
+
+## Versioned combined review candidate
+
+`same-browser-composed-v1.guarded.sql.txt` combines the two candidates in one
+transaction, generated from their exact contents by
+`compose-same-browser-v1.mjs` with source hashes recorded in the header. It is
+not a migration and must not be applied. Both unconditional blockers appear
+before any schema changes; the second is a formal blocker, not evidence that
+the cleanup job, other callers, legacy writers, or in-flight transactions have
+been stopped. The attempt tables and original browser-prune function are
+created first, then the retention preflight pins those functions alongside the
+installed 028 functions before the legacy-writer and cleanup replacements.
+The legal-version table is deliberately empty, and the application release
+gates remain closed.
+
+The disposable PGlite diagnostic compares the stored composition against the
+generator, exercises both blockers, and injects a mismatched installed cleanup
+body to verify that the whole transaction rolls back. Only within that local
+memory database does it remove both blockers to exercise the candidate. Before
+any future rollout, independently enumerate all callers, disable and drain old
+writers and cron, establish a reviewed way to prove that state rather than
+removing the formal blocker by assumption, and verify races under actual
+Postgres. Review the empty legal table and published-text synchronization, the
+hosted Auth version/duplicate behavior, expiry monitoring and renewed function
+hashes, SMTP and cross-device flows; obtain explicit authorization for a new
+migration. None of these actions alters or repairs the 028 ledger.
+
+### Provenance through intent deletion
+
+The candidate adds `signup_created_after_cutover` to the account admission
+row, initially false for existing rows. The pinned Auth INSERT trigger sets it
+true for every new identity in the INSERT transaction, regardless of whether
+its pointer is missing, expired, or already pruned. This marker does not admit a
+user. Legacy recovery refuses marked accounts even after intent deletion;
+pre-cutover pending accounts retain the existing path. A verified Admin saga
+is independent of this flag, but all other identity-creation paths must be
+inventoried before rollout because newly created pending accounts cannot use
+legacy recovery. The admission FK removes the marker with its account.
+
+The composition requires signup disabled, pins the Auth trigger and public and
+private legacy wrappers, and retains an unconditional blocker until all old
+writers, old deployments and in-flight transactions are actually drained. It
+does not infer historical provenance from email or metadata; existing pending
+identities and any in-flight or historical public signups require review at
+the cutover, and concurrent behavior needs actual Postgres tests.
+
+The candidate retains attempt markers until intent deletion by FK cascade, so
+a renewed bound intent cannot lose `requires_password` at the 24-hour cutoff.
+After the original attempt has been expired for 24 hours, the proposed
+browser-prune function locks the intent and scrubs only its browser hash,
+regardless of intent state. It retains the marker, `requires_password`,
+provenance and any uncertainty fence. Find/admit already reject the original
+expired attempt; identity-bound recovery does not use the hash. This also
+covers fenced password completion, which consumes the intent without setting
+`attempt.consumed_at`, and bound intents whose fence remains unresolved. Actual
+hash minimization depends on a separately approved, monitored cleanup process;
+none is scheduled here. A verified plan to drain all old writers and actual
+concurrent Postgres and Auth/SMTP tests remain release blockers. The boolean proposal and synthetic
+Admin test are not evidence about the actual QA ledger or hosted concurrency.
+
+Existing 028 health and toggle checks pin previous function bodies and counts;
+they cannot simply be reused. A reviewed cutover must introduce compatible
+health checks and schedulers covering the protected window and both intent and
+browser cleanup, repin the new bodies, and observe results before activation.
+Do not run legacy cron scripts against this candidate. No scheduler is enabled.
