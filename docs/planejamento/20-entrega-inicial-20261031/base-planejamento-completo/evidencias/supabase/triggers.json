@@ -1,0 +1,884 @@
+[
+  {
+    "schema": "app_private",
+    "relation": "admin_operations",
+    "tgname": "onboarding_verified_admin_completion",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER onboarding_verified_admin_completion AFTER UPDATE OF phase ON app_private.admin_operations FOR EACH ROW EXECUTE FUNCTION app_private.onboarding_enroll_admin()"
+  },
+  {
+    "schema": "app_private",
+    "relation": "command_receipts",
+    "tgname": "capture_task_revision",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER capture_task_revision AFTER INSERT OR DELETE OR UPDATE ON app_private.command_receipts FOR EACH ROW EXECUTE FUNCTION app_private.capture_task_bump()"
+  },
+  {
+    "schema": "app_private",
+    "relation": "command_receipts",
+    "tgname": "finance_revision",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER finance_revision AFTER INSERT OR DELETE OR UPDATE ON app_private.command_receipts FOR EACH ROW EXECUTE FUNCTION app_private.finance_bump()"
+  },
+  {
+    "schema": "app_private",
+    "relation": "command_receipts",
+    "tgname": "goal_terminal_receipt_guard",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER goal_terminal_receipt_guard BEFORE INSERT OR DELETE OR UPDATE ON app_private.command_receipts FOR EACH ROW EXECUTE FUNCTION app_private.fgt_receipt_guard()"
+  },
+  {
+    "schema": "app_private",
+    "relation": "command_receipts",
+    "tgname": "projects_habits_revision",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER projects_habits_revision AFTER INSERT OR DELETE OR UPDATE ON app_private.command_receipts FOR EACH ROW EXECUTE FUNCTION app_private.projects_habits_bump()"
+  },
+  {
+    "schema": "app_private",
+    "relation": "command_receipts",
+    "tgname": "vault_revision",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER vault_revision AFTER INSERT OR DELETE OR UPDATE ON app_private.command_receipts FOR EACH ROW EXECUTE FUNCTION app_private.vault_bump()"
+  },
+  {
+    "schema": "app_private",
+    "relation": "finance_goal_dispositions",
+    "tgname": "goal_terminal_disposition_guard",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER goal_terminal_disposition_guard BEFORE INSERT OR DELETE OR UPDATE ON app_private.finance_goal_dispositions FOR EACH ROW EXECUTE FUNCTION app_private.fgt_disposition_guard()"
+  },
+  {
+    "schema": "app_private",
+    "relation": "finance_goal_dispositions",
+    "tgname": "goal_terminal_event",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER goal_terminal_event AFTER INSERT ON app_private.finance_goal_dispositions FOR EACH ROW EXECUTE FUNCTION app_private.fgt_event()"
+  },
+  {
+    "schema": "app_private",
+    "relation": "finance_goal_highlights",
+    "tgname": "goal_finance_revision",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER goal_finance_revision AFTER INSERT OR DELETE OR UPDATE ON app_private.finance_goal_highlights FOR EACH ROW EXECUTE FUNCTION app_private.finance_bump()"
+  },
+  {
+    "schema": "app_private",
+    "relation": "finance_goal_highlights",
+    "tgname": "goal_project",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER goal_project BEFORE INSERT OR DELETE OR UPDATE ON app_private.finance_goal_highlights FOR EACH ROW EXECUTE FUNCTION app_private.fg_project()"
+  },
+  {
+    "schema": "app_private",
+    "relation": "finance_goal_releases",
+    "tgname": "goal_finance_revision",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER goal_finance_revision AFTER INSERT OR DELETE OR UPDATE ON app_private.finance_goal_releases FOR EACH ROW EXECUTE FUNCTION app_private.finance_bump()"
+  },
+  {
+    "schema": "app_private",
+    "relation": "finance_goal_releases",
+    "tgname": "goal_project",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER goal_project BEFORE INSERT OR DELETE OR UPDATE ON app_private.finance_goal_releases FOR EACH ROW EXECUTE FUNCTION app_private.fg_project()"
+  },
+  {
+    "schema": "app_private",
+    "relation": "finance_goal_reservations",
+    "tgname": "goal_finance_revision",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER goal_finance_revision AFTER INSERT OR DELETE OR UPDATE ON app_private.finance_goal_reservations FOR EACH ROW EXECUTE FUNCTION app_private.finance_bump()"
+  },
+  {
+    "schema": "app_private",
+    "relation": "finance_goal_reservations",
+    "tgname": "goal_project",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER goal_project BEFORE INSERT OR DELETE OR UPDATE ON app_private.finance_goal_reservations FOR EACH ROW EXECUTE FUNCTION app_private.fg_project()"
+  },
+  {
+    "schema": "app_private",
+    "relation": "finance_goals",
+    "tgname": "goal_finance_revision",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER goal_finance_revision AFTER INSERT OR DELETE OR UPDATE ON app_private.finance_goals FOR EACH ROW EXECUTE FUNCTION app_private.finance_bump()"
+  },
+  {
+    "schema": "app_private",
+    "relation": "finance_goals",
+    "tgname": "goal_project",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER goal_project BEFORE INSERT OR DELETE OR UPDATE ON app_private.finance_goals FOR EACH ROW EXECUTE FUNCTION app_private.fg_project()"
+  },
+  {
+    "schema": "app_private",
+    "relation": "finance_goals",
+    "tgname": "goal_z_image_binding",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER goal_z_image_binding BEFORE INSERT OR UPDATE ON app_private.finance_goals FOR EACH ROW EXECUTE FUNCTION app_private.fgi_project()"
+  },
+  {
+    "schema": "app_private",
+    "relation": "finance_series",
+    "tgname": "finance_revision",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER finance_revision AFTER INSERT OR DELETE OR UPDATE ON app_private.finance_series FOR EACH ROW EXECUTE FUNCTION app_private.finance_bump()"
+  },
+  {
+    "schema": "app_private",
+    "relation": "finance_series",
+    "tgname": "finance_series_project",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER finance_series_project BEFORE INSERT OR UPDATE ON app_private.finance_series FOR EACH ROW EXECUTE FUNCTION app_private.fsv2_project()"
+  },
+  {
+    "schema": "app_private",
+    "relation": "finance_series_occurrences",
+    "tgname": "finance_revision",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER finance_revision AFTER INSERT OR DELETE OR UPDATE ON app_private.finance_series_occurrences FOR EACH ROW EXECUTE FUNCTION app_private.finance_bump()"
+  },
+  {
+    "schema": "app_private",
+    "relation": "finance_series_occurrences",
+    "tgname": "finance_series_project",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER finance_series_project BEFORE INSERT OR UPDATE ON app_private.finance_series_occurrences FOR EACH ROW EXECUTE FUNCTION app_private.fsv2_project()"
+  },
+  {
+    "schema": "app_private",
+    "relation": "finance_series_permits",
+    "tgname": "finance_series_permit_zero",
+    "tgenabled": "O",
+    "tgdeferrable": true,
+    "tginitdeferred": true,
+    "definition": "CREATE CONSTRAINT TRIGGER finance_series_permit_zero AFTER INSERT OR UPDATE ON app_private.finance_series_permits DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION app_private.fsv2_permit_zero()"
+  },
+  {
+    "schema": "app_private",
+    "relation": "onboarding_oauth",
+    "tgname": "onboarding_oauth_permit_zero",
+    "tgenabled": "O",
+    "tgdeferrable": true,
+    "tginitdeferred": true,
+    "definition": "CREATE CONSTRAINT TRIGGER onboarding_oauth_permit_zero AFTER UPDATE ON app_private.onboarding_oauth DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION app_private.onboarding_oauth_permit_zero()"
+  },
+  {
+    "schema": "app_private",
+    "relation": "onboarding_write_permits",
+    "tgname": "onboarding_permit_zero",
+    "tgenabled": "O",
+    "tgdeferrable": true,
+    "tginitdeferred": true,
+    "definition": "CREATE CONSTRAINT TRIGGER onboarding_permit_zero AFTER INSERT OR UPDATE ON app_private.onboarding_write_permits DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION app_private.onboarding_permit_must_be_gone()"
+  },
+  {
+    "schema": "auth",
+    "relation": "users",
+    "tgname": "second_brain_admin_creation_final",
+    "tgenabled": "O",
+    "tgdeferrable": true,
+    "tginitdeferred": true,
+    "definition": "CREATE CONSTRAINT TRIGGER second_brain_admin_creation_final AFTER INSERT ON auth.users DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION app_private.check_admin_auth_creation_final()"
+  },
+  {
+    "schema": "auth",
+    "relation": "users",
+    "tgname": "second_brain_identity_created",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER second_brain_identity_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION app_private.on_auth_user_created()"
+  },
+  {
+    "schema": "public",
+    "relation": "capture_file_links",
+    "tgname": "drive_revision",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER drive_revision AFTER INSERT OR DELETE OR UPDATE ON public.capture_file_links FOR EACH ROW EXECUTE FUNCTION app_private.capture_task_bump()"
+  },
+  {
+    "schema": "public",
+    "relation": "capture_links",
+    "tgname": "capture_task_integrity",
+    "tgenabled": "O",
+    "tgdeferrable": true,
+    "tginitdeferred": true,
+    "definition": "CREATE CONSTRAINT TRIGGER capture_task_integrity AFTER INSERT OR DELETE OR UPDATE ON public.capture_links DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION app_private.capture_task_deferred_integrity()"
+  },
+  {
+    "schema": "public",
+    "relation": "capture_links",
+    "tgname": "capture_task_revision",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER capture_task_revision AFTER INSERT OR DELETE OR UPDATE ON public.capture_links FOR EACH ROW EXECUTE FUNCTION app_private.capture_task_bump()"
+  },
+  {
+    "schema": "public",
+    "relation": "captures",
+    "tgname": "capture_document_row",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER capture_document_row BEFORE INSERT OR UPDATE ON public.captures FOR EACH ROW EXECUTE FUNCTION app_private.capture_document_row()"
+  },
+  {
+    "schema": "public",
+    "relation": "captures",
+    "tgname": "capture_files_sync",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER capture_files_sync AFTER INSERT OR UPDATE ON public.captures FOR EACH ROW EXECUTE FUNCTION app_private.capture_files_sync()"
+  },
+  {
+    "schema": "public",
+    "relation": "captures",
+    "tgname": "capture_task_integrity",
+    "tgenabled": "O",
+    "tgdeferrable": true,
+    "tginitdeferred": true,
+    "definition": "CREATE CONSTRAINT TRIGGER capture_task_integrity AFTER INSERT OR DELETE OR UPDATE ON public.captures DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION app_private.capture_task_deferred_integrity()"
+  },
+  {
+    "schema": "public",
+    "relation": "captures",
+    "tgname": "capture_task_revision",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER capture_task_revision AFTER INSERT OR DELETE OR UPDATE ON public.captures FOR EACH ROW EXECUTE FUNCTION app_private.capture_task_bump()"
+  },
+  {
+    "schema": "public",
+    "relation": "captures",
+    "tgname": "capture_task_row",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER capture_task_row BEFORE INSERT OR UPDATE ON public.captures FOR EACH ROW EXECUTE FUNCTION app_private.capture_task_row()"
+  },
+  {
+    "schema": "public",
+    "relation": "captures",
+    "tgname": "capture_task_sync_links",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER capture_task_sync_links AFTER INSERT OR UPDATE ON public.captures FOR EACH ROW EXECUTE FUNCTION app_private.capture_task_sync_links()"
+  },
+  {
+    "schema": "public",
+    "relation": "captures",
+    "tgname": "knowledge_promoted_capture",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER knowledge_promoted_capture BEFORE UPDATE ON public.captures FOR EACH ROW EXECUTE FUNCTION app_private.knowledge_promoted_capture()"
+  },
+  {
+    "schema": "public",
+    "relation": "captures",
+    "tgname": "projects_habits_revision",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER projects_habits_revision AFTER INSERT OR DELETE OR UPDATE ON public.captures FOR EACH ROW EXECUTE FUNCTION app_private.projects_habits_bump()"
+  },
+  {
+    "schema": "public",
+    "relation": "captures",
+    "tgname": "zz_project_live_owner",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER zz_project_live_owner BEFORE INSERT OR UPDATE ON public.captures FOR EACH ROW EXECUTE FUNCTION app_private.project_live_owner()"
+  },
+  {
+    "schema": "public",
+    "relation": "categories",
+    "tgname": "capture_task_revision",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER capture_task_revision AFTER INSERT OR DELETE OR UPDATE ON public.categories FOR EACH ROW EXECUTE FUNCTION app_private.capture_task_bump()"
+  },
+  {
+    "schema": "public",
+    "relation": "categories",
+    "tgname": "capture_task_row",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER capture_task_row BEFORE INSERT OR UPDATE ON public.categories FOR EACH ROW EXECUTE FUNCTION app_private.capture_task_row()"
+  },
+  {
+    "schema": "public",
+    "relation": "domain_events",
+    "tgname": "capture_task_event",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER capture_task_event BEFORE INSERT OR UPDATE ON public.domain_events FOR EACH ROW EXECUTE FUNCTION app_private.capture_task_event()"
+  },
+  {
+    "schema": "public",
+    "relation": "domain_events",
+    "tgname": "capture_task_revision",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER capture_task_revision AFTER INSERT OR DELETE OR UPDATE ON public.domain_events FOR EACH ROW EXECUTE FUNCTION app_private.capture_task_bump()"
+  },
+  {
+    "schema": "public",
+    "relation": "domain_events",
+    "tgname": "finance_revision",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER finance_revision AFTER INSERT OR DELETE OR UPDATE ON public.domain_events FOR EACH ROW EXECUTE FUNCTION app_private.finance_bump()"
+  },
+  {
+    "schema": "public",
+    "relation": "domain_events",
+    "tgname": "projects_habits_revision",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER projects_habits_revision AFTER INSERT OR DELETE OR UPDATE ON public.domain_events FOR EACH ROW EXECUTE FUNCTION app_private.projects_habits_bump()"
+  },
+  {
+    "schema": "public",
+    "relation": "domain_events",
+    "tgname": "vault_revision",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER vault_revision AFTER INSERT OR DELETE OR UPDATE ON public.domain_events FOR EACH ROW EXECUTE FUNCTION app_private.vault_bump()"
+  },
+  {
+    "schema": "public",
+    "relation": "drive_files",
+    "tgname": "drive_file_row",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER drive_file_row BEFORE INSERT OR UPDATE ON public.drive_files FOR EACH ROW EXECUTE FUNCTION app_private.drive_file_row()"
+  },
+  {
+    "schema": "public",
+    "relation": "drive_files",
+    "tgname": "drive_integrity",
+    "tgenabled": "O",
+    "tgdeferrable": true,
+    "tginitdeferred": true,
+    "definition": "CREATE CONSTRAINT TRIGGER drive_integrity AFTER INSERT OR DELETE OR UPDATE ON public.drive_files DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION app_private.drive_integrity_trigger()"
+  },
+  {
+    "schema": "public",
+    "relation": "drive_files",
+    "tgname": "drive_revision",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER drive_revision AFTER INSERT OR DELETE OR UPDATE ON public.drive_files FOR EACH ROW EXECUTE FUNCTION app_private.capture_task_bump()"
+  },
+  {
+    "schema": "public",
+    "relation": "drive_folders",
+    "tgname": "drive_integrity",
+    "tgenabled": "O",
+    "tgdeferrable": true,
+    "tginitdeferred": true,
+    "definition": "CREATE CONSTRAINT TRIGGER drive_integrity AFTER INSERT OR DELETE OR UPDATE ON public.drive_folders DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION app_private.drive_integrity_trigger()"
+  },
+  {
+    "schema": "public",
+    "relation": "drive_folders",
+    "tgname": "drive_revision",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER drive_revision AFTER INSERT OR DELETE OR UPDATE ON public.drive_folders FOR EACH ROW EXECUTE FUNCTION app_private.capture_task_bump()"
+  },
+  {
+    "schema": "public",
+    "relation": "drive_folders",
+    "tgname": "projects_habits_revision",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER projects_habits_revision AFTER INSERT OR DELETE OR UPDATE ON public.drive_folders FOR EACH ROW EXECUTE FUNCTION app_private.projects_habits_bump()"
+  },
+  {
+    "schema": "public",
+    "relation": "drive_folders",
+    "tgname": "projects_habits_row",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER projects_habits_row BEFORE INSERT OR UPDATE ON public.drive_folders FOR EACH ROW EXECUTE FUNCTION app_private.projects_habits_row()"
+  },
+  {
+    "schema": "public",
+    "relation": "drive_folders",
+    "tgname": "zz_project_live_owner",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER zz_project_live_owner BEFORE INSERT OR UPDATE ON public.drive_folders FOR EACH ROW EXECUTE FUNCTION app_private.project_live_owner()"
+  },
+  {
+    "schema": "public",
+    "relation": "fin_accounts",
+    "tgname": "finance_project",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER finance_project BEFORE INSERT OR UPDATE ON public.fin_accounts FOR EACH ROW EXECUTE FUNCTION app_private.finance_project()"
+  },
+  {
+    "schema": "public",
+    "relation": "fin_accounts",
+    "tgname": "finance_reserved_balance_guard",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER finance_reserved_balance_guard BEFORE UPDATE ON public.fin_accounts FOR EACH ROW EXECUTE FUNCTION app_private.fg_account_close_guard()"
+  },
+  {
+    "schema": "public",
+    "relation": "fin_accounts",
+    "tgname": "finance_revision",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER finance_revision AFTER INSERT OR DELETE OR UPDATE ON public.fin_accounts FOR EACH ROW EXECUTE FUNCTION app_private.finance_bump()"
+  },
+  {
+    "schema": "public",
+    "relation": "fin_accounts",
+    "tgname": "zz_fin_accounts_card_metadata_guard",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER zz_fin_accounts_card_metadata_guard BEFORE INSERT OR UPDATE ON public.fin_accounts FOR EACH ROW EXECUTE FUNCTION app_private.finance_card_metadata_guard()"
+  },
+  {
+    "schema": "public",
+    "relation": "fin_budgets",
+    "tgname": "finance_project",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER finance_project BEFORE INSERT OR UPDATE ON public.fin_budgets FOR EACH ROW EXECUTE FUNCTION app_private.finance_project()"
+  },
+  {
+    "schema": "public",
+    "relation": "fin_budgets",
+    "tgname": "finance_revision",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER finance_revision AFTER INSERT OR DELETE OR UPDATE ON public.fin_budgets FOR EACH ROW EXECUTE FUNCTION app_private.finance_bump()"
+  },
+  {
+    "schema": "public",
+    "relation": "fin_categories",
+    "tgname": "finance_project",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER finance_project BEFORE INSERT OR UPDATE ON public.fin_categories FOR EACH ROW EXECUTE FUNCTION app_private.finance_project()"
+  },
+  {
+    "schema": "public",
+    "relation": "fin_categories",
+    "tgname": "finance_revision",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER finance_revision AFTER INSERT OR DELETE OR UPDATE ON public.fin_categories FOR EACH ROW EXECUTE FUNCTION app_private.finance_bump()"
+  },
+  {
+    "schema": "public",
+    "relation": "fin_tags",
+    "tgname": "finance_project",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER finance_project BEFORE INSERT OR UPDATE ON public.fin_tags FOR EACH ROW EXECUTE FUNCTION app_private.finance_project()"
+  },
+  {
+    "schema": "public",
+    "relation": "fin_tags",
+    "tgname": "finance_revision",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER finance_revision AFTER INSERT OR DELETE OR UPDATE ON public.fin_tags FOR EACH ROW EXECUTE FUNCTION app_private.finance_bump()"
+  },
+  {
+    "schema": "public",
+    "relation": "fin_transactions",
+    "tgname": "finance_project",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER finance_project BEFORE INSERT OR UPDATE ON public.fin_transactions FOR EACH ROW EXECUTE FUNCTION app_private.finance_project()"
+  },
+  {
+    "schema": "public",
+    "relation": "fin_transactions",
+    "tgname": "finance_revision",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER finance_revision AFTER INSERT OR DELETE OR UPDATE ON public.fin_transactions FOR EACH ROW EXECUTE FUNCTION app_private.finance_bump()"
+  },
+  {
+    "schema": "public",
+    "relation": "fin_transactions",
+    "tgname": "finance_series_guard",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER finance_series_guard BEFORE INSERT OR DELETE OR UPDATE ON public.fin_transactions FOR EACH ROW EXECUTE FUNCTION app_private.fsv2_ledger_guard()"
+  },
+  {
+    "schema": "public",
+    "relation": "fin_transactions",
+    "tgname": "finance_tags",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER finance_tags AFTER INSERT OR UPDATE ON public.fin_transactions FOR EACH ROW EXECUTE FUNCTION app_private.finance_sync_tags()"
+  },
+  {
+    "schema": "public",
+    "relation": "habit_entries",
+    "tgname": "projects_habits_revision",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER projects_habits_revision AFTER INSERT OR DELETE OR UPDATE ON public.habit_entries FOR EACH ROW EXECUTE FUNCTION app_private.projects_habits_bump()"
+  },
+  {
+    "schema": "public",
+    "relation": "habit_entries",
+    "tgname": "projects_habits_row",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER projects_habits_row BEFORE INSERT OR UPDATE ON public.habit_entries FOR EACH ROW EXECUTE FUNCTION app_private.projects_habits_row()"
+  },
+  {
+    "schema": "public",
+    "relation": "habit_pauses",
+    "tgname": "projects_habits_revision",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER projects_habits_revision AFTER INSERT OR DELETE OR UPDATE ON public.habit_pauses FOR EACH ROW EXECUTE FUNCTION app_private.projects_habits_bump()"
+  },
+  {
+    "schema": "public",
+    "relation": "habit_pauses",
+    "tgname": "projects_habits_row",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER projects_habits_row BEFORE INSERT OR UPDATE ON public.habit_pauses FOR EACH ROW EXECUTE FUNCTION app_private.projects_habits_row()"
+  },
+  {
+    "schema": "public",
+    "relation": "habits",
+    "tgname": "projects_habits_revision",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER projects_habits_revision AFTER INSERT OR DELETE OR UPDATE ON public.habits FOR EACH ROW EXECUTE FUNCTION app_private.projects_habits_bump()"
+  },
+  {
+    "schema": "public",
+    "relation": "habits",
+    "tgname": "projects_habits_row",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER projects_habits_row BEFORE INSERT OR UPDATE ON public.habits FOR EACH ROW EXECUTE FUNCTION app_private.projects_habits_row()"
+  },
+  {
+    "schema": "public",
+    "relation": "knowledge_notebooks",
+    "tgname": "knowledge_integrity",
+    "tgenabled": "O",
+    "tgdeferrable": true,
+    "tginitdeferred": true,
+    "definition": "CREATE CONSTRAINT TRIGGER knowledge_integrity AFTER INSERT OR DELETE OR UPDATE ON public.knowledge_notebooks DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION app_private.knowledge_deferred_integrity()"
+  },
+  {
+    "schema": "public",
+    "relation": "knowledge_notebooks",
+    "tgname": "knowledge_revision",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER knowledge_revision AFTER INSERT OR DELETE OR UPDATE ON public.knowledge_notebooks FOR EACH ROW EXECUTE FUNCTION app_private.capture_task_bump()"
+  },
+  {
+    "schema": "public",
+    "relation": "knowledge_notebooks",
+    "tgname": "knowledge_row",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER knowledge_row BEFORE INSERT OR UPDATE ON public.knowledge_notebooks FOR EACH ROW EXECUTE FUNCTION app_private.knowledge_row()"
+  },
+  {
+    "schema": "public",
+    "relation": "knowledge_notebooks",
+    "tgname": "projects_habits_revision",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER projects_habits_revision AFTER INSERT OR DELETE OR UPDATE ON public.knowledge_notebooks FOR EACH ROW EXECUTE FUNCTION app_private.projects_habits_bump()"
+  },
+  {
+    "schema": "public",
+    "relation": "knowledge_notebooks",
+    "tgname": "zz_project_live_owner",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER zz_project_live_owner BEFORE INSERT OR UPDATE ON public.knowledge_notebooks FOR EACH ROW EXECUTE FUNCTION app_private.project_live_owner()"
+  },
+  {
+    "schema": "public",
+    "relation": "knowledge_pages",
+    "tgname": "knowledge_integrity",
+    "tgenabled": "O",
+    "tgdeferrable": true,
+    "tginitdeferred": true,
+    "definition": "CREATE CONSTRAINT TRIGGER knowledge_integrity AFTER INSERT OR DELETE OR UPDATE ON public.knowledge_pages DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION app_private.knowledge_deferred_integrity()"
+  },
+  {
+    "schema": "public",
+    "relation": "knowledge_pages",
+    "tgname": "knowledge_revision",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER knowledge_revision AFTER INSERT OR DELETE OR UPDATE ON public.knowledge_pages FOR EACH ROW EXECUTE FUNCTION app_private.capture_task_bump()"
+  },
+  {
+    "schema": "public",
+    "relation": "knowledge_pages",
+    "tgname": "knowledge_row",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER knowledge_row BEFORE INSERT OR UPDATE ON public.knowledge_pages FOR EACH ROW EXECUTE FUNCTION app_private.knowledge_row()"
+  },
+  {
+    "schema": "public",
+    "relation": "links",
+    "tgname": "knowledge_revision",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER knowledge_revision AFTER INSERT OR DELETE OR UPDATE ON public.links FOR EACH ROW EXECUTE FUNCTION app_private.capture_task_bump()"
+  },
+  {
+    "schema": "public",
+    "relation": "links",
+    "tgname": "knowledge_row",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER knowledge_row BEFORE INSERT OR UPDATE ON public.links FOR EACH ROW EXECUTE FUNCTION app_private.knowledge_row()"
+  },
+  {
+    "schema": "public",
+    "relation": "page_refs",
+    "tgname": "knowledge_revision",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER knowledge_revision AFTER INSERT OR DELETE OR UPDATE ON public.page_refs FOR EACH ROW EXECUTE FUNCTION app_private.capture_task_bump()"
+  },
+  {
+    "schema": "public",
+    "relation": "projects",
+    "tgname": "capture_task_revision",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER capture_task_revision AFTER INSERT OR DELETE OR UPDATE ON public.projects FOR EACH ROW EXECUTE FUNCTION app_private.capture_task_bump()"
+  },
+  {
+    "schema": "public",
+    "relation": "projects",
+    "tgname": "capture_task_row",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER capture_task_row BEFORE INSERT OR UPDATE ON public.projects FOR EACH ROW EXECUTE FUNCTION app_private.capture_task_row()"
+  },
+  {
+    "schema": "public",
+    "relation": "projects",
+    "tgname": "project_image_column",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER project_image_column BEFORE INSERT OR UPDATE ON public.projects FOR EACH ROW EXECUTE FUNCTION app_private.project_image_column()"
+  },
+  {
+    "schema": "public",
+    "relation": "projects",
+    "tgname": "projects_habits_revision",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER projects_habits_revision AFTER INSERT OR DELETE OR UPDATE ON public.projects FOR EACH ROW EXECUTE FUNCTION app_private.projects_habits_bump()"
+  },
+  {
+    "schema": "public",
+    "relation": "tasks",
+    "tgname": "capture_task_integrity",
+    "tgenabled": "O",
+    "tgdeferrable": true,
+    "tginitdeferred": true,
+    "definition": "CREATE CONSTRAINT TRIGGER capture_task_integrity AFTER INSERT OR DELETE OR UPDATE ON public.tasks DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION app_private.capture_task_deferred_integrity()"
+  },
+  {
+    "schema": "public",
+    "relation": "tasks",
+    "tgname": "capture_task_revision",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER capture_task_revision AFTER INSERT OR DELETE OR UPDATE ON public.tasks FOR EACH ROW EXECUTE FUNCTION app_private.capture_task_bump()"
+  },
+  {
+    "schema": "public",
+    "relation": "tasks",
+    "tgname": "capture_task_row",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER capture_task_row BEFORE INSERT OR UPDATE ON public.tasks FOR EACH ROW EXECUTE FUNCTION app_private.capture_task_row()"
+  },
+  {
+    "schema": "public",
+    "relation": "tasks",
+    "tgname": "zz_project_live_owner",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER zz_project_live_owner BEFORE INSERT OR UPDATE ON public.tasks FOR EACH ROW EXECUTE FUNCTION app_private.project_live_owner()"
+  },
+  {
+    "schema": "public",
+    "relation": "user_entitlements",
+    "tgname": "capture_task_access_lock",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER capture_task_access_lock BEFORE INSERT OR DELETE OR UPDATE ON public.user_entitlements FOR EACH ROW EXECUTE FUNCTION app_private.capture_task_access_lock()"
+  },
+  {
+    "schema": "public",
+    "relation": "user_moderation",
+    "tgname": "capture_task_access_lock",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER capture_task_access_lock BEFORE INSERT OR DELETE OR UPDATE ON public.user_moderation FOR EACH ROW EXECUTE FUNCTION app_private.capture_task_access_lock()"
+  },
+  {
+    "schema": "public",
+    "relation": "vault_items",
+    "tgname": "vault_revision",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER vault_revision AFTER INSERT OR DELETE OR UPDATE ON public.vault_items FOR EACH ROW EXECUTE FUNCTION app_private.vault_bump()"
+  },
+  {
+    "schema": "public",
+    "relation": "vault_items",
+    "tgname": "vault_row",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER vault_row BEFORE INSERT OR UPDATE ON public.vault_items FOR EACH ROW EXECUTE FUNCTION app_private.vault_row()"
+  },
+  {
+    "schema": "public",
+    "relation": "vault_master_keys",
+    "tgname": "vault_revision",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER vault_revision AFTER INSERT OR DELETE OR UPDATE ON public.vault_master_keys FOR EACH ROW EXECUTE FUNCTION app_private.vault_bump()"
+  },
+  {
+    "schema": "public",
+    "relation": "vault_master_keys",
+    "tgname": "vault_row",
+    "tgenabled": "O",
+    "tgdeferrable": false,
+    "tginitdeferred": false,
+    "definition": "CREATE TRIGGER vault_row BEFORE INSERT OR UPDATE ON public.vault_master_keys FOR EACH ROW EXECUTE FUNCTION app_private.vault_row()"
+  }
+]

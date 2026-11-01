@@ -1,0 +1,365 @@
+{
+  "result": {
+    "lints": [
+      {
+        "name": "rls_enabled_no_policy",
+        "title": "RLS Enabled No Policy",
+        "level": "INFO",
+        "facing": "EXTERNAL",
+        "categories": [
+          "SECURITY"
+        ],
+        "description": "Detects cases where row level security (RLS) has been enabled on a table but no RLS policies have been created.",
+        "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy",
+        "count": 36,
+        "findings": [
+          {
+            "detail": "Table \\`app_private.admin_operations\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "admin_operations",
+              "type": "table",
+              "schema": "app_private"
+            },
+            "observed_at": "2026-11-01T00:06:15.927Z"
+          },
+          {
+            "detail": "Table \\`app_private.capture_task_revisions\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "capture_task_revisions",
+              "type": "table",
+              "schema": "app_private"
+            },
+            "observed_at": "2026-11-01T00:06:15.927Z"
+          },
+          {
+            "detail": "Table \\`app_private.command_receipts\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "command_receipts",
+              "type": "table",
+              "schema": "app_private"
+            },
+            "observed_at": "2026-11-01T00:06:15.927Z"
+          },
+          {
+            "detail": "Table \\`app_private.file_cleanup_runs\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "file_cleanup_runs",
+              "type": "table",
+              "schema": "app_private"
+            },
+            "observed_at": "2026-11-01T00:06:15.927Z"
+          },
+          {
+            "detail": "Table \\`app_private.finance_goal_dispositions\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "finance_goal_dispositions",
+              "type": "table",
+              "schema": "app_private"
+            },
+            "observed_at": "2026-11-01T00:06:15.927Z"
+          },
+          {
+            "detail": "Table \\`app_private.finance_goal_highlights\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "finance_goal_highlights",
+              "type": "table",
+              "schema": "app_private"
+            },
+            "observed_at": "2026-11-01T00:06:15.927Z"
+          },
+          {
+            "detail": "Table \\`app_private.finance_goal_releases\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "finance_goal_releases",
+              "type": "table",
+              "schema": "app_private"
+            },
+            "observed_at": "2026-11-01T00:06:15.927Z"
+          },
+          {
+            "detail": "Table \\`app_private.finance_goal_reservations\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "finance_goal_reservations",
+              "type": "table",
+              "schema": "app_private"
+            },
+            "observed_at": "2026-11-01T00:06:15.927Z"
+          },
+          {
+            "detail": "Table \\`app_private.finance_goals\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "finance_goals",
+              "type": "table",
+              "schema": "app_private"
+            },
+            "observed_at": "2026-11-01T00:06:15.927Z"
+          },
+          {
+            "detail": "Table \\`app_private.finance_revisions\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "finance_revisions",
+              "type": "table",
+              "schema": "app_private"
+            },
+            "observed_at": "2026-11-01T00:06:15.927Z"
+          },
+          {
+            "detail": "Table \\`app_private.finance_series\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "finance_series",
+              "type": "table",
+              "schema": "app_private"
+            },
+            "observed_at": "2026-11-01T00:06:15.927Z"
+          },
+          {
+            "detail": "Table \\`app_private.finance_series_occurrences\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "finance_series_occurrences",
+              "type": "table",
+              "schema": "app_private"
+            },
+            "observed_at": "2026-11-01T00:06:15.927Z"
+          },
+          {
+            "detail": "Table \\`app_private.finance_series_permits\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "finance_series_permits",
+              "type": "table",
+              "schema": "app_private"
+            },
+            "observed_at": "2026-11-01T00:06:15.927Z"
+          },
+          {
+            "detail": "Table \\`app_private.google_calendar_cursors\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "google_calendar_cursors",
+              "type": "table",
+              "schema": "app_private"
+            },
+            "observed_at": "2026-11-01T00:06:15.927Z"
+          },
+          {
+            "detail": "Table \\`app_private.google_calendar_limits\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "google_calendar_limits",
+              "type": "table",
+              "schema": "app_private"
+            },
+            "observed_at": "2026-11-01T00:06:15.927Z"
+          },
+          {
+            "detail": "Table \\`app_private.google_credentials\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "google_credentials",
+              "type": "table",
+              "schema": "app_private"
+            },
+            "observed_at": "2026-11-01T00:06:15.927Z"
+          },
+          {
+            "detail": "Table \\`app_private.google_event_links\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "google_event_links",
+              "type": "table",
+              "schema": "app_private"
+            },
+            "observed_at": "2026-11-01T00:06:15.927Z"
+          },
+          {
+            "detail": "Table \\`app_private.google_oauth_flows\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "google_oauth_flows",
+              "type": "table",
+              "schema": "app_private"
+            },
+            "observed_at": "2026-11-01T00:06:15.927Z"
+          },
+          {
+            "detail": "Table \\`app_private.google_sync_executions\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "google_sync_executions",
+              "type": "table",
+              "schema": "app_private"
+            },
+            "observed_at": "2026-11-01T00:06:15.927Z"
+          },
+          {
+            "detail": "Table \\`app_private.onboarding_commands\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "onboarding_commands",
+              "type": "table",
+              "schema": "app_private"
+            },
+            "observed_at": "2026-11-01T00:06:15.927Z"
+          },
+          {
+            "detail": "Table \\`app_private.onboarding_entries\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "onboarding_entries",
+              "type": "table",
+              "schema": "app_private"
+            },
+            "observed_at": "2026-11-01T00:06:15.927Z"
+          },
+          {
+            "detail": "Table \\`app_private.onboarding_intents\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "onboarding_intents",
+              "type": "table",
+              "schema": "app_private"
+            },
+            "observed_at": "2026-11-01T00:06:15.927Z"
+          },
+          {
+            "detail": "Table \\`app_private.onboarding_oauth\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "onboarding_oauth",
+              "type": "table",
+              "schema": "app_private"
+            },
+            "observed_at": "2026-11-01T00:06:15.927Z"
+          },
+          {
+            "detail": "Table \\`app_private.onboarding_retention_state\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "onboarding_retention_state",
+              "type": "table",
+              "schema": "app_private"
+            },
+            "observed_at": "2026-11-01T00:06:15.927Z"
+          },
+          {
+            "detail": "Table \\`app_private.onboarding_rounds\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "onboarding_rounds",
+              "type": "table",
+              "schema": "app_private"
+            },
+            "observed_at": "2026-11-01T00:06:15.927Z"
+          },
+          {
+            "detail": "Table \\`app_private.onboarding_write_permits\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "onboarding_write_permits",
+              "type": "table",
+              "schema": "app_private"
+            },
+            "observed_at": "2026-11-01T00:06:15.927Z"
+          },
+          {
+            "detail": "Table \\`app_private.profile_focus\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "profile_focus",
+              "type": "table",
+              "schema": "app_private"
+            },
+            "observed_at": "2026-11-01T00:06:15.927Z"
+          },
+          {
+            "detail": "Table \\`app_private.project_contexts\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "project_contexts",
+              "type": "table",
+              "schema": "app_private"
+            },
+            "observed_at": "2026-11-01T00:06:15.927Z"
+          },
+          {
+            "detail": "Table \\`app_private.projects_habits_revisions\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "projects_habits_revisions",
+              "type": "table",
+              "schema": "app_private"
+            },
+            "observed_at": "2026-11-01T00:06:15.927Z"
+          },
+          {
+            "detail": "Table \\`app_private.rate_limits\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "rate_limits",
+              "type": "table",
+              "schema": "app_private"
+            },
+            "observed_at": "2026-11-01T00:06:15.927Z"
+          },
+          {
+            "detail": "Table \\`app_private.upload_reservations\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "upload_reservations",
+              "type": "table",
+              "schema": "app_private"
+            },
+            "observed_at": "2026-11-01T00:06:15.927Z"
+          },
+          {
+            "detail": "Table \\`app_private.vault_revisions\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "vault_revisions",
+              "type": "table",
+              "schema": "app_private"
+            },
+            "observed_at": "2026-11-01T00:06:15.927Z"
+          },
+          {
+            "detail": "Table \\`public.admin_audit_events\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "admin_audit_events",
+              "type": "table",
+              "schema": "public"
+            },
+            "observed_at": "2026-11-01T00:06:15.927Z"
+          },
+          {
+            "detail": "Table \\`public.user_moderation\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "user_moderation",
+              "type": "table",
+              "schema": "public"
+            },
+            "observed_at": "2026-11-01T00:06:15.927Z"
+          },
+          {
+            "detail": "Table \\`public.vault_items\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "vault_items",
+              "type": "table",
+              "schema": "public"
+            },
+            "observed_at": "2026-11-01T00:06:15.927Z"
+          },
+          {
+            "detail": "Table \\`public.vault_master_keys\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "vault_master_keys",
+              "type": "table",
+              "schema": "public"
+            },
+            "observed_at": "2026-11-01T00:06:15.927Z"
+          }
+        ]
+      },
+      {
+        "name": "auth_leaked_password_protection",
+        "title": "Leaked Password Protection Disabled",
+        "level": "WARN",
+        "facing": "EXTERNAL",
+        "categories": [
+          "SECURITY"
+        ],
+        "description": "Leaked password protection is currently disabled.",
+        "remediation": "https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection",
+        "count": 1,
+        "findings": [
+          {
+            "detail": "Supabase Auth prevents the use of compromised passwords by checking against HaveIBeenPwned.org. Enable this feature to enhance security.",
+            "metadata": {
+              "type": "auth",
+              "entity": "Auth"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

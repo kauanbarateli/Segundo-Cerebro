@@ -1,0 +1,396 @@
+{
+  "date": "2026-10-31",
+  "repository": "kauanbarateli/Segundo-Cerebro",
+  "issues": 25,
+  "native_edges": 32,
+  "ok": true,
+  "results": [
+    {
+      "key": "A01",
+      "number": 128,
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/128",
+      "state": "open",
+      "labels": [
+        "enhancement",
+        "ready-for-agent"
+      ],
+      "blocked_by": [],
+      "body_sha256": "cb7cdaefcfa8d534038bf9df94d666c2c27951a675e967333b07bfdd9f8ec831",
+      "errors": []
+    },
+    {
+      "key": "A02",
+      "number": 129,
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/129",
+      "state": "open",
+      "labels": [
+        "enhancement",
+        "ready-for-agent"
+      ],
+      "blocked_by": [],
+      "body_sha256": "cf1efd1da7e304e89a3ca75f7eca5c5109eab034f486056f132843b419d44807",
+      "errors": []
+    },
+    {
+      "key": "A03",
+      "number": 130,
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/130",
+      "state": "open",
+      "labels": [
+        "enhancement",
+        "ready-for-agent"
+      ],
+      "blocked_by": [],
+      "body_sha256": "c05b623a94f42c8684e2679f42178d7a4fd2219161ba55fc0be81fdc18831942",
+      "errors": []
+    },
+    {
+      "key": "A04",
+      "number": 131,
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/131",
+      "state": "open",
+      "labels": [
+        "enhancement",
+        "ready-for-agent"
+      ],
+      "blocked_by": [
+        129,
+        130
+      ],
+      "body_sha256": "39e2d5ab8e2063e7b25b76d553029f19558fca13365690e4d4db97a4e38dec95",
+      "errors": []
+    },
+    {
+      "key": "A05",
+      "number": 132,
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/132",
+      "state": "open",
+      "labels": [
+        "enhancement",
+        "ready-for-agent"
+      ],
+      "blocked_by": [],
+      "body_sha256": "6e5c94df0a17f88880127368fe36b686ef506aeabf5c6a7e7e7a9a1b78df80e5",
+      "errors": []
+    },
+    {
+      "key": "A06",
+      "number": 133,
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/133",
+      "state": "open",
+      "labels": [
+        "enhancement",
+        "ready-for-agent"
+      ],
+      "blocked_by": [],
+      "body_sha256": "37e47335643f134e81a24781ad95505fda25e0762ce34e39055fb775f43de843",
+      "errors": []
+    },
+    {
+      "key": "B00",
+      "number": 134,
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/134",
+      "state": "open",
+      "labels": [
+        "enhancement",
+        "ready-for-agent"
+      ],
+      "blocked_by": [],
+      "body_sha256": "b11b341914d981007b466fb78430f11cc5d7f0537b16a83b7731d82052adaece",
+      "errors": []
+    },
+    {
+      "key": "B01",
+      "number": 135,
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/135",
+      "state": "open",
+      "labels": [
+        "enhancement",
+        "ready-for-agent"
+      ],
+      "blocked_by": [
+        134
+      ],
+      "body_sha256": "22a5e97ef74b80b716696d5ba34e6ceb0a6c732322356d8b97d3ca733b455526",
+      "errors": []
+    },
+    {
+      "key": "B02",
+      "number": 136,
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/136",
+      "state": "open",
+      "labels": [
+        "enhancement",
+        "ready-for-agent"
+      ],
+      "blocked_by": [
+        135
+      ],
+      "body_sha256": "67b49bb86ed41ee2741ce8bbffd20c65e383e428f2a5aab97a095d60e5b360ab",
+      "errors": []
+    },
+    {
+      "key": "B03",
+      "number": 137,
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/137",
+      "state": "open",
+      "labels": [
+        "enhancement",
+        "ready-for-agent"
+      ],
+      "blocked_by": [
+        136
+      ],
+      "body_sha256": "d04e9001f502235b592cc5cad970c1b8c1dfa4a0189be09284787a74df8291eb",
+      "errors": []
+    },
+    {
+      "key": "B04",
+      "number": 138,
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/138",
+      "state": "open",
+      "labels": [
+        "enhancement",
+        "ready-for-agent"
+      ],
+      "blocked_by": [
+        134
+      ],
+      "body_sha256": "6a2aaadb7d55d0bad5b28082868cccb3235cfa33c924cad3e0896cde33203116",
+      "errors": []
+    },
+    {
+      "key": "B05",
+      "number": 139,
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/139",
+      "state": "open",
+      "labels": [
+        "enhancement",
+        "ready-for-agent"
+      ],
+      "blocked_by": [],
+      "body_sha256": "17b9fe9cdd396aa119d5f7262e44808fe72679ac860083c0732f15a590fe19a6",
+      "errors": []
+    },
+    {
+      "key": "B06",
+      "number": 140,
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/140",
+      "state": "open",
+      "labels": [
+        "enhancement",
+        "ready-for-agent"
+      ],
+      "blocked_by": [
+        128,
+        129,
+        130,
+        131,
+        132,
+        133,
+        135,
+        136,
+        137,
+        138,
+        139
+      ],
+      "body_sha256": "5a22a107c4aaa2997abf5964a96a38fcd8a0087fa82620dacd8a4523b41ae898",
+      "errors": []
+    },
+    {
+      "key": "P2-01",
+      "number": 141,
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/141",
+      "state": "open",
+      "labels": [
+        "enhancement",
+        "needs-triage",
+        "pos-mvp"
+      ],
+      "blocked_by": [
+        135
+      ],
+      "body_sha256": "e9635f92c29857ab743f0f80bbc71513709f1b41b5f3af7c9ad1344c8dadf967",
+      "errors": []
+    },
+    {
+      "key": "P2-02",
+      "number": 142,
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/142",
+      "state": "open",
+      "labels": [
+        "enhancement",
+        "needs-triage",
+        "pos-mvp"
+      ],
+      "blocked_by": [
+        133
+      ],
+      "body_sha256": "7c0f985f8afda0746128a9fd0d29f629074d2e8a640e31c85beb2e7c29cb28e2",
+      "errors": []
+    },
+    {
+      "key": "P2-03",
+      "number": 143,
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/143",
+      "state": "open",
+      "labels": [
+        "enhancement",
+        "needs-triage",
+        "pos-mvp"
+      ],
+      "blocked_by": [
+        142
+      ],
+      "body_sha256": "bf9fdbedd616400806271ad6e5e339fbc5ec819c86d273da23b865528f8032a0",
+      "errors": []
+    },
+    {
+      "key": "P2-04",
+      "number": 144,
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/144",
+      "state": "open",
+      "labels": [
+        "enhancement",
+        "needs-triage",
+        "pos-mvp"
+      ],
+      "blocked_by": [
+        134
+      ],
+      "body_sha256": "0e4a350cb78b24fe85ac7c6cf7a763b4dd0c73ee08d42a3dfa5eb30ef9a6153a",
+      "errors": []
+    },
+    {
+      "key": "P2-05",
+      "number": 145,
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/145",
+      "state": "open",
+      "labels": [
+        "enhancement",
+        "needs-triage",
+        "pos-mvp"
+      ],
+      "blocked_by": [
+        144
+      ],
+      "body_sha256": "a92755b6007d517339a01fc14801fcc1ff97b7dd57d4562dbe92eff34e4f08fa",
+      "errors": []
+    },
+    {
+      "key": "P2-06",
+      "number": 146,
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/146",
+      "state": "open",
+      "labels": [
+        "enhancement",
+        "needs-triage",
+        "pos-mvp"
+      ],
+      "blocked_by": [
+        144
+      ],
+      "body_sha256": "88203735ecff484a383d219e845333cc0c2623db2a3a7d635c826ba5f70f53d6",
+      "errors": []
+    },
+    {
+      "key": "P2-07",
+      "number": 147,
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/147",
+      "state": "open",
+      "labels": [
+        "enhancement",
+        "needs-triage",
+        "pos-mvp"
+      ],
+      "blocked_by": [
+        134
+      ],
+      "body_sha256": "7d6b830ac962074eca0b5985cf3e22baac96548185b301d7c77baa5e708c484a",
+      "errors": []
+    },
+    {
+      "key": "P2-08",
+      "number": 148,
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/148",
+      "state": "open",
+      "labels": [
+        "enhancement",
+        "needs-triage",
+        "pos-mvp"
+      ],
+      "blocked_by": [
+        137,
+        147
+      ],
+      "body_sha256": "26812be8bcd988962347d903f926ce49988063ad8b5aae4bb0072da5044a76de",
+      "errors": []
+    },
+    {
+      "key": "P2-09",
+      "number": 149,
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/149",
+      "state": "open",
+      "labels": [
+        "enhancement",
+        "needs-triage",
+        "pos-mvp"
+      ],
+      "blocked_by": [
+        138,
+        139,
+        147
+      ],
+      "body_sha256": "9d54248bec86e9cf3c301af3da013811540150f666408246e570f7eb71dfca68",
+      "errors": []
+    },
+    {
+      "key": "P2-10",
+      "number": 150,
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/150",
+      "state": "open",
+      "labels": [
+        "enhancement",
+        "needs-triage",
+        "pos-mvp"
+      ],
+      "blocked_by": [
+        147
+      ],
+      "body_sha256": "0e21f02773266efff7e7bdfeabf3c041127b06b0dc8594df39caa07bd274d2bd",
+      "errors": []
+    },
+    {
+      "key": "P2-11",
+      "number": 151,
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/151",
+      "state": "open",
+      "labels": [
+        "enhancement",
+        "needs-triage",
+        "pos-mvp"
+      ],
+      "blocked_by": [
+        134
+      ],
+      "body_sha256": "07bc655aebc4f203cd8e86d568db0ae6e948d463d759adcbb629330a6bc82069",
+      "errors": []
+    },
+    {
+      "key": "P2-12",
+      "number": 152,
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/152",
+      "state": "open",
+      "labels": [
+        "enhancement",
+        "needs-triage",
+        "pos-mvp"
+      ],
+      "blocked_by": [
+        151
+      ],
+      "body_sha256": "d8f8c7ad1a66c09d6cd990748a94412d097aa0a049f3a1b4bcc08c4a8a61414b",
+      "errors": []
+    }
+  ]
+}

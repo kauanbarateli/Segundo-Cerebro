@@ -1,0 +1,55 @@
+{
+  "data_utc": "2026-11-01T00:15:35.740832+00:00",
+  "tipo": "Verificação documental local; não valida execução do aplicativo ou serviços",
+  "base_git": "bd35288404c493d1b03f7a1a0208f808cc2079a2",
+  "resultado": "PASS",
+  "links_locais_verificados": 107,
+  "links_locais_ausentes": [],
+  "frentes": 13,
+  "decisoes_confirmadas": 17,
+  "escopo_original_byte_identico": true,
+  "referencias": [
+    {
+      "arquivo": "calendario-1440-dark.png",
+      "sha256": "438bc0934f1f8132daa13a518e777780eadbf1934153bd55452d3cba0be395f4",
+      "identico_a_referencia": true
+    },
+    {
+      "arquivo": "calendario-1440-light.png",
+      "sha256": "de715528fab437390f0c0510a68bcd124c2f89d2b0250167c4f60c4d8b216ba9",
+      "identico_a_referencia": true
+    },
+    {
+      "arquivo": "capturar-1440-light.png",
+      "sha256": "06e6ab2e466a10d958e810a963d1e92387464b8a831ad65cc30c019f6cd45d98",
+      "identico_a_referencia": true
+    },
+    {
+      "arquivo": "capturar-390-dark.png",
+      "sha256": "1f997d1c366cdae6103d30fd85b59b0ca87da9e88b3d6e2cca74985787d52ebd",
+      "identico_a_referencia": true
+    },
+    {
+      "arquivo": "configuracoes-390-light.png",
+      "sha256": "be55b1d3b5fc2bb0d11aaa6c522123d7eeed04aad4ec3da1c9c8421175118282",
+      "identico_a_referencia": true
+    },
+    {
+      "arquivo": "projetos-1440-light.png",
+      "sha256": "8f7a2c91315f7142d2660857efcea0356077fc7a14322f4aed9a2b6118011853",
+      "identico_a_referencia": true
+    }
+  ],
+  "banco_hospedado": "STRUCTURAL_METADATA_AUDIT_COMPLETED_WITH_DOCUMENTED_DEVIATION",
+  "testes_do_aplicativo_executados": false,
+  "publicacao_github_realizada": false,
+  "alteracoes_produto_realizadas": false,
+  "total_arquivos_incluindo_manifesto": 65,
+  "versao_pacote": "1.2",
+  "checklist_mantenedor_adicionado": true,
+  "consulta_catalogo_sql_executada": true,
+  "resultado_catalogo_bruto": false,
+  "verificacoes_catalogo": 2512,
+  "divergencias_catalogo": 1,
+  "interpretacao_divergencia": "Versioned operational PT409 patch matches with CRLF; raw false preserved"
+}

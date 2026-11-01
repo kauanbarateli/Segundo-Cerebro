@@ -1,0 +1,22 @@
+[
+  {
+    "version": "20261007151834",
+    "name": "identity_foundation"
+  },
+  {
+    "version": "20261007151850",
+    "name": "auth_password_completion"
+  },
+  {
+    "version": "20261007151904",
+    "name": "restrict_rls_event_trigger_execution"
+  },
+  {
+    "version": "20261007210519",
+    "name": "capture_task_transactions"
+  },
+  {
+    "version": "20261007223710",
+    "name": "activity_page"
+  }
+]

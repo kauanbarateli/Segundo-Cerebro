@@ -1,0 +1,15 @@
+[
+  {
+    "jobid": 1,
+    "jobname": "sc-onboarding-retention-v1",
+    "schedule": "*/15 * * * *",
+    "active": true,
+    "command_md5": "989bfa26cdb65de0489a7cfcd1482813",
+    "mentions_onboarding": true,
+    "mentions_operational_retention": false,
+    "mentions_clickup": false,
+    "runs_24h": 96,
+    "succeeded_24h": 96,
+    "last_success": "2026-11-01 00:00:00.015957+00"
+  }
+]

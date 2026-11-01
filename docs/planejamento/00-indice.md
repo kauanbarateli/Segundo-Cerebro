@@ -1,5 +1,7 @@
 # Planejamento — Novo Segundo Cérebro
 
+**Entrada vigente — 31/10/2026:** [doc20 — entrega inicial em duas frentes](20-entrega-inicial-20261031/README.md). Cadastro somente e-mail/senha, beta gratuito, UTM simples, métricas, feedback e atualizações; integrações e ADM em etapa posterior. O doc20 substitui a ordem/escopo conflitantes abaixo, preservando evidências e aceites históricos. Publicação de planejamento não significa implementação.
+
 **Entrada vigente26/10/2026:** [doc18 — convergência ao protótipo](18-convergencia-prototipo-20261025/README.md). Consolida código/Preview/CI/issues/branches e substitui o backlog histórico abaixo onde houver divergência. Snapshot303doc17 é a autoridade visual; D-077/D-078/D-080–083 delimitam execução e exceções. Implementação permanece pausada, investigação/issues autorizadas.
 
 **Planejamento aprovado em 23/09/2026; protótipo atualizado em 29/09/2026.** Duas rodadas de decisão respondidas (D-001…D-027), diagnóstico + documentos de proposta + roadmap + 28 tickets executáveis em 6 specs. D-028/D-029 registram o protótipo anterior; D-030/D-031 registram esta revisão e a instalação da skill. A execução de produção começa pelos pré-requisitos do [doc 12](12-roadmap.md) §"Antes do primeiro ticket" e pelo **T-001** do [doc 13](13-tickets.md).
