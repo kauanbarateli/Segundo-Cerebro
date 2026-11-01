@@ -4,8 +4,8 @@ module.exports = {
       name: "generated-database-types-stay-at-server-boundary",
       severity: "error",
       comment: "Schema gerado pertence a Auth/adapters; contratos de produto continuam próprios do Núcleo.",
-      from: { pathNot: ["(?:^|/)src/lib/auth/", "(?:^|/)src/adapters/db/"] },
-      to: { path: "(?:^|/)src/lib/supabase/database\\.generated\\.ts$" },
+      from: { pathNot: ["(?:^|/)src/lib/auth/", "(?:^|/)src/adapters/db/", "(?:^|/)src/lib/supabase/database\\.front-b-qa028\\.ts$"] },
+      to: { path: "(?:^|/)src/lib/supabase/database\\.(?:generated|front-b-qa028)\\.ts$" },
     },
     {
       name: "supabase-sdk-stays-at-server-boundary",
