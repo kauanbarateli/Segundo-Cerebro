@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/auth/guards";
+import { readAuthConfiguration } from "@/lib/auth/config";
 import { frontBCapabilities } from "@/lib/access/front-b-capabilities-server";
 import { FEEDBACK_PATH, readOptionalDestinations } from "@/lib/navigation/optional-destinations";
 import { UpdatesBoard } from "@/components/features/atualizacoes/updates-board";
@@ -10,13 +11,14 @@ export const dynamic = "force-dynamic";
 
 export default async function UpdatesPage() {
   await requireUser();
+  const feedbackAvailable = readAuthConfiguration().mode === "supabase" ? frontBCapabilities().schema : readOptionalDestinations().feedback;
   return (
     <>
       <div className="shell-page-heading">
         <h1>Atualizações</h1>
         <p>Acompanhe o que está sendo preparado para o Segundo Cérebro.</p>
       </div>
-      {(frontBCapabilities().schema || readOptionalDestinations().feedback) && <a className="updates-suggestion" href={FEEDBACK_PATH}>Enviar sugestão</a>}
+      {feedbackAvailable && <a className="updates-suggestion" href={FEEDBACK_PATH}>Enviar sugestão</a>}
       <UpdatesBoard />
     </>
   );

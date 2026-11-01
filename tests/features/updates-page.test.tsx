@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 const guards = vi.hoisted(() => ({ requireUser: vi.fn() }));
 const capabilities = vi.hoisted(() => ({ frontB: vi.fn() }));
 vi.mock("@/lib/auth/guards", () => ({ requireUser: guards.requireUser }));
+vi.mock("@/lib/auth/config", () => ({ readAuthConfiguration: () => ({ mode: "supabase" }) }));
 vi.mock("@/lib/access/front-b-capabilities-server", () => ({ frontBCapabilities: capabilities.frontB }));
 import UpdatesPage from "../../src/app/(workspace)/atualizacoes/page";
 import { UpdatesBoard } from "../../src/components/features/atualizacoes/updates-board";
