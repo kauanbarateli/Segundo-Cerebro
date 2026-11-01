@@ -203,21 +203,18 @@
 }
 
 .conheca-secoes {
-  order: 1;
-}
-
-.conheca-cabecalho__acesso {
-  order: 2;
+  display: none;
 }
 
 .conheca-secoes ul {
   display: flex;
   gap: var(--space-1);
   padding: 0;
+  margin: 0;
   list-style: none;
 }
 
-/* Sobre o vidro só a tinta principal foi validada (DS 2.1): links e marca usam ink. */
+/* Sobre o vidro só a tinta principal foi validada (DS 2.1): links, tema e marca usam ink. */
 .conheca-cabecalho .sb-brand__second {
   color: var(--ink);
 }
@@ -235,11 +232,6 @@
   transition: background-color var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease);
 }
 
-/* O pedido de acesso só entra no painel quando sai da barra. */
-.conheca-secoes .conheca-secoes__acesso {
-  display: none;
-}
-
 @media (hover: hover) {
   .conheca-secoes a:hover {
     background: var(--surface-hover);
@@ -247,54 +239,46 @@
   }
 }
 
-.conheca-menu {
-  order: 3;
-  display: none;
+/* Tema e acesso ficam na barra em toda largura; criar conta só cabe a partir do tablet. */
+.conheca-cabecalho__acoes {
+  display: flex;
   align-items: center;
-  justify-content: center;
-  width: var(--target);
-  height: var(--target);
-  padding: 0;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-full);
-  background: var(--surface);
-  color: var(--ink);
-  cursor: pointer;
+  gap: var(--space-2);
 }
 
-@media (max-width: 767px) {
-  .conheca-menu {
+.conheca-cabecalho .theme-toggle {
+  color: var(--ink);
+}
+
+.conheca-botao--contorno {
+  border-color: var(--line-strong);
+  background: transparent;
+  color: var(--ink);
+}
+
+.conheca-botao--contorno:focus-visible {
+  outline-color: var(--ink);
+}
+
+@media (hover: hover) {
+  .conheca-botao--contorno:hover {
+    background: var(--surface-hover);
+  }
+}
+
+.conheca-cabecalho__criar {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .conheca-cabecalho__criar {
     display: inline-flex;
   }
-  .conheca-secoes {
-    position: absolute;
-    inset: 100% 0 auto;
-    display: none;
-    padding: var(--space-2) var(--conheca-margem) var(--space-5);
-    border-bottom: 1px solid var(--line);
-    background: var(--surface);
-  }
-  .conheca-secoes[data-aberto] {
-    display: block;
-  }
-  .conheca-secoes ul {
-    flex-direction: column;
-  }
-  .conheca-secoes a {
-    width: 100%;
-    min-height: var(--field-height);
-    border-radius: var(--radius-md);
-    font-size: var(--type-corpo-forte);
-  }
 }
 
-/* Nos celulares estreitos o nome da marca tem prioridade sobre o botão. */
-@media (max-width: 419px) {
-  .conheca-cabecalho__acesso {
-    display: none;
-  }
-  .conheca-secoes .conheca-secoes__acesso {
-    display: list-item;
+@media (min-width: 768px) {
+  .conheca-secoes {
+    display: block;
   }
 }
 
@@ -647,25 +631,6 @@
   }
 }
 
-/* Princípios e panorama dos módulos, sem duplicar capítulos. */
-.conheca-principios__texto { display: grid; gap: var(--space-5); }
-.conheca-principios__lista {
-  display: grid;
-  gap: var(--space-8);
-  margin-top: var(--space-12);
-  padding: 0;
-  list-style: none;
-}
-.conheca-principios__lista li {
-  display: grid;
-  align-content: start;
-  gap: var(--space-3);
-  padding-top: var(--space-5);
-  border-top: 1px solid var(--line);
-}
-@media (min-width: 768px) {
-  .conheca-principios__lista { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--space-12); }
-}
 /* Acesso */
 
 .conheca-acesso {
@@ -750,12 +715,13 @@
 }
 
 .conheca-rodape__links {
-  display: grid;
-  justify-items: start;
-  gap: var(--space-2);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-6);
 }
 
-.conheca-rodape__configuracoes {
+.conheca-rodape__suporte {
   display: inline-flex;
   align-items: center;
   min-width: var(--target);
@@ -763,15 +729,6 @@
   max-width: 100%;
   border-radius: var(--radius-sm);
   overflow-wrap: anywhere;
-}
-
-/* O seletor de tema do rodapé mostra o rótulo em todas as larguras. */
-.conheca-rodape .theme-selector .field__label {
-  position: static;
-  width: auto;
-  height: auto;
-  overflow: visible;
-  clip-path: none;
 }
 
 @media (min-width: 900px) {
@@ -782,7 +739,6 @@
   }
   .conheca-rodape__aviso { grid-column: 1; }
   .conheca-rodape__links { grid-column: 1 / -1; }
-  .conheca-rodape .theme-selector { grid-column: 2; grid-row: 1 / span 2; align-self: end; }
 }
 
 /* Movimento: a tela do Início se abre com a rolagem, a tela de cada capítulo

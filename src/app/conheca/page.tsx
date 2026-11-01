@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { INDEXACAO_PUBLICA } from "@/components/features/conheca/content";
 import { LandingPage } from "@/components/features/conheca/landing-page";
+import { readSignupCapability } from "@/lib/access/signup-capability";
 
 const titulo = "Segundo Cérebro · Capture agora, encontre depois";
 const descricao = "Notas, tarefas, agenda, hábitos, finanças e senhas num só lugar, ligados entre si. Conheça o Segundo Cérebro.";
@@ -37,5 +38,5 @@ export function generateMetadata(): Metadata {
 }
 
 export default function ConhecaPage() {
-  return <LandingPage />;
+  return <LandingPage cadastroAberto={readSignupCapability().available} />;
 }
