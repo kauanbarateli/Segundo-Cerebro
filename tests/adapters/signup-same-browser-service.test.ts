@@ -9,7 +9,7 @@ const secret="a".repeat(43), token="b".repeat(48), hash="c".repeat(64);
 const current={terms:"terms-v1",privacy:"privacy-v1",originVersion:"utm-v1"};
 const input={browserSecret:secret,token,terms:current.terms,privacy:current.privacy,acceptOrigin:true};
 function setup() {
- const ports={canBegin:vi.fn(()=>true),browserHash:vi.fn(()=>hash),findAttempt:vi.fn(async()=>({intentId})),verifyEmailProof:vi.fn(async()=>({userId,sessionId,email:"person@example.invalid"})),subjectHash:vi.fn(()=>hash),admit:vi.fn(async()=>true),clearProvisionalSession:vi.fn(async()=>{})};
+ const ports={canBegin:vi.fn(()=>true),browserHash:vi.fn(()=>hash),findAttempt:vi.fn(async()=>({intentId})),limitToken:vi.fn(async()=>({allowed:true})),verifyEmailProof:vi.fn(async()=>({userId,sessionId,email:"person@example.invalid"})),subjectHash:vi.fn(()=>hash),admit:vi.fn(async()=>true),clearProvisionalSession:vi.fn(async()=>{})};
  return ports satisfies SameBrowserSignupPorts;
 }
 describe("same-browser signup candidate",()=>{

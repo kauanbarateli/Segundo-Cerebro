@@ -9,6 +9,7 @@ export interface SameBrowserSignupPorts {
   browserHash(secret: string): string;
   /** Returns a live intent only when its Auth INSERT actually bound it. */
   findAttempt(hash: string): Promise<{ intentId: string } | null>;
+  limitToken(token: string): Promise<{ allowed: boolean }>;
   /** One-time email proof followed by verified getUser and getClaims. */
   verifyEmailProof(token: string): Promise<{ userId: string; sessionId: string; email: string } | null>;
   subjectHash(email: string): string;
@@ -31,6 +32,7 @@ export async function confirmSameBrowserSignup(ports: SameBrowserSignupPorts, in
     // Check before OTP so opening a link on another device never consumes it.
     const attempt = await ports.findAttempt(browserHash);
     if (!attempt || !UUID.test(attempt.intentId)) return { status: "other-browser" };
+    if (!(await ports.limitToken(input.token)).allowed) return { status: "unavailable" };
     started = true;
     const identity = await ports.verifyEmailProof(input.token);
     if (!identity || !UUID.test(identity.userId) || !UUID.test(identity.sessionId) || typeof identity.email !== "string" || /[\u0000-\u001f\u007f-\u009f<>]/u.test(identity.email)) throw Error("unavailable");
