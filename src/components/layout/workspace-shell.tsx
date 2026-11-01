@@ -329,7 +329,7 @@ export function WorkspaceShell({ children, avatarId = null, displayName = null, 
           </button>
           <div id="shell-profile" ref={profilePopover} popover="auto" className="shell-profile">
             <p className="shell-profile-title">{connected ? "Sua conta" : "Perfil de demonstração"}</p>
-            <p>{connected ? "Seus registros são salvos na sua conta." : "Nenhuma conta está conectada."}</p>
+            {!connected && <p>Nenhuma conta está conectada.</p>}
             {activityAllowed && <Link href="/atividade" className="shell-menu-link" onClick={closeProfile}><Icons.Activity /><span>Atividade</span></Link>}
             <Link href="/configuracoes" className="shell-menu-link" onClick={closeProfile}><Icons.Settings /><span>Configurações</span></Link>
             <Link href={optional.help.href} className="shell-menu-link" onClick={closeProfile}>{optional.help.kind === "feedback" ? <Icons.Inbox /> : <Icons.Help />}<span>{optional.help.label}</span></Link>
@@ -361,7 +361,7 @@ export function WorkspaceShell({ children, avatarId = null, displayName = null, 
             <strong className="shell-breadcrumb-current">{context}</strong>
           </div>
           <div className="shell-top-actions">
-            <span className="shell-mode"><span className="shell-mode-dot" aria-hidden="true" /><span className="shell-demo-label">{connected ? "Conta conectada" : "Demonstração"}</span></span>
+            {!connected && <span className="shell-mode"><span className="shell-mode-dot" aria-hidden="true" /><span className="shell-demo-label">Demonstração</span></span>}
             <Button variant="ghost" className="shell-top-search" onClick={openSearch} aria-label="Buscar informações" aria-keyshortcuts="Control+k Meta+k">
               <Icons.Search />
             </Button>
@@ -378,7 +378,7 @@ export function WorkspaceShell({ children, avatarId = null, displayName = null, 
         <main id="conteudo" ref={main} tabIndex={-1} className="shell-main"><ConnectedCommandFeedback>{children}</ConnectedCommandFeedback></main>
         <footer className="shell-footer">
           <span>Um lugar para pensar com clareza.</span>
-          <span className="shell-status">{connected ? "Seus registros são salvos na sua conta." : "Demonstração · Alterações guardadas somente nesta visita."}</span>
+          {!connected && <span className="shell-status">Demonstração · Alterações guardadas somente nesta visita.</span>}
         </footer>
       </div>
 
