@@ -2,9 +2,8 @@ import { Brand } from "@/components/ui/brand";
 import Link from "next/link";
 import { LegalLinks } from "@/components/ui/legal-links";
 import { Icons } from "@/components/ui/icons";
-import { ThemeSelector } from "@/components/theme/theme-selector";
 import { AccessAction } from "./access-action";
-import { acesso, capitulos, hero, movimentos, previaKanban, principios, rodape, type Capitulo as ConteudoCapitulo } from "./content";
+import { acessoPara, capitulos, hero, movimentos, previaKanban, rodape, type Capitulo as ConteudoCapitulo } from "./content";
 import { LandingHeader } from "./landing-header";
 import { ProductShot } from "./product-shot";
 import { ProjectPreview } from "./project-preview";
@@ -43,11 +42,12 @@ function Capitulo({ item, ordem }: { item: ConteudoCapitulo; ordem: "texto-prime
 }
 
 /** Apresentação pública do produto: três capítulos com telas reais do app em demonstração. */
-export function LandingPage() {
+export function LandingPage({ cadastroAberto = false }: { cadastroAberto?: boolean }) {
+  const acesso = acessoPara(cadastroAberto);
   return (
     <div className="conheca" id="topo">
       <a className="skip-link" href="#conteudo">Pular para o conteúdo</a>
-      <LandingHeader />
+      <LandingHeader acesso={acesso.cabecalho} />
       <main id="conteudo" tabIndex={-1}>
         <section className="conheca-hero" aria-labelledby="conheca-titulo">
           <div className="conheca-faixa conheca-hero__grade">
@@ -93,27 +93,13 @@ export function LandingPage() {
             <Capitulo key={item.id} item={item} ordem={indice % 2 === 0 ? "texto-primeiro" : "tela-primeiro"} />
           ))}
         </section>
-        <section id="principios" className="conheca-secao" aria-labelledby="principios-titulo">
-          <div className="conheca-faixa conheca-principios">
-            <div className="conheca-principios__texto"><h2 id="principios-titulo" className="conheca-titulo">{principios.titulo}</h2><p className="conheca-paragrafo">{principios.texto}</p></div>
-            <ul className="conheca-principios__lista">
-              {principios.itens.map((item) => (
-                <li key={item.titulo}>
-                  <h3 className="conheca-regra__titulo">{item.titulo}</h3>
-                  <p className="conheca-paragrafo">{item.texto}</p>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
-
         <section id="acesso" className="conheca-acesso" aria-labelledby="acesso-titulo">
           <div className="conheca-faixa conheca-acesso__grade">
             <h2 id="acesso-titulo" className="conheca-vitrine">{acesso.titulo}</h2>
             <div className="conheca-acesso__apoio">
               <p className="conheca-chamada">{acesso.texto}</p>
-              <AccessAction destino={acesso.destino} />
-              <Link className="conheca-acesso__conta" href="/entrar" prefetch={false}>Já tem uma conta? Entrar</Link>
+              <AccessAction destino={acesso.principal} />
+              {acesso.conta && <Link className="conheca-acesso__conta" href={acesso.conta.href} prefetch={false}>{acesso.conta.rotulo}</Link>}
             </div>
           </div>
         </section>
@@ -122,14 +108,13 @@ export function LandingPage() {
       <footer className="conheca-rodape">
         <div className="conheca-faixa conheca-rodape__grade">
           <div className="conheca-rodape__marca">
-            <Brand variant="horizontal" size={56} />
+            <Brand variant="stacked" size={36} />
             <p>{rodape.lema}</p>
           </div>
           <p className="conheca-rodape__aviso">{rodape.aviso}</p>
-          <ThemeSelector />
-          <nav className="conheca-rodape__links" aria-label="Informações e configurações">
+          <nav className="conheca-rodape__links" aria-label="Informações e suporte">
             <LegalLinks />
-            <Link className="conheca-rodape__configuracoes" href="/configuracoes" prefetch={false}>Configurações do aplicativo</Link>
+            <a className="conheca-rodape__suporte" href="mailto:suporte@segundocerebroapp.com.br">Precisa de ajuda?</a>
           </nav>
           <p className="conheca-rodape__direitos">© 2026 Segundo Cérebro</p>
         </div>
