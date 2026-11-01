@@ -290,6 +290,9 @@ html[data-input="keyboard"] .shell-sidebar-toggle svg { transition: none; }
   line-height: var(--leading-control);
   text-decoration: none;
   white-space: nowrap;
+  border: 0;
+  font-family: inherit;
+  cursor: pointer;
   transition: background-color var(--motion-fast) var(--motion-ease);
 }
 .shell-capture svg { width: 17px; height: 17px; }
@@ -399,7 +402,10 @@ html[data-input="keyboard"] .shell-sidebar-toggle svg { transition: none; }
   html[data-sidebar="collapsed"] .shell-profile { left: var(--space-4); }
 
   .shell-topbar { min-height: var(--layout-topbar-mobile); padding-inline: max(var(--space-4), env(safe-area-inset-left)) max(var(--space-4), env(safe-area-inset-right)); gap: var(--space-2); }
-  .shell-sidebar-toggle, .shell-breadcrumb-root, .shell-breadcrumb-separator, .shell-capture { display: none; }
+  .shell-sidebar-toggle, .shell-breadcrumb-root, .shell-breadcrumb-separator { display: none; }
+  /* Quick capture stays reachable on phones as an icon-only 44px target; the bottom bar still opens the page. */
+  .shell-capture { min-width: var(--target); padding: 10px; justify-content: center; margin-left: 0; }
+  .shell-capture span { display: none; }
   .shell-menu-button, .shell-top-search { display: inline-flex; }
   .shell-menu-button { margin-left: -10px; }
   .shell-top-actions { gap: 0; }

@@ -1,5 +1,6 @@
 "use client";
 
+import { QuickCapture } from "@/components/features/capturar/quick-capture";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
@@ -368,7 +369,7 @@ export function WorkspaceShell({ children, avatarId = null, displayName = null, 
             <ThemeToggle />
             {optional.updates && <Link className="shell-icon-link" href={optional.updates.href} aria-label={optional.updates.label} title={optional.updates.label} aria-current={pathname === optional.updates.href ? "page" : undefined}><Icons.Bell /></Link>}
             {activityAllowed && <Link className="shell-icon-link" href="/atividade" aria-label="Atividade" title="Atividade" aria-current={pathname === "/atividade" ? "page" : undefined}><Icons.Activity /></Link>}
-            {captureAllowed && <Link className="shell-capture" href="/capturar"><Icons.Capture /><span>Capturar</span></Link>}
+            {captureAllowed && <QuickCapture />}
             <Link className="shell-top-avatar" href="/configuracoes#perfil" aria-label="Abrir meu perfil">
               <AccountAvatar userId={userId} fileId={connected ? avatarId : null} name={profileName} />
             </Link>
