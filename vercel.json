@@ -41,6 +41,7 @@
       "codex/b08-integracao-frentes": false,
       "codex/front-b-feedback-confirmacao": false,
       "codex/front-b-feedback-sessao": false,
+      "codex/front-b-feedback-browser": false,
       "codex/reconciliacao-banco-20261031": false,
       "codex/fix-auditoria-173": false,
       "codex/frente-b-migrations-locais": false
