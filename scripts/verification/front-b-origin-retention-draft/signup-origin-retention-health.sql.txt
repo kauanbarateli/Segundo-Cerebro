@@ -1,0 +1,60 @@
+-- DRAFT READ-ONLY diagnostic. Run only after independently verifying project identity,
+-- schema, privileges and authorization; it does not establish those facts itself.
+begin transaction read only;
+with function_health as (
+ select coalesce(bool_and(
+  pg_catalog.pg_get_userbyid(p.proowner)='postgres'
+  and p.prokind='f' and p.pronargs=0 and p.pronargdefaults=0
+  and pg_catalog.pg_get_function_result(p.oid)='jsonb'
+  and p.prosecdef and not p.proisstrict and not p.proretset and not p.proleakproof
+  and p.provolatile='v' and p.proparallel='u' and l.lanname='plpgsql'
+  and p.proconfig=ARRAY['search_path=""']::text[]
+  and pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(pg_catalog.replace(p.prosrc,E'\r\n',E'\n'),'UTF8')),'hex')='8a0c0c2b6871d750d83596649b59f424204b1bcac0d6192a998c7bfff04ef641'
+  and pg_catalog.has_function_privilege(pg_catalog.to_regrole('anon'),p.oid,'EXECUTE') is false
+  and pg_catalog.has_function_privilege(pg_catalog.to_regrole('authenticated'),p.oid,'EXECUTE') is false
+  and pg_catalog.has_function_privilege(pg_catalog.to_regrole('service_role'),p.oid,'EXECUTE') is true
+  and (select count(*) from pg_catalog.aclexplode(coalesce(p.proacl,pg_catalog.acldefault('f',p.proowner))) a
+       where a.privilege_type='EXECUTE' and not a.is_grantable and a.grantor=p.proowner
+       and a.grantee in (p.proowner,pg_catalog.to_regrole('service_role')::oid))=2
+  and not exists(select 1 from pg_catalog.aclexplode(coalesce(p.proacl,pg_catalog.acldefault('f',p.proowner))) a
+       where a.privilege_type<>'EXECUTE' or a.is_grantable or a.grantor<>p.proowner
+       or a.grantee not in (p.proowner,pg_catalog.to_regrole('service_role')::oid))
+ ),false) as qualified
+ from pg_catalog.pg_proc p join pg_catalog.pg_language l on l.oid=p.prolang
+ where p.oid=pg_catalog.to_regprocedure('app_private.signup_prune()')
+), jobs as (
+ select * from cron.job where jobname='sc-signup-origin-retention-v1'
+), qualifying_jobs as (
+ select * from jobs where username='postgres' and database=current_database()
+  and schedule='*/5 * * * *'
+  and command='SET statement_timeout = ''20s''; SET lock_timeout = ''250ms''; SELECT app_private.signup_prune();'
+), latest as (
+ select r.status,r.start_time,r.end_time
+ from cron.job_run_details r join qualifying_jobs j on j.jobid=r.jobid
+  and r.command=j.command and r.username=j.username and r.database=j.database
+ order by r.start_time desc nulls last,r.runid desc limit 1
+), outcomes as (
+ select max(r.end_time) filter(where r.status='succeeded') as last_success_at,
+        max(r.end_time) filter(where r.status='failed') as last_failure_at
+ from cron.job_run_details r join qualifying_jobs j on j.jobid=r.jobid
+  and r.command=j.command and r.username=j.username and r.database=j.database
+)
+select jsonb_build_object(
+ 'checked_at',now(),
+ 'function_matches_reviewed_draft',(select qualified from function_health),
+ 'job_count',(select count(*) from jobs),
+ 'qualified_job_count',(select count(*) from qualifying_jobs),
+ 'qualified_active_count',(select count(*) from qualifying_jobs where active),
+ 'last_success_at',(select last_success_at from outcomes),
+ 'last_failure_at',(select last_failure_at from outcomes),
+ 'latest_run_status',(select case when status in ('starting','connecting','sending','running','succeeded','failed') then status else 'other' end from latest),
+ 'latest_run_started_at',(select start_time from latest),
+ 'latest_run_ended_at',(select end_time from latest),
+ 'expired_intents',(select count(*) from app_private.signup_intents where state in ('pending','bound') and expires_at<=now()),
+ 'oldest_intent_deadline',(select min(expires_at) from app_private.signup_intents where state in ('pending','bound') and expires_at<=now()),
+ 'pending_scrubs',(select count(*) from app_private.signup_intents where state='consumed' and subject_hash is not null and consumed_at<=now()-interval '24 hours'),
+ 'oldest_scrub_deadline',(select min(consumed_at+interval '24 hours') from app_private.signup_intents where state='consumed' and subject_hash is not null and consumed_at<=now()-interval '24 hours'),
+ 'expired_origins',(select count(*) from app_private.signup_origins where expires_at<=now()),
+ 'oldest_origin_deadline',(select min(expires_at) from app_private.signup_origins where expires_at<=now())
+) as retention_health;
+rollback;
