@@ -5,6 +5,8 @@ describe("origem facultativa do cadastro", () => {
   it("não lê nem retorna dados quando não há consentimento", () => {
     const input = Object.defineProperty({}, "utm_source", { get() { throw new Error("não deve ler"); } });
     expect(parseSignupOrigin(false, input)).toBeNull();
+    expect(parseSignupOrigin("true", input)).toBeNull();
+    expect(parseSignupOrigin(1, input)).toBeNull();
   });
   it("aceita apenas os cinco campos, normaliza e ignora os demais", () => {
     expect(parseSignupOrigin(true, { utm_source: "  busca ", utm_medium: "cpc", utm_campaign: "início", utm_term: "foco", utm_content: "a", referrer: "privado", role: "master" })).toEqual({ utm_source: "busca", utm_medium: "cpc", utm_campaign: "início", utm_term: "foco", utm_content: "a" });
