@@ -1,6 +1,7 @@
 import { FlatCompat } from "@eslint/eslintrc";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { assertLegacyMinimatchRuleDisabled } from "./scripts/verification/minimatch-lint-guard.mjs";
 
 const compat = new FlatCompat({ baseDirectory: dirname(fileURLToPath(import.meta.url)) });
 
@@ -20,4 +21,5 @@ const config = [
   },
 ];
 
+assertLegacyMinimatchRuleDisabled(config);
 export default config;

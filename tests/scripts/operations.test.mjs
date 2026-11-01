@@ -59,6 +59,12 @@ test("production operator checks emit only metadata reports and do not accept ar
  const env={SC_RELEASE_PSQL:resolve(directory,"fake-psql"),SC_RELEASE_REPORT_DIRECTORY:join(directory,"reports"),PGHOST:"db."+PERSONAL_REF+".supabase.co",PGUSER:"postgres",PGDATABASE:"postgres",PGPASSWORD:canary,PGSSLMODE:"require"},output=[];let requests=0;
  assert.equal(await runReleaseCli(["check"],env,value=>output.push(value),{query:async request=>{requests++;assert.ok(request.file.endsWith("release-catalog.sql"));return{version:1,ok:false,checks:100,deviations:[{check:"rls",object:"public.tasks"}]};}}),1);assert.equal(requests,1);assert.equal(output[0].deviation_count,1);const report=JSON.parse(await readFile(join(env.SC_RELEASE_REPORT_DIRECTORY,output[0].report_name),"utf8"));assert.equal(report.deviations[0].object,"public.tasks");assert.equal(JSON.stringify(output).includes(canary),false);
  assert.throws(()=>assertReleaseReport({version:1,ok:true,checks:1,deviations:[],plaintext:canary}),/INVALID/);assert.equal(await runReleaseCli(["check","arbitrary.sql"],env,()=>undefined,{query(){requests++;}}),1);assert.equal(requests,1);
+ output.length=0;const calls=[];
+ const diagnose={query:async request=>{calls.push(request.file);return calls.length===1?{version:1,ok:false,checks:2512,deviations:[{check:"onboarding_function",object:"public.onboarding_call(uuid,uuid,text,jsonb)"}]}:{check:"onboarding_conflict_patch_pt409",ok:true};}};
+ assert.equal(await runReleaseCli(["diagnose-patch"],env,value=>output.push(value),diagnose),1);
+ assert.equal(output[0].ok,false);assert.equal(output[0].patch_recognized,true);assert.equal(calls.length,2);
+ const diagnostic=JSON.parse(await readFile(join(env.SC_RELEASE_REPORT_DIRECTORY,output[0].report_name),"utf8"));
+ assert.equal(diagnostic.ok,false);assert.equal(diagnostic.patch_classification.recognized,true);assert.equal(diagnostic.deviations.length,1);
 }));
 test("psql process reads credentials only from env, sanitizes stderr and caps JSON output",async()=>{
  const child=Object.assign(new EventEmitter(),{stdout:new PassThrough(),stderr:new PassThrough(),kill(){}});let seen;const result=queryPostgres("fake-psql",{PGPASSWORD:canary},{file:"fixed-catalog.sql"},(_,args,options)=>{seen={args,options};return child;});child.stderr.end(canary);child.stdout.end('{"ok":true}');child.emit("close",0);assert.deepEqual(await result,{ok:true});assert.equal(JSON.stringify(seen.args).includes(canary),false);assert.equal(seen.options.env.PGPASSWORD,canary);assert.equal(seen.options.shell,false);
