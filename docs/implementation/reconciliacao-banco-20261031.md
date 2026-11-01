@@ -36,10 +36,12 @@ O comando operacional `node scripts/operations/release-checks.mjs diagnose-patch
 
 ## Restante para conclusão
 
-1. Projeto, ledger e catálogo foram reconfirmados nos dois ambientes por leitura; ainda falta confirmar backup/recuperação sem consultar dados pessoais.
+1. Projeto, ledger e catálogo foram reconfirmados nos dois ambientes por leitura. Em 31/10/2026 o mantenedor decidiu que backup e recuperação não bloqueiam esta etapa; a pendência não foi validada e está na [#158](https://github.com/kauanbarateli/Segundo-Cerebro/issues/158), vinculada à #42.
 2. O catálogo comparou os objetos cobertos e os registros acima explicam o canal histórico; documentar por migration as dependências não cobertas pelo catálogo e produzir procedimento revisado que preserve a incerteza de recibos antigos.
 3. A classificação separada do patch está disponível e foi conferida em leitura. Em PGlite, `node --test tests/scripts/onboarding-conflict-verifier.test.mjs` confirmou o patch, a tradução de SQLSTATE `40001` para `PT409` sem expor a mensagem interna e a recusa do wrapper canônico, corpo alterado e grant indevido. O comando `diagnose-patch` mantém o catálogo bruto e sua saída de falha; validar também os consumidores derivados e o HTTP em QA.
 4. O mecanismo aditivo reversível foi ensaiado em QA e existe prova histórica de HTTP 409; ainda é necessário testar a migration real quando existir e revalidar os fluxos Admin/onboarding e isolamento para o novo candidato, com recuperação e reversão documentadas.
 5. Só considerar reconciliado quando houver evidência suficiente de ledger e objetos, QA e procedimento revisado. O teste local desta página não equivale a esses aceites.
+
+Após a introdução do diagnóstico separado, a execução local das suítes `release-catalog`, `release-default-acl-count`, `release-patch-classification` e `onboarding-conflict-verifier` aprovou 11 testes. Os consumidores de restore e a validação conectada do candidato futuro mantêm seus aceites próprios.
 
 Nenhuma alteração de banco, ledger, dados, Auth ou Storage foi realizada para esta evidência.
