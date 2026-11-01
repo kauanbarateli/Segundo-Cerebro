@@ -22,6 +22,13 @@ test("classificador reconhece PT409 exato e recusa alterações no corpo ou gran
     assert.equal((await check()).ok, false, "wrapper canônico não deve ser classificado como patch");
     await db.exec(patch);
     assert.equal((await check()).ok, true);
+    await db.exec(`create or replace function app_private.onboarding_call(uuid,uuid,text,jsonb) returns jsonb
+      language plpgsql as $$ begin raise exception 'fixture conflict' using errcode='40001'; end $$`);
+    await assert.rejects(
+      db.query("select public.onboarding_call(null,null,'fixture','{}'::jsonb)"),
+      (error) => error.code === "PT409" && !error.message.includes("fixture conflict"),
+      "o wrapper traduz o conflito sem expor a mensagem privada",
+    );
     await db.exec("grant execute on function public.onboarding_call(uuid,uuid,text,jsonb) to authenticated");
     assert.equal((await check()).ok, false);
     await db.exec("revoke execute on function public.onboarding_call(uuid,uuid,text,jsonb) from authenticated");

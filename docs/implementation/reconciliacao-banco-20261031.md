@@ -20,6 +20,8 @@ Não reaplicar as 22 migrations não registradas, não reparar ledger em lote e 
 
 As evidências explicam o mecanismo da diferença e sustentam o catálogo final para os objetos verificados. Não constituem prova criptográfica de todos os bytes executados em 006–027. A tabela de hashes da auditoria preserva a identidade das fontes locais, não inventa hashes de execução remota.
 
+Na conferência complementar, os SHA-256 das 27 fontes canônicas, com normalização CRLF/LF, coincidiram com os 27 hashes da tabela histórica da auditoria. A correspondência comprova a estabilidade das fontes locais entre as duas análises; não transforma os hashes locais em recibos de execução no servidor.
+
 ## Comparação atual em QA
 
 Após autenticação da conexão dedicada, a URL retornada identificou `twrydxsdemaykgvdlpyd`. O ledger de QA contém 27 entradas com nomes `m001` a `m027` e versões atribuídas no momento da instalação; os mapeamentos históricos estão em [homologacao-twry-20261022.md](homologacao-twry-20261022.md). Não confundir esses números de versão com os nomes de arquivo canônicos.
@@ -32,7 +34,7 @@ O comando operacional `node scripts/operations/release-checks.mjs diagnose-patch
 
 1. Projeto, ledger e catálogo foram reconfirmados nos dois ambientes por leitura; ainda falta confirmar backup/recuperação sem consultar dados pessoais.
 2. O catálogo comparou os objetos cobertos e os registros acima explicam o canal histórico; documentar por migration as dependências não cobertas pelo catálogo e produzir procedimento revisado que preserve a incerteza de recibos antigos.
-3. A classificação separada do patch está disponível e foi conferida em leitura. Em PGlite, `node --test tests/scripts/onboarding-conflict-verifier.test.mjs` confirmou o patch e recusou o wrapper canônico, corpo alterado e grant indevido. Integrar formalmente os dois resultados ao protocolo de release, sem alterar silenciosamente os consumidores que fixam o catálogo canônico; validar também os consumidores derivados e o comportamento em QA.
+3. A classificação separada do patch está disponível e foi conferida em leitura. Em PGlite, `node --test tests/scripts/onboarding-conflict-verifier.test.mjs` confirmou o patch, a tradução de SQLSTATE `40001` para `PT409` sem expor a mensagem interna e a recusa do wrapper canônico, corpo alterado e grant indevido. O comando `diagnose-patch` mantém o catálogo bruto e sua saída de falha; validar também os consumidores derivados e o HTTP em QA.
 4. Ensaiar caminho aditivo em QA autorizado e provar o conflito HTTP 409, os fluxos Admin/onboarding e isolamento, com recuperação e reversão documentadas.
 5. Só considerar reconciliado quando houver evidência suficiente de ledger e objetos, QA e procedimento revisado. O teste local desta página não equivale a esses aceites.
 
