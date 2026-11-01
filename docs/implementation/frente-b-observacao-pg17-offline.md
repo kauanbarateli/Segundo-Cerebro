@@ -1,0 +1,15 @@
+# Observação sintética das candidatas da Frente B em PostgreSQL 17
+
+**Estado: preparação para revisão; ainda não executada em PostgreSQL nativo.** Os testes puros deste lote verificam contratos e rejeições simuladas, mas não demonstram isolamento, rollback ou limpeza reais.
+
+O runner `scripts/verification/front-b-offline-observation/offline-runner.mjs` foi desenhado para um job Linux descartável, com opt-in explícito e checkout vinculado a um SHA. Ele fixa as 27 fontes históricas, o patch PT409, as três candidatas e os verificadores. A imagem oficial proposta é [`postgres:17.11`](https://hub.docker.com/layers/library/postgres/17.11/images/sha256-a65e6a841f6c4dbc4abda3d67fa3bc21824e9611064fcd82e87ea67aad60a0c3?tab=layers), por digest e plataforma Linux/amd64. O pull usa a rede do runner; o container de banco é criado sem rede e sem portas publicadas. A fixture de Auth e Storage é sintética e reproduz os bytes do fixture local existente.
+
+A proposta usa o ID imutável do container, socket Unix, identificação da instância e marker em cada sessão, além de verificar os resultados após mutações negativas revertidas. O encerramento procura confirmar a remoção do container próprio. Esses controles precisam ser analisados após a primeira execução real; uma falha, timeout ou remoção não comprovada não constitui observação aprovada. O runner registra somente resumo, sem conteúdo de SQL ou dados de usuários.
+
+O resultado, mesmo se observado com sucesso, **não** certifica Supabase Auth, Storage, PostgREST, ledger da CLI, QA, produção ou um catálogo de 30 migrations. O catálogo histórico pode permanecer divergente após o patch e as candidatas; os classificadores de PT409, estruturas adicionais e estado da flag são apresentados separadamente. Não fixar os 26 desvios observados em PGlite como aprovação em PostgreSQL 17.
+
+Teste puro: `node --test tests/scripts/front-b-offline-observation.test.mjs`. `--help` é inerte. A execução nativa requer um job dedicado revisado, Linux, ambiente restrito e flags explícitas; não executá-la na máquina de trabalho ou em um banco hospedado. Se `auth-local-ci.mjs` ou sua cadeia de imports mudar, revisar todos os pins de bootstrap antes de reutilizar o runner; um hash incompatível deve recusar a execução.
+
+A consulta `supabase/operations/inspect-front-b-legacy-cohort.sql` retorna apenas a contagem distinta de identidades que correspondem à guarda de contas antigas não confirmadas na candidata de admissão. Uma consulta equivalente, mas não demonstrada como byte a byte idêntica, retornou zero no QA em 01/11/2026. O resultado é pontual e não verifica outras classes, produção, concorrência ou autorização de instalação. O teste com fixture PGlite verifica a contagem e exclusões representativas, sem consultar dados hospedados.
+
+Esta preparação não cria migrations canônicas, não altera bancos nem autoriza abertura de cadastro, merge ou deploy. Ver também [promoção aditiva em QA](promocao-aditiva-frente-b-qa-20261101.md) e [observação anterior em PGlite](observacao-catalogo-historico-frente-b-pglite-20261101.md).
