@@ -45,7 +45,11 @@ const target='do $$ declare expression text; begin\n select pg_get_expr(conbin,c
 assert.equal(candidateText.split(target).length,2);
 assert.ok(candidateText.indexOf("set local lock_timeout='5s';")<candidateText.indexOf(target));
 assert.ok(candidateText.indexOf('lock table auth.users in share row exclusive mode;')<candidateText.indexOf(target));
-const guarded=candidateText.replace(target,guard+target);
+// String.replace interprets $$ in its replacement; concatenation must preserve
+// both the original PL/pgSQL delimiter and the experimental guard verbatim.
+const insertion=candidateText.indexOf(target);
+const guarded=candidateText.slice(0,insertion)+guard+candidateText.slice(insertion);
+assert.equal(guarded.slice(0,insertion)+guarded.slice(insertion+guard.length),candidateText);
 async function setup(){const db=await createCatalogueFixture();try{for(const row of await readCurrent27CanonicalMigrations(fileURLToPath(root)))await db.exec(row.source.toString('utf8'));return db;}catch(error){await db.close();throw error;}}
 async function readConstraint(db){const rows=(await db.query(descriptor)).rows;assert.equal(rows.length,1);return rows[0].value;}
 async function allowed(db,value){const expression=(await readConstraint(db)).expression;return (await db.query(`select (${expression}) as allowed from (select $1::text as entity_type) probe`,[value])).rows[0].allowed;}
