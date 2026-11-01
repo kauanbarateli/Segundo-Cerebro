@@ -1,0 +1,50 @@
+name: Frente B — build e documentos públicos em demonstração
+
+on:
+  push:
+    branches: [codex/b08-integracao-frentes]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: front-b-build-${{ github.ref }}
+  cancel-in-progress: true
+
+# Complementary evidence only: the full Fundação/audit gate remains mandatory.
+# No hosted Auth, database, deployment, credentials or private user content.
+jobs:
+  demo-build:
+    if: github.ref == 'refs/heads/codex/b08-integracao-frentes'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:bc6ab0d6d44ff4826e4cb8c1e6d801e185bfc42bb0753f8e2a30efc70db054c7
+      options: --ipc=host
+      env:
+        PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
+    defaults:
+      run:
+        shell: bash
+    env:
+      APP_MODE: demo
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Instalar dependências reproduzíveis
+        run: npm ci
+      - name: Conferir navegador fixado
+        run: node scripts/verification/check-ci-browser-runtime.mjs
+      - name: Build demonstrativo
+        run: npm run build
+      - name: Conferir pacote cliente
+        run: npm run check:client-auth
+      - name: Documentos legais e navegação pública
+        run: npm run test:e2e -- --workers=1 tests/e2e/legal-pages.spec.ts
