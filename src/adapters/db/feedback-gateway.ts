@@ -19,12 +19,13 @@ function validItem(value: unknown): boolean {
     && typeof item.createdAt === "string" && Number.isFinite(Date.parse(item.createdAt));
 }
 
-export async function feedbackRpc(config: SupabaseAuthConfig, actor: AuthenticatedIdentity, input?: FeedbackSubmission): Promise<unknown> {
+export interface FeedbackCursor { before: string; id: string }
+export async function feedbackRpc(config: SupabaseAuthConfig, actor: AuthenticatedIdentity, input?: FeedbackSubmission, cursor?: FeedbackCursor): Promise<unknown> {
   if (!isTrustedHostedDatabaseOrigin(config) || !authDeploymentAllowed(process.env, config)) throw new FeedbackGatewayError("UNAVAILABLE");
   const writing = input !== undefined;
   const payload = writing
     ? { p_user: actor.userId, p_session: actor.sessionId, p_client: input.clientId, p_category: input.category, p_message: input.text }
-    : { p_user: actor.userId, p_session: actor.sessionId };
+    : { p_user: actor.userId, p_session: actor.sessionId, p_before: cursor?.before ?? null, p_before_id: cursor?.id ?? null };
   let response: Response;
   try {
     response = await fetch(new URL(`/rest/v1/rpc/${writing ? "feedback_submit" : "feedback_list"}`, config.supabaseUrl), {
@@ -45,8 +46,10 @@ export async function feedbackRpc(config: SupabaseAuthConfig, actor: Authenticat
       if (code === "23505" || code === "22023" || code === "23514") throw new FeedbackGatewayError("CONFLICT");
       throw new FeedbackGatewayError(writing ? "COMMIT_UNKNOWN" : "UNAVAILABLE");
     }
-    if (writing ? !validItem(data) : !Array.isArray(data) || data.length > 100 || !data.every(validItem)) throw new Error("invalid response");
-    return data;
+    if (writing) { if (!validItem(data)) throw new Error("invalid response"); return data; }
+    if (!Array.isArray(data) || data.length > 51 || !data.every(validItem)) throw new Error("invalid response");
+    const items = data.slice(0, 50); const last = items.at(-1) as { id: string; createdAt: string } | undefined;
+    return { items, next: data.length > 50 && last ? { id: last.id, before: last.createdAt } : null };
   } catch (error) {
     if (error instanceof FeedbackGatewayError) throw error;
     throw new FeedbackGatewayError(writing ? "COMMIT_UNKNOWN" : "UNAVAILABLE");

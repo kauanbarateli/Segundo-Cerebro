@@ -7,5 +7,5 @@ export const metadata: Metadata = { title: "Feedback · Segundo Cérebro" };
 export const dynamic = "force-dynamic";
 export default async function FeedbackPage() {
   const user = await requireUser();
-  return <FeedbackWorkspace userId={user.userId} />;
+  return <FeedbackWorkspace key={user.userId} userId={user.userId} />;
 }

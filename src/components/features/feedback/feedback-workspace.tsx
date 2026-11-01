@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
 import { Field } from "@/components/ui/field";
 
 type Item = { id: string; category: string; text: string; status: "received"; createdAt: string };
+type Cursor = { before: string; id: string };
 const categories = [
   ["suggestion", "Sugestão"], ["complaint", "Reclamação"], ["problem", "Problema"],
   ["improvement", "Melhoria"], ["other", "Outro"],
@@ -14,18 +15,24 @@ export function FeedbackWorkspace({ userId }: { userId: string }) {
   const [loading, setLoading] = useState(true), [sending, setSending] = useState(false);
   const [error, setError] = useState(""), [notice, setNotice] = useState(""), [uncertain, setUncertain] = useState(false);
   const [loadError, setLoadError] = useState(false);
+  const [next, setNext] = useState<Cursor | null>(null);
+  const requestGeneration = useRef(0);
   const intent = useRef<string | null>(null);
-  const load = useCallback(async () => {
+  const load = useCallback(async (cursor?: Cursor) => {
+    const generation = ++requestGeneration.current;
     setLoading(true); setLoadError(false);
     try {
-      const response = await fetch("/api/feedback", { cache: "no-store", headers: { "x-expected-user-id": userId } });
+      const query = cursor ? `?${new URLSearchParams(cursor)}` : "";
+      const response = await fetch(`/api/feedback${query}`, { cache: "no-store", headers: { "x-expected-user-id": userId } });
       const result: unknown = await response.json();
-      if (!response.ok || !result || typeof result !== "object" || !("result" in result) || !Array.isArray(result.result)) throw new Error("load");
-      setItems(result.result as Item[]);
-    } catch { setLoadError(true); }
-    finally { setLoading(false); }
+      if (!response.ok || !result || typeof result !== "object" || !("result" in result) || !result.result || typeof result.result !== "object" || !("items" in result.result) || !Array.isArray(result.result.items) || !("next" in result.result)) throw new Error("load");
+      if (generation !== requestGeneration.current) return;
+      const page = result.result as { items: Item[]; next: Cursor | null };
+      setItems((current) => cursor ? [...current, ...page.items] : page.items); setNext(page.next);
+    } catch { if (generation === requestGeneration.current) setLoadError(true); }
+    finally { if (generation === requestGeneration.current) setLoading(false); }
   }, [userId]);
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { const generation = requestGeneration; void load(); return () => { generation.current++; }; }, [load]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); if (sending) return;
@@ -60,7 +67,8 @@ export function FeedbackWorkspace({ userId }: { userId: string }) {
         {uncertain && <button type="button" disabled={sending} onClick={() => { setUncertain(false); intent.current = null; setText(""); setError(""); void load(); }}>Descartar rascunho e atualizar histórico</button>}
       </form>
       <section className="feedback-panel" aria-labelledby="feedback-history"><h2 id="feedback-history">Suas mensagens</h2>
-        {loading ? <p>Carregando mensagens…</p> : loadError ? <><p role="alert">Não foi possível carregar suas mensagens.</p><button type="button" onClick={() => void load()}>Tentar novamente</button></> : items.length === 0 ? <p>Nenhuma mensagem enviada ainda.</p> : <ul className="feedback-list">{items.map((item) => <li key={item.id}><strong>{categories.find(([key]) => key === item.category)?.[1] ?? "Mensagem"}</strong><span>Recebida</span><p>{item.text}</p><time dateTime={item.createdAt}>{new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium" }).format(new Date(item.createdAt))}</time></li>)}</ul>}
+        {items.length > 0 && <ul className="feedback-list">{items.map((item) => <li key={item.id}><strong>{categories.find(([key]) => key === item.category)?.[1] ?? "Mensagem"}</strong><span>Recebida</span><p>{item.text}</p><time dateTime={item.createdAt}>{new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium" }).format(new Date(item.createdAt))}</time></li>)}</ul>}
+        {loading ? <p>Carregando mensagens…</p> : loadError ? <><p role="alert">Não foi possível carregar suas mensagens.</p><button type="button" onClick={() => void load()}>Tentar novamente</button></> : items.length === 0 ? <p>Nenhuma mensagem enviada ainda.</p> : next && <button type="button" onClick={() => void load(next)}>Carregar mais</button>}
       </section>
     </div>
   </>;

@@ -47,18 +47,19 @@ begin
  return jsonb_build_object('id',v_row.id,'category',v_row.category,'text',v_row.message,'status','received','createdAt',v_row.created_at);
 end $$;
 
-create function app_private.feedback_list(p_user uuid,p_session uuid) returns jsonb
+create function app_private.feedback_list(p_user uuid,p_session uuid,p_before timestamptz,p_before_id uuid) returns jsonb
 language plpgsql security definer set search_path='' as $$
 begin
  perform app_private.require_actor(p_user,p_session);
+ if (p_before is null)<>(p_before_id is null) then raise exception 'Invalid cursor.' using errcode='22023'; end if;
  return coalesce((select jsonb_agg(jsonb_build_object('id',f.id,'category',f.category,'text',f.message,'status','received','createdAt',f.created_at) order by f.created_at desc,f.id desc)
-  from (select * from app_private.feedback_requests where user_id=p_user order by created_at desc,id desc limit 100) f),'[]'::jsonb);
+  from (select * from app_private.feedback_requests where user_id=p_user and (p_before is null or (created_at,id)<(p_before,p_before_id)) order by created_at desc,id desc limit 51) f),'[]'::jsonb);
 end $$;
 
 create function public.feedback_submit(p_user uuid,p_session uuid,p_client uuid,p_category text,p_message text) returns jsonb
 language sql security invoker set search_path='' as $$ select app_private.feedback_submit(p_user,p_session,p_client,p_category,p_message) $$;
-create function public.feedback_list(p_user uuid,p_session uuid) returns jsonb
-language sql security invoker set search_path='' as $$ select app_private.feedback_list(p_user,p_session) $$;
-revoke all on function app_private.feedback_submit(uuid,uuid,uuid,text,text), app_private.feedback_list(uuid,uuid), public.feedback_submit(uuid,uuid,uuid,text,text), public.feedback_list(uuid,uuid) from public,anon,authenticated,service_role;
-grant execute on function app_private.feedback_submit(uuid,uuid,uuid,text,text), app_private.feedback_list(uuid,uuid), public.feedback_submit(uuid,uuid,uuid,text,text), public.feedback_list(uuid,uuid) to service_role;
+create function public.feedback_list(p_user uuid,p_session uuid,p_before timestamptz,p_before_id uuid) returns jsonb
+language sql security invoker set search_path='' as $$ select app_private.feedback_list(p_user,p_session,p_before,p_before_id) $$;
+revoke all on function app_private.feedback_submit(uuid,uuid,uuid,text,text), app_private.feedback_list(uuid,uuid,timestamptz,uuid), public.feedback_submit(uuid,uuid,uuid,text,text), public.feedback_list(uuid,uuid,timestamptz,uuid) from public,anon,authenticated,service_role;
+grant execute on function app_private.feedback_submit(uuid,uuid,uuid,text,text), app_private.feedback_list(uuid,uuid,timestamptz,uuid), public.feedback_submit(uuid,uuid,uuid,text,text), public.feedback_list(uuid,uuid,timestamptz,uuid) to service_role;
 commit;

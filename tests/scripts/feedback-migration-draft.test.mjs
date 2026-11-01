@@ -25,15 +25,23 @@ test("feedback local: isolamento, replay, eventos e permissões", { timeout: 600
     const first = (await submit("Sugestão de teste" )).rows[0].value;
     assert.deepEqual((await submit("Sugestão de teste")).rows[0].value, first);
     await assert.rejects(submit("Outra mensagem válida"), (error) => error.code === "23505");
-    assert.equal((await db.query("select public.feedback_list($1,$2) as value", [b, sb])).rows[0].value.length, 0);
-    await assert.rejects(db.query("select public.feedback_list($1,$2)", [a, sb]), (error) => error.code === "42501");
+    assert.equal((await db.query("select public.feedback_list($1,$2,null,null) as value", [b, sb])).rows[0].value.length, 0);
+    await assert.rejects(db.query("select public.feedback_list($1,$2,null,null)", [a, sb]), (error) => error.code === "42501");
     const { rows } = await db.query("select count(*)::int as count from public.domain_events where user_id=$1 and entity_type='feedback_request'", [a]);
     assert.equal(rows[0].count, 1);
     const event = await db.query("select after from public.domain_events where user_id=$1 and entity_type='feedback_request'", [a]);
     assert.equal(JSON.stringify(event.rows[0]).includes("Sugestão de teste"), false);
-    const access = await db.query("select has_function_privilege('authenticated','public.feedback_list(uuid,uuid)','execute') as browser, has_table_privilege('authenticated','app_private.feedback_requests','select') as table_read");
+    const access = await db.query("select has_function_privilege('authenticated','public.feedback_list(uuid,uuid,timestamp with time zone,uuid)','execute') as browser, has_table_privilege('authenticated','app_private.feedback_requests','select') as table_read");
     assert.deepEqual(access.rows[0], { browser: false, table_read: false });
+    await db.query("insert into app_private.feedback_requests(user_id,client_id,category,message) select $1,gen_random_uuid(),'other','mensagem fictícia' from generate_series(1,60)", [a]);
+    const firstPage = (await db.query("select public.feedback_list($1,$2,null,null) as value", [a, sa])).rows[0].value;
+    assert.equal(firstPage.length, 51);
+    const last = firstPage[49];
+    const nextPage = (await db.query("select public.feedback_list($1,$2,$3,$4) as value", [a, sa, last.createdAt, last.id])).rows[0].value;
+    assert.equal(nextPage.length, 11);
+    assert.equal(nextPage.some((item) => firstPage.slice(0, 50).some((seen) => seen.id === item.id)), false);
+    await assert.rejects(db.query("select public.feedback_list($1,$2,$3,null)", [a, sa, last.createdAt]), (error) => error.code === "22023");
     await db.query("update public.user_moderation set status='blocked' where user_id=$1", [a]);
-    await assert.rejects(db.query("select public.feedback_list($1,$2)", [a, sa]), (error) => error.code === "42501");
+    await assert.rejects(db.query("select public.feedback_list($1,$2,null,null)", [a, sa]), (error) => error.code === "42501");
   } finally { await db.close(); }
 });

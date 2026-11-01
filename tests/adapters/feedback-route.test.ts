@@ -15,4 +15,11 @@ describe("feedback HTTP", () => {
   it("nega identidade de outra aba e senha pendente", async () => { expect((await GET(request("GET", undefined, undefined, other))).status).toBe(409); state.identity = { userId: owner, sessionId: other, mustChangePassword: true }; expect((await GET(request())).status).toBe(403); expect(state.rpc).not.toHaveBeenCalled(); });
   it("nega origem externa e identidade injetada antes do gateway", async () => { const body = JSON.stringify({ category: "suggestion", text: "Mensagem válida", clientId: other, userId: other }); expect((await POST(request("POST", body, "https://outside.invalid"))).status).toBe(403); expect((await POST(request("POST", body))).status).toBe(400); expect(state.rpc).not.toHaveBeenCalled(); });
   it("limita o corpo e associa o ator conferido à mensagem", async () => { expect((await POST(request("POST", JSON.stringify({ text: "x".repeat(40000) })))).status).toBe(400); const response = await POST(request("POST", JSON.stringify({ category: "suggestion", text: "Mensagem válida", clientId: other }))); expect(response.status).toBe(200); expect(state.rpc).toHaveBeenCalledOnce(); expect(state.rpc.mock.calls.at(0)?.[1]).toMatchObject({ userId: owner }); });
+  it("recusa cursor incompleto ou parâmetros extras", async () => {
+    for (const query of ["?before=2026-01-01T00%3A00%3A00Z", "?id=" + other, "?unknown=1", "?before=x&id=" + other]) {
+      const input = new Request(`https://app.example.invalid/api/feedback${query}`, { headers: { "x-expected-user-id": owner } });
+      expect((await GET(input)).status).toBe(400);
+    }
+    expect(state.rpc).not.toHaveBeenCalled();
+  });
 });

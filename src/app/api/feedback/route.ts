@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { feedbackRpc, FeedbackGatewayError } from "@/adapters/db/feedback-gateway";
+import { feedbackRpc, FeedbackGatewayError, type FeedbackCursor } from "@/adapters/db/feedback-gateway";
 import { ErroDeDominio } from "@/core/contracts/base";
 import { decodeFeedbackSubmission } from "@/core/feedback/submission";
 import { readAuthConfiguration } from "@/lib/auth/config";
@@ -22,7 +22,17 @@ async function handler(request: Request, write: boolean) {
     if (actor.mustChangePassword) throw new AuthGuardError("forbidden");
     if (request.headers.get("x-expected-user-id") !== actor.userId) throw new SessionChanged();
     if (write && (!sameOrigin(request.headers.get("origin"), config.appOrigin) || request.headers.get("content-type")?.split(";")[0]?.trim() !== "application/json")) throw new AuthGuardError("forbidden");
-    let input;
+    let input; let cursor: FeedbackCursor | undefined;
+    if (!write) {
+      const params = new URL(request.url).searchParams;
+      if ([...params.keys()].some((key) => !["before", "id"].includes(key)) || params.getAll("before").length > 1 || params.getAll("id").length > 1) throw new ErroDeDominio("VALIDATION", "Cursor inválido.");
+      const before = params.get("before"), id = params.get("id");
+      if ((before === null) !== (id === null)) throw new ErroDeDominio("VALIDATION", "Cursor inválido.");
+      if (before !== null && id !== null) {
+        if (before.length > 40 || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/.test(before) || !Number.isFinite(Date.parse(before)) || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) throw new ErroDeDominio("VALIDATION", "Cursor inválido.");
+        cursor = { before, id };
+      }
+    }
     if (write) {
       const reader = request.body?.getReader();
       if (!reader) throw new ErroDeDominio("VALIDATION", "Envio inválido.");
@@ -34,7 +44,7 @@ async function handler(request: Request, write: boolean) {
         input = decodeFeedbackSubmission(parsed);
       } finally { reader.releaseLock(); }
     }
-    return NextResponse.json({ ok: true, result: await feedbackRpc(config, actor, input) }, { headers: resultHeaders });
+    return NextResponse.json({ ok: true, result: await feedbackRpc(config, actor, input, cursor) }, { headers: resultHeaders });
   } catch (error) {
     const code = error instanceof SessionChanged ? "SESSION_CHANGED" : error instanceof ErroDeDominio ? "VALIDATION" : error instanceof FeedbackGatewayError ? error.code : error instanceof AuthGuardError ? error.code.toUpperCase() : "UNAVAILABLE";
     const status = code === "UNAUTHENTICATED" ? 401 : code === "FORBIDDEN" ? 403 : code === "VALIDATION" ? 400 : code === "CONFLICT" || code === "SESSION_CHANGED" ? 409 : 503;
