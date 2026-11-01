@@ -13,3 +13,27 @@ Antes de abrir o cadastro: selecionar e configurar um provedor SMTP e remetente 
 A [documentação oficial de SMTP do Supabase](https://supabase.com/docs/guides/auth/auth-smtp) informa que o envio padrão é restrito a endereços autorizados e sujeito a limites, e lista Resend entre os provedores compatíveis. A [documentação dos templates](https://supabase.com/docs/guides/auth/auth-email-templates) descreve as variáveis disponíveis; nenhuma dessas referências substitui o teste de entrega e de recuperação existente.
 
 O responsável confirmou que o Resend e o domínio de envio já estavam disponíveis e funcionando na recuperação. Há [evidência anterior de entrega e recuperação em produção](smtp-producao-20261012.md); ela não comprova que o projeto separado de QA use a mesma configuração. A inspeção acima observou o SMTP próprio desligado no QA, sem examinar ou alterar credenciais. A preparação do QA precisa preservar a recuperação existente e não pressupõe falta de conta ou domínio de envio.
+
+## Candidata para revisão dos modelos, ainda não aplicada
+
+O Supabase documenta modelos Go com condicionais e as variáveis `RedirectTo`, `TokenHash` e `ConfirmationURL`. O envio inicial e o reenvio de cadastro informam exatamente `/auth/confirmar-cadastro`; a retomada usa recuperação com `/auth/continuar-cadastro`. A recuperação legada usa `/auth/callback` com um parâmetro `state` variável. Por isso, uma alteração global que substitua todos os links de recuperação quebraria o contrato anterior.
+
+Para um ambiente com origem fixa revisada, pode-se avaliar uma condição de igualdade exata entre `RedirectTo` e a URL completa candidata daquele ambiente. Somente nessa condição, o link apontaria para essa URL fixa com `?token_hash={{ .TokenHash }}`; no ramo `else`, deve permanecer o `{{ .ConfirmationURL }}` original. Aplicar a mesma distinção separadamente ao modelo de confirmação e ao de recuperação, cada um com sua própria rota fixa. Não usar correspondência por prefixo, origem fornecida pelo usuário, coringas ou concatenação de parâmetros arbitrários. Não instalar estes exemplos sem revisar os modelos atuais e o endereço concreto do preview:
+
+```gotemplate
+{{ if eq .RedirectTo "https://ORIGEM-QA-REVISADA/auth/confirmar-cadastro" }}
+<a href="https://ORIGEM-QA-REVISADA/auth/confirmar-cadastro?token_hash={{ .TokenHash }}">Confirmar e-mail</a>
+{{ else }}
+<a href="{{ .ConfirmationURL }}">Confirmar e-mail</a>
+{{ end }}
+```
+
+```gotemplate
+{{ if eq .RedirectTo "https://ORIGEM-QA-REVISADA/auth/continuar-cadastro" }}
+<a href="https://ORIGEM-QA-REVISADA/auth/continuar-cadastro?token_hash={{ .TokenHash }}">Continuar cadastro</a>
+{{ else }}
+<a href="{{ .ConfirmationURL }}">Redefinir senha</a>
+{{ end }}
+```
+
+Esses trechos são uma proposta para revisão, não uma configuração instalada ou um teste de renderização do provedor. Antes de usá-los, confirmar o valor real de `RedirectTo` permitido, a sintaxe e o escape no Auth do QA, desligar rastreamento/reescrita de links do remetente e verificar redação de tokens em infraestrutura. Exercitar separadamente primeiro acesso, reenvio, retomada, link expirado/usado, abertura automática por scanner sem consumir o token, sessão existente, outro dispositivo e recuperação legada completa. O GET candidato só transfere o hash para cookie HttpOnly; a verificação ocorre no POST explícito. A URL contém um segredo temporário, portanto não deve ser copiada para evidências, logs ou mensagens.
