@@ -16,6 +16,10 @@ const AUTH_PINS=[
  ['tests/helpers/canonical-front-b-source.mjs','fcdbeb291832d3025d3551d42e47fb8b20ecbf1b7fe294990b6be25d41202040']
  ,['scripts/verification/front-b-signup-reservation-draft/candidate-reservation.sql.txt','18288441c5195279ad3b31bb3cf68ededd914fe0121533f8210fbbb33d843dd7']
  ];
+const SAME_BROWSER_PINS=Object.freeze([
+ ['scripts/verification/front-b-135-draft/admission-feedback-metrics-atomic.sql.txt','aca4ef373aec1ad3c2ddce859d412a5454e1cb06f457e395fdab5fbada6cacff'],
+ ['scripts/verification/front-b-135-draft/same-browser-composed-v1.guarded.sql.txt','39abb9b4af679d761f6bd05388f9d5a85b10fa7dc66cb5f91ccfd671f89d119e']
+]);
 const LOCAL_PINS=Object.freeze({
  'offline-contract.mjs':'538e2e31e3a69ac34029848beb414e6146f54bba4c39fbf32806c06c4193e707',
  'qualify.mjs':'8816d54b6d9b0265c024a6c86b5f235695eed800376522f202eb1b39060b825c',
@@ -23,15 +27,20 @@ const LOCAL_PINS=Object.freeze({
  'session.mjs':'02f5bc09f3778c1d65917989fefd3959dc80c2a2d345e2288121abc1f2997acc',
  'cleanup.mjs':'41ee0a110504fc4b39817644b005ba3b2f849377c8356d338d5bbc52f49a2835',
  'fixture.sql':'db35f101300407095589e7279a7af23fc89bad2bab87e302bb3b5cb0673fbbe2',
- 'reservation.sql.txt':'2ed365eb0943c25d3463b7a8578268d47e1813c39cadcacf3b3eac35094b42bc'
+ 'reservation.sql.txt':'2ed365eb0943c25d3463b7a8578268d47e1813c39cadcacf3b3eac35094b42bc',
+ 'same-browser-fixture.sql':'47a07cae9e0686b8d98168e9f2a60c90532d735fa1cef22686f0a620d6f07a59',
+ 'same-browser-seed.sql':'d49f5436440bcf0b733f1cdfbc084f76ab5767ba20c420a229b9378b3071d6a0',
+ 'same-browser-qualify.mjs':'115989f08ab5ae12965211499a068fa00e3f389757195c954ae6e89bb72d1747',
+ 'same-browser-retention-races.draft.mjs':'c34210d4c0b59405d0bf7707b6a2999c898a4b8beb3cdf23ee3461d7d5d2afb6'
 });
 const SUPPORT_PINS=Object.freeze([
- [BASE+'runner.test.mjs','55303f3fc6710a043accc5786f58a76e56ef27a003544bad914c5f5c04e02b68'],
+ [BASE+'runner.test.mjs','0efe3463b5a04cd64674b1955f86c2013067170577200a54bb30b3f18baf5428'],
  [BASE+'session.test.mjs','0d5abd786b5011ded73d60a1b25c365413df6516e7a598bc9064a99dd2ff15cc'],
  [BASE+'race.test.mjs','abc65232de672d573755e2c9b8a9dfbfc31833b33c6829cfa7511795bcbf6233'],
  [BASE+'qualify.test.mjs','34bf3c2caac26f380ceec8ac85eddebe691063880ab028ddcbf322ed1e3eec6d'],
  [BASE+'cleanup.test.mjs','8ed8aebf5635913c5653d29a427cd570e7513988481469fabd53593e1ffd1ccc'],
  [BASE+'offline-contract.test.mjs','9a044453c2a82033fc5dcc6afca527a3bfb7865aec49b76a4d113caae61a8dc8'],
+ [BASE+'same-browser-retention-races.draft.test.mjs','38d067ae96125719d33897accba169191c7aa3c908f2aba2d26cbc3d8564d967'],
  ['.nvmrc','68ca3fba3b7e864770cb61aeb306d4bd4354b68ab4dd38450860c5d823e42a53'],
  ['.github/workflows/front-b-135-pg17-races.yml','c6fd17f5ec523d19297f7d2d20fb1ae7ded7af3525eb4699614e5224ce7ddce5']
 ]);
@@ -47,21 +56,23 @@ const pause=ms=>new Promise(resolveTimer=>setTimeout(resolveTimer,ms));
 async function groupAbsent(pid){if(!Number.isSafeInteger(pid)||pid<2)return false;for(let i=0;i<20;i++){try{process.kill(-pid,0);}catch(e){return e?.code==='ESRCH';}await pause(50);}return false;}
 export function mayTeardown(groupKnown,pending,states){return groupKnown===true&&pending===0&&Array.isArray(states)&&states.every(s=>s?.groupGone===true);}
 export function receipt(sha,results,groupKnown,pending,allClean){
- if(!SHA.test(sha)||!mayTeardown(groupKnown,pending,[])||allClean!==true||!Array.isArray(results)||results.length!==2)fail();
- for(const [index,name] of ['reservation-exclusive-pg17','start-exclusive-pg17'].entries()){const r=results[index];if(!r||Object.keys(r).sort().join(',')!=='acceptance,hostedCertified,scenario,status'||r.scenario!==name||r.status!=='CASE_OBSERVED_CLEANUP_PENDING'||r.acceptance!==false||r.hostedCertified!==false)fail();}
- return {scenario:'front-b-reservation-races-pg17',status:'OBSERVED',acceptance:false,hostedCertified:false,cleanupConfirmed:true,cases:2,sourceSha:sha};
+ if(!SHA.test(sha)||!mayTeardown(groupKnown,pending,[])||allClean!==true||!Array.isArray(results)||results.length!==4)fail();
+ for(const [index,name] of ['reservation-exclusive-pg17','start-exclusive-pg17','same-browser-renewal-prune-pg17','same-browser-fence-prune-pg17'].entries()){const r=results[index];if(!r||Object.keys(r).sort().join(',')!=='acceptance,hostedCertified,scenario,status'||r.scenario!==name||r.status!=='CASE_OBSERVED_CLEANUP_PENDING'||r.acceptance!==false||r.hostedCertified!==false)fail();}
+ return {scenario:'front-b-reservation-races-pg17',status:'OBSERVED',acceptance:false,hostedCertified:false,cleanupConfirmed:true,cases:4,sourceSha:sha};
 }
 export async function execute(env=process.env){
- environment(env);assertIntegratedPath(relative(ROOT,fileURLToPath(import.meta.url)).replaceAll('\\','/'));if(await realpath(ROOT)!==ROOT||await realpath(env.RUNNER_TEMP)!==env.RUNNER_TEMP||Object.keys(LOCAL_PINS).length!==7)fail();
+ environment(env);assertIntegratedPath(relative(ROOT,fileURLToPath(import.meta.url)).replaceAll('\\','/'));if(await realpath(ROOT)!==ROOT||await realpath(env.RUNNER_TEMP)!==env.RUNNER_TEMP||Object.keys(LOCAL_PINS).length!==11)fail();
  const os={PATH:SAFE_PATH,HOME:env.RUNNER_TEMP,LANG:env.LANG??'C.UTF-8',LC_ALL:env.LC_ALL??'C.UTF-8',TZ:'UTC',NO_COLOR:'1',GIT_CONFIG_NOSYSTEM:'1',GIT_CONFIG_GLOBAL:'/dev/null',GIT_CONFIG_SYSTEM:'/dev/null',GIT_CONFIG_COUNT:'1',GIT_CONFIG_KEY_0:'core.fsmonitor',GIT_CONFIG_VALUE_0:'false',GIT_TERMINAL_PROMPT:'0',DOCKER_HOST:'unix:///var/run/docker.sock'};
  const git=args=>execFileSync('git',['-c','gc.auto=0','-c','protocol.allow=never','-c','core.hooksPath=/dev/null',...args],{cwd:ROOT,env:os,timeout:15000,maxBuffer:2097152});
  if(git(['rev-parse','HEAD']).toString().trim()!==env.GITHUB_SHA||git(['status','--porcelain','--untracked-files=all']).toString().trim())fail();
- const pins=[...AUTH_PINS,...SUPPORT_PINS,...Object.entries(LOCAL_PINS).map(([p,h])=>[BASE+p,h]),[BASE+'runner.mjs',null]];const bytes=new Map();
+ const pins=[...AUTH_PINS,...SAME_BROWSER_PINS,...SUPPORT_PINS,...Object.entries(LOCAL_PINS).map(([p,h])=>[BASE+p,h]),[BASE+'runner.mjs',null]];const bytes=new Map();
  for(const [path,hash] of pins){const b=await source(path);if(!b.equals(git(['show','HEAD:'+path]))||hash&&digest(b)!==hash)fail();bytes.set(path,b);}
  const {IMAGE,requireImage,requireOfflineContainer,sameSessionGuard,requireSqlBytes}=await import(pathToFileURL(join(ROOT,BASE+'offline-contract.mjs')).href);
  const {qualifySources}=await import(pathToFileURL(join(ROOT,BASE+'qualify.mjs')).href),{observeReservationRace,seedStartSql,nullCaseSql,nullBaselineSql}=await import(pathToFileURL(join(ROOT,BASE+'race.mjs')).href),{openDockerSession}=await import(pathToFileURL(join(ROOT,BASE+'session.mjs')).href),{removeEmptyOwnedDirectory}=await import(pathToFileURL(join(ROOT,BASE+'cleanup.mjs')).href);
+ const {qualifySameBrowser}=await import(pathToFileURL(join(ROOT,BASE+'same-browser-qualify.mjs')).href),{observeRetentionRace}=await import(pathToFileURL(join(ROOT,BASE+'same-browser-retention-races.draft.mjs')).href);
  const {runBoundedProcess}=await import(pathToFileURL(join(ROOT,'scripts/verification/auth-local-ci.mjs')).href);
  const qualified=qualifySources(bytes.get(BASE+'fixture.sql'),bytes.get(BASE+'reservation.sql.txt'),bytes.get('scripts/verification/front-b-signup-reservation-draft/candidate-reservation.sql.txt'));requireSqlBytes(qualified.fixture);requireSqlBytes(qualified.candidate);
+ const sameBrowser=qualifySameBrowser({foundation:bytes.get(SAME_BROWSER_PINS[0][0]),composition:bytes.get(SAME_BROWSER_PINS[1][0]),fixture:bytes.get(BASE+'same-browser-fixture.sql'),seed:bytes.get(BASE+'same-browser-seed.sql')});for(const sql of Object.values(sameBrowser))requireSqlBytes(sql);
  let home,groupKnown=true;const pending=new Set();
  const run=async(args,timeout=30000,options={})=>{const promise=runBoundedProcess('docker',args,{cwd:ROOT,env:os,timeoutMs:timeout,maxBytes:2097152,...options});pending.add(promise);try{const v=await promise;if(v.groupConfirmed!==true){groupKnown=false;fail();}return v;}catch(e){if(e?.groupConfirmed!==true)groupKnown=false;throw e;}finally{pending.delete(promise);}};
  const list=async filter=>(await run(['ps','--all','--no-trunc','--quiet','--filter',filter])).stdout.trim().split(/\r?\n/).filter(Boolean);
@@ -70,7 +81,7 @@ export async function execute(env=process.env){
  try{
   home=await mkdtemp(join(env.RUNNER_TEMP,'sc-fb-race-'));if(await realpath(home)!==home)fail();os.HOME=home;os.DOCKER_CONFIG=join(home,'docker-config');
   await run(['pull','--platform','linux/amd64',IMAGE],300000,{capture:false});const image=requireImage(json((await run(['image','inspect','--format','{{json .}}',IMAGE])).stdout));
-  for(const kind of ['reservation','start']){
+  for(const kind of ['reservation','start','renewal','fence']){
    const nonce=randomBytes(16).toString('hex'),name='sc-front-b-offline-'+nonce,label='sc.front-b-offline='+nonce;let id=null,created=false,ok=false;const sessions=[];
    const owned=async()=>{const a=await list('name=^/'+name+'$'),b=await list('label='+label);if(a.length>1||b.length>1||JSON.stringify(a)!==JSON.stringify(b)||a.some(x=>!ID.test(x)))fail();return a[0]??null;};
    try{
@@ -83,12 +94,15 @@ export async function execute(env=process.env){
     if(!instance||instance.database!=='postgres'||instance.owner!=='postgres'||!Number.isSafeInteger(instance.version)||instance.version<170000||instance.version>=180000||!/^\d{16,20}$/.test(instance.systemIdentifier))fail();const systemIdentifier=instance.systemIdentifier;
     await psql(`begin;do $boot$ begin if current_user<>'postgres' or current_database()<>'postgres' or current_setting('server_version_num')::integer<170000 or current_setting('server_version_num')::integer>=180000 or inet_server_addr() is not null or inet_client_addr() is not null or (select system_identifier::text from pg_control_system())<>'${systemIdentifier}' then raise exception 'REFUSED';end if;end $boot$;create schema sc_front_b_observation;revoke all on schema sc_front_b_observation from public;create table sc_front_b_observation.marker(nonce text primary key,system_identifier text not null);revoke all on sc_front_b_observation.marker from public;insert into sc_front_b_observation.marker values('${nonce}','${systemIdentifier}');commit;`);
     const checked=async sql=>psql(sameSessionGuard(nonce,systemIdentifier)+requireSqlBytes(Buffer.from(sql)).toString('utf8'));
-    await checked(qualified.fixture.toString('utf8'));await checked(qualified.candidate.toString('utf8'));
+    if(kind==='reservation'||kind==='start'){await checked(qualified.fixture.toString('utf8'));await checked(qualified.candidate.toString('utf8'));}
+    else for(const sql of [sameBrowser.fixture,sameBrowser.foundation,sameBrowser.composition,sameBrowser.seed])await checked(sql.toString('utf8'));
     const context={nonce,systemIdentifier,user:'10000000-0000-4000-8000-000000000001',session:'20000000-0000-4000-8000-000000000001',intent:'30000000-0000-4000-8000-000000000001',requestA:'40000000-0000-4000-8000-000000000001',requestB:'40000000-0000-4000-8000-000000000002'};
     if(kind==='reservation')for(const nullCase of ['intent_state','intent_expiry','admission_origin','admission_state','identity_null']){const result=json(await checked(nullCaseSql(context,nullCase)));if(result.kind!=='null-refused'||result.case!==nullCase||Object.keys(result).length!==2)fail();const baseline=json(await checked(nullBaselineSql(context)));if(baseline.kind!=='baseline'||baseline.intact!==true||Object.keys(baseline).length!==2)fail();}
     let generation=null;if(kind==='start'){const seed=json(await checked(seedStartSql(context)));if(seed.kind!=='seed'||seed.result?.status!=='acquired'||seed.result.requestId!==context.requestA||!/^[0-9a-f-]{36}$/i.test(seed.result.generation))fail();generation=seed.result.generation;}
     const ports={open:async()=>{const session=openDockerSession({id,cwd:ROOT,env:os,checkSql:requireSqlBytes,groupAbsent});sessions.push(session);return session;},query:async sql=>json(await checked(sql)),pause:()=>pause(100)};
-    results.push(await observeReservationRace(ports,context,generation));requireOfflineContainer(await inspect(id),id,name,image,nonce);ok=true;
+    if(kind==='renewal'||kind==='fence')results.push(await observeRetentionRace(ports,{nonce,systemIdentifier,user:context.user,session:context.session,intent:context.intent,request:context.requestA},kind));
+    else results.push(await observeReservationRace(ports,context,generation));
+    requireOfflineContainer(await inspect(id),id,name,image,nonce);ok=true;
    }finally{
     const cleanupAllowed=mayTeardown(groupKnown,pending.size,sessions.map(s=>s.state()));if(!cleanupAllowed)allClean=false;
     if(cleanupAllowed)try{const found=await owned();if(id&&found!==id)fail();if(!id)id=found;if(id){const state=await inspect(id);requireOfflineContainer(state,id,name,image,nonce,state.State?.Running);await run(['rm','--force','--volumes',id],60000,{capture:false});}if(await owned()!==null||id&&(await list('id='+id)).length!==0||created&&!id)fail();await run(['info','--format','{{json .ID}}']);}catch{allClean=false;}
