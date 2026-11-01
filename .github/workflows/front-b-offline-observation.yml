@@ -30,6 +30,7 @@ jobs:
         run: npm ci
       - name: Contratos puros
         run: node --test tests/scripts/front-b-offline-observation.test.mjs tests/scripts/front-b-offline-deviations.test.mjs
+      # Diagnostic evidence only; never a migration release gate.
       - name: Diagnóstico sintético da pré-condição 028
         run: |
           env -i PATH="$PATH" HOME="$RUNNER_TEMP" LANG=C.UTF-8 LC_ALL=C.UTF-8 TZ=UTC SC_FRONT_B_028_DIAGNOSTIC=1 node scripts/verification/front-b-offline-observation/028-precondition-diagnostic.mjs --execute
