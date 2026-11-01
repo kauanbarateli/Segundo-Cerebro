@@ -1,0 +1,37 @@
+-- Observation only: NOT a drain or permission to cut over. Verify the QA
+-- connection binding independently; missing privileges/data mean UNKNOWN.
+begin transaction read only;
+set local statement_timeout='10s';
+set local search_path=pg_catalog;
+with current_role_info as (
+ select r.rolsuper,r.rolbypassrls from pg_catalog.pg_roles r where r.rolname=current_user
+), cron_info as (
+ select c.relrowsecurity,c.relforcerowsecurity,c.relowner from pg_catalog.pg_class c
+ where c.oid=pg_catalog.to_regclass('cron.job')
+), activity as (
+ select a.pid,a.state,a.backend_type,a.xact_start,a.wait_event_type
+ from pg_catalog.pg_stat_activity a where a.datname=current_database() and a.pid<>pg_catalog.pg_backend_pid()
+), relevant_locks as (
+ select l.pid,l.granted from pg_catalog.pg_locks l
+ where l.database=(select oid from pg_catalog.pg_database where datname=current_database())
+ and l.relation in (pg_catalog.to_regclass('auth.users'),pg_catalog.to_regclass('app_private.signup_settings'),pg_catalog.to_regclass('app_private.user_admission'),pg_catalog.to_regclass('app_private.signup_intents'),pg_catalog.to_regclass('app_private.signup_origins'),pg_catalog.to_regclass('app_private.signup_completion_fences_draft'))
+ and l.pid<>pg_catalog.pg_backend_pid()
+)
+select pg_catalog.jsonb_build_object(
+ 'checked_at',pg_catalog.now(),
+ 'role_and_db_only',current_user='postgres' and current_database()='postgres',
+ 'activity_visibility_expected',(select rolsuper from current_role_info) or pg_catalog.pg_has_role(current_user,'pg_read_all_stats','USAGE'),
+ 'track_activities',pg_catalog.current_setting('track_activities'),
+ 'active_backends',(select count(*) from activity where state='active'),
+ 'idle_in_transaction',(select count(*) from activity where state like 'idle in transaction%'),
+ 'backends_with_transaction',(select count(*) from activity where xact_start is not null),
+ 'relevant_granted_locks',(select count(*) from relevant_locks where granted),
+ 'relevant_waiting_locks',(select count(*) from relevant_locks where not granted),
+ 'prepared_transactions',(select count(*) from pg_catalog.pg_prepared_xacts where database=current_database()),
+ 'cron_relation_present',exists(select 1 from cron_info),
+ 'cron_global_row_visibility_expected',coalesce((select not c.relrowsecurity or r.rolsuper or r.rolbypassrls or (not c.relforcerowsecurity and pg_catalog.pg_has_role(current_user,c.relowner,'USAGE')) from cron_info c cross join current_role_info r),false),
+ 'visible_cron_jobs',(select count(*) from cron.job),
+ 'visible_active_cron_jobs',(select count(*) from cron.job where active),
+ 'visible_named_or_literal_signup_jobs',(select count(*) from cron.job where lower(jobname) like 'sc-signup-%' or lower(command) like '%signup_prune%' or lower(command) like '%signup_browser_prune%')
+) as writer_observation;
+rollback;

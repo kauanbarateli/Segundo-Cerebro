@@ -1,0 +1,54 @@
+-- GUARDED QA proposal. No external drain, project identity or approval is implied.
+begin;
+do $quarantine_guard$ begin raise exception 'REVIEW_AND_QA_AUTHORIZATION_REQUIRED'; end $quarantine_guard$;
+set local lock_timeout='5s';set local statement_timeout='60s';
+lock table cron.job,auth.users,app_private.signup_settings,app_private.user_admission,app_private.signup_intents,app_private.signup_completion_fences_draft in share row exclusive mode;
+do $environment$ begin
+ if current_user<>'postgres' or current_database()<>'postgres'
+  or (select count(*) from supabase_migrations.schema_migrations where version='20261101172256')<>1
+  or not exists(select 1 from app_private.signup_settings where singleton and enabled is false)
+  or exists(select 1 from app_private.signup_intents)
+  or exists(select 1 from app_private.signup_completion_fences_draft)
+  or exists(select 1 from cron.job where lower(jobname) like 'sc-signup-%' or lower(command) like '%signup_prune%' or lower(command) like '%signup_browser_prune%')
+  then raise exception 'QA_BASELINE_REFUSED'; end if;
+end $environment$;
+do $acl_check$ declare e record;ok boolean;begin
+ for e in select * from (values ('app_private.signup_prune()','cbd79d7ec1fbb93605616e7aa742c8b20ec741e098b7058b244f559add32d726','plpgsql',true),
+  ('public.signup_prune()','83a63ed59363fc48cf51dc9265cac25106f0df60eec2a262963cdec1d1843f92','sql',false),
+  ('app_private.signup_recover_verified_intent(uuid,uuid,text,text,text)','a26121c44a358eeacbeb768b1516f759fd04d14f3772f55925306ea9207da12f','plpgsql',true),
+  ('public.signup_recover_verified_intent(uuid,uuid,text,text,text)','1c44bc50a684573383162d126641c9afac6e1abf3b5e3507d7400b16ddd8895e','sql',false)) as v(signature,body_hash,language_name,security_definer) loop
+  select coalesce(bool_and(pg_catalog.pg_get_userbyid(p.proowner)='postgres' and p.prokind='f'
+   and pg_catalog.pg_get_function_result(p.oid)='jsonb' and p.prosecdef=e.security_definer and not p.proisstrict
+   and p.proconfig=ARRAY['search_path=""']::text[] and l.lanname=e.language_name
+   and pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(pg_catalog.replace(p.prosrc,E'\r\n',E'\n'),'UTF8')),'hex')=e.body_hash
+   and pg_catalog.has_function_privilege(pg_catalog.to_regrole('anon'),p.oid,'EXECUTE') is false
+   and pg_catalog.has_function_privilege(pg_catalog.to_regrole('authenticated'),p.oid,'EXECUTE') is false
+   and pg_catalog.has_function_privilege(pg_catalog.to_regrole('service_role'),p.oid,'EXECUTE') is true
+   and (select count(*) from pg_catalog.aclexplode(coalesce(p.proacl,pg_catalog.acldefault('f',p.proowner))) a
+    where a.privilege_type='EXECUTE' and not a.is_grantable and a.grantor=p.proowner and (a.grantee=p.proowner or a.grantee=pg_catalog.to_regrole('service_role')::oid))=2
+   and not exists(select 1 from pg_catalog.aclexplode(coalesce(p.proacl,pg_catalog.acldefault('f',p.proowner))) a
+    where a.privilege_type<>'EXECUTE' or a.is_grantable or a.grantor<>p.proowner or (a.grantee<>p.proowner and a.grantee<>pg_catalog.to_regrole('service_role')::oid))),false)
+   into ok from pg_catalog.pg_proc p join pg_catalog.pg_language l on l.oid=p.prolang where p.oid=pg_catalog.to_regprocedure(e.signature);
+  if ok is distinct from true then raise exception 'QA_ACL_OR_BODY_REFUSED'; end if;
+ end loop;end $acl_check$;
+revoke execute on function app_private.signup_prune(),public.signup_prune(),app_private.signup_recover_verified_intent(uuid,uuid,text,text,text),public.signup_recover_verified_intent(uuid,uuid,text,text,text) from service_role;
+do $acl_check$ declare e record;ok boolean;begin
+ for e in select * from (values ('app_private.signup_prune()','cbd79d7ec1fbb93605616e7aa742c8b20ec741e098b7058b244f559add32d726','plpgsql',true),
+  ('public.signup_prune()','83a63ed59363fc48cf51dc9265cac25106f0df60eec2a262963cdec1d1843f92','sql',false),
+  ('app_private.signup_recover_verified_intent(uuid,uuid,text,text,text)','a26121c44a358eeacbeb768b1516f759fd04d14f3772f55925306ea9207da12f','plpgsql',true),
+  ('public.signup_recover_verified_intent(uuid,uuid,text,text,text)','1c44bc50a684573383162d126641c9afac6e1abf3b5e3507d7400b16ddd8895e','sql',false)) as v(signature,body_hash,language_name,security_definer) loop
+  select coalesce(bool_and(pg_catalog.pg_get_userbyid(p.proowner)='postgres' and p.prokind='f'
+   and pg_catalog.pg_get_function_result(p.oid)='jsonb' and p.prosecdef=e.security_definer and not p.proisstrict
+   and p.proconfig=ARRAY['search_path=""']::text[] and l.lanname=e.language_name
+   and pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(pg_catalog.replace(p.prosrc,E'\r\n',E'\n'),'UTF8')),'hex')=e.body_hash
+   and pg_catalog.has_function_privilege(pg_catalog.to_regrole('anon'),p.oid,'EXECUTE') is false
+   and pg_catalog.has_function_privilege(pg_catalog.to_regrole('authenticated'),p.oid,'EXECUTE') is false
+   and pg_catalog.has_function_privilege(pg_catalog.to_regrole('service_role'),p.oid,'EXECUTE') is false
+   and (select count(*) from pg_catalog.aclexplode(coalesce(p.proacl,pg_catalog.acldefault('f',p.proowner))) a
+    where a.privilege_type='EXECUTE' and not a.is_grantable and a.grantor=p.proowner and (a.grantee=p.proowner))=1
+   and not exists(select 1 from pg_catalog.aclexplode(coalesce(p.proacl,pg_catalog.acldefault('f',p.proowner))) a
+    where a.privilege_type<>'EXECUTE' or a.is_grantable or a.grantor<>p.proowner or (a.grantee<>p.proowner))),false)
+   into ok from pg_catalog.pg_proc p join pg_catalog.pg_language l on l.oid=p.prolang where p.oid=pg_catalog.to_regprocedure(e.signature);
+  if ok is distinct from true then raise exception 'QA_ACL_OR_BODY_REFUSED'; end if;
+ end loop;end $acl_check$;
+rollback;

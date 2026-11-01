@@ -1,0 +1,5 @@
+Teste adversarial isolado do prune legado: o [run 41355269625](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/41355269625), commit `9969ca854de903bc559d53ff75b27f5d0ae26de6`, concluiu com cinco casos observados e limpeza confirmada.
+
+No caso adicional, a chamada do prune da 028 já havia entrado na função e aguardava o lock da tabela. A transação que mantinha o lock substituiu a função e fez commit; a chamada antiga então retornou o formato da 028, enquanto uma chamada nova retornou uma sentinela instalada exclusivamente no banco descartável. A espera foi observada com `pg_blocking_pids` e lock de relação pendente. O ensaio demonstra que a substituição e o commit, neste cenário, não drenam a execução iniciada anteriormente.
+
+O PostgreSQL 17 foi executado em container sem rede pelo runner existente. A sentinela é instrumentação de teste, e o recibo declara `acceptance=false` e `hostedCertified=false`; o resultado não valida o Supabase hospedado nem elimina os gates de identidade, drenagem e concorrência do corte. Nenhuma operação foi executada em QA ou produção.
