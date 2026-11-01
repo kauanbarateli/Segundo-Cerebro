@@ -16,6 +16,15 @@ const ack = (body: Payload) => ({ ok: true, result: { ...item, category: body.ca
 let bundle: string;
 test.use({ serviceWorkers: "block" });
 
+test.beforeEach(async ({}, info) => {
+  // The headed diagnostic must not silently run a headless project.
+  if (process.env.FRONT_B_FOCUS_EXPECT_HEADED === "1") expect(info.project.use.headless).toBe(false);
+  if (process.env.FRONT_B_FOCUS_EXPECT_NEW_HEADLESS === "1") {
+    expect(info.project.use.headless).toBe(true);
+    expect(info.project.use.channel).toBe("chromium");
+  }
+});
+
 test.beforeAll(async () => {
   const build = await rolldown({
     input: resolve("tests/e2e/fixtures/feedback-session-browser.tsx"), platform: "browser", tsconfig: false,
