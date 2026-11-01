@@ -32,7 +32,7 @@ const LOCAL_PINS=Object.freeze({
  'same-browser-seed.sql':'d49f5436440bcf0b733f1cdfbc084f76ab5767ba20c420a229b9378b3071d6a0',
  'same-browser-qualify.mjs':'3605fe60dc5b085fb1fd86599b5a08d4db531b5ad0c9bcd9ad674d67a4316a03',
  'same-browser-retention-races.draft.mjs':'a0dac01de4a42a416e1a18a79bd31b8f5a10ec82364a36ddd60000577cea0631',
- 'legacy-prune-race.draft.mjs':'5507a8eccc5a02500213e30daddee5d3fa298ecbbf86cf3ce80aae0e577a8ba3'
+ 'legacy-prune-race.draft.mjs':'1d64a43b4086e0b65a5dafcda16a61207c4284f89bd89990e4b50b3cf2d871f1'
 });
 const SUPPORT_PINS=Object.freeze([
  [BASE+'runner.test.mjs','002e4a24570929741c3dbf83c0642dc84624ce1220c6d06a780864b39ca5fe10'],

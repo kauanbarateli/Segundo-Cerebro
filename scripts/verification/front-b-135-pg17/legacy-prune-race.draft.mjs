@@ -18,16 +18,16 @@ export function legacyPruneRacePlan(ctx,composition){
  });
 }
 export async function observeLegacyPruneRace(ports,ctx,composition){
- const plan=legacyPruneRacePlan(ctx,composition);if(!ports||['open','query','pause'].some(k=>typeof ports[k]!=='function'))fail();let a,b,closedA=false,closedB=false,error;
+ const plan=legacyPruneRacePlan(ctx,composition);if(!ports||['open','query','pause'].some(k=>typeof ports[k]!=='function'))fail();let a,b,closedA=false,closedB=false,error,phase='preflight';
  try{
   const pre=await ports.query(plan.preflight);if(!exact(pre,['kind','empty'])||pre.kind!=='preflight'||pre.empty!==true)fail();
-  a=await ports.open('a');b=await ports.open('b');if(!a||!b||a===b||[a,b].some(x=>['send','read','close'].some(k=>typeof x[k]!=='function')))fail();
-  await a.send(plan.first);const first=await a.read();if(!exact(first,['kind','pid'])||first.kind!=='first'||!pid(first.pid))fail();
-  await b.send(plan.second);const second=await b.read();if(!exact(second,['kind','pid'])||second.kind!=='second-start'||!pid(second.pid)||second.pid===first.pid)fail();
-  let observed=false;for(let i=0;i<30;i++){const w=await ports.query(plan.waiting(first.pid,second.pid));if(!exact(w,['kind','blocked'])||w.kind!=='waiting'||typeof w.blocked!=='boolean')fail();if(w.blocked){observed=true;break;}await ports.pause();}if(!observed)fail();
-  await a.send(plan.cutover);const done=await a.read();if(!exact(done,['kind'])||done.kind!=='cutover-committed')fail();
-  const old=await b.read();if(!exact(old,['kind','result'])||old.kind!=='old-return'||!exact(old.result,['expiredRemoved','consumedScrubbed','originsRemoved','fencedExamined','expiredOriginsCleared']))fail();
-  const fresh=await ports.query(plan.fresh);if(!exact(fresh,['kind','result'])||fresh.kind!=='fresh'||!exact(fresh.result,['testOnlyNewBody'])||fresh.result.testOnlyNewBody!==true)fail();
+  phase='open';a=await ports.open('a');b=await ports.open('b');if(!a||!b||a===b||[a,b].some(x=>['send','read','close'].some(k=>typeof x[k]!=='function')))fail();
+  phase='first';await a.send(plan.first);const first=await a.read();if(!exact(first,['kind','pid'])||first.kind!=='first'||!pid(first.pid))fail();
+  phase='second';await b.send(plan.second);const second=await b.read();if(!exact(second,['kind','pid'])||second.kind!=='second-start'||!pid(second.pid)||second.pid===first.pid)fail();
+  phase='waiting';let observed=false;for(let i=0;i<30;i++){const w=await ports.query(plan.waiting(first.pid,second.pid));if(!exact(w,['kind','blocked'])||w.kind!=='waiting'||typeof w.blocked!=='boolean')fail();if(w.blocked){observed=true;break;}await ports.pause();}if(!observed)fail();
+  phase='cutover';await a.send(plan.cutover);const done=await a.read();if(!exact(done,['kind'])||done.kind!=='cutover-committed')fail();
+  phase='old-return';const old=await b.read();if(!exact(old,['kind','result'])||old.kind!=='old-return'||!exact(old.result,['expiredRemoved','consumedScrubbed','originsRemoved','fencedExamined','expiredOriginsCleared']))fail();
+  phase='fresh';const fresh=await ports.query(plan.fresh);if(!exact(fresh,['kind','result'])||fresh.kind!=='fresh'||!exact(fresh.result,['testOnlyNewBody'])||fresh.result.testOnlyNewBody!==true)fail();
  }catch(e){error=e;}finally{try{if(a)closedA=await a.close()===true;}catch{}try{if(b)closedB=await b.close()===true;}catch{}}
- if(error||!closedA||!closedB)fail();return Object.freeze({scenario:'legacy-prune-resumes-after-replacement-pg17',status:'CASE_OBSERVED_CLEANUP_PENDING',acceptance:false,hostedCertified:false});
+ if(error||!closedA||!closedB){process.stderr.write(JSON.stringify({code:'LEGACY_PRUNE_RACE_REFUSED',phase,closedA,closedB})+'\n');fail();}return Object.freeze({scenario:'legacy-prune-resumes-after-replacement-pg17',status:'CASE_OBSERVED_CLEANUP_PENDING',acceptance:false,hostedCertified:false});
 }
