@@ -21,10 +21,11 @@ import { OwnSessionsSection } from "./own-sessions-section";
 import { createOwnSessionsReader } from "./own-sessions-reader";
 import { SettingsLegalSection } from "./settings-legal-section";
 import { SettingsFocusSection } from "./settings-focus-section";
+import { SignupOriginSetting } from "./signup-origin-setting";
 import { reconcilePreferenceDraft } from "./preference-draft";
 import "./settings.css";
 
-export function SettingsConnectedWorkspace() {
+export function SettingsConnectedWorkspace({originAvailable=false}:{originAvailable?:boolean}) {
   const router = useRouter();
   const app = useDemoApplication(), { policy, applyAccountPreferences } = useDemoAccess(), theme = useTheme();
   const readSessions = useMemo(() => createOwnSessionsReader(app.userId), [app.userId]);
@@ -116,6 +117,7 @@ export function SettingsConnectedWorkspace() {
       <Button variant="primary" loading={saving} onClick={() => void save("settings.modules.update", { modules })}>Salvar módulos</Button>
     </Collapsible></section>
     <OwnSessionsSection scopeKey={app.userId} read={readSessions} />
+    {originAvailable && <section className="settings-panel" aria-label="Origem do cadastro"><SignupOriginSetting key={app.userId} userId={app.userId} /></section>}
     <section id="dados" className="settings-panel settings-panel--collapsible"><Collapsible defaultOpen title="Meus dados"><p className="settings-text">Seus registros pertencem à sua conta. A administração acompanha contas e ações administrativas; conteúdos pessoais permanecem isolados.</p><p className="settings-text">Exportação de dados e notificações push ficam para a fase 2.</p></Collapsible></section>
     <SettingsLegalSection />
     <section className="settings-panel" aria-label="Instalação do aplicativo"><InstallHelp /></section>

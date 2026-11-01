@@ -33,8 +33,8 @@ function PasswordField({ name, label, autoComplete, disabled, error }: {
   </div>;
 }
 
-export function AuthForm({ kind, available, requiresCurrentPassword = false, completionPending = false, notice, returnTo }: {
-  kind: AuthFormKind; available: boolean; requiresCurrentPassword?: boolean; completionPending?: boolean; notice?: string; returnTo?: string;
+export function AuthForm({ kind, available, signupAvailable = false, requiresCurrentPassword = false, completionPending = false, notice, returnTo }: {
+  kind: AuthFormKind; available: boolean; signupAvailable?: boolean; requiresCurrentPassword?: boolean; completionPending?: boolean; notice?: string; returnTo?: string;
 }) {
   const action = kind === "sign-in" ? signInAction : kind === "recovery" ? recoverPasswordAction : updatePasswordAction;
   const [state, formAction, pending] = useActionState(action, initialState);
@@ -111,6 +111,6 @@ export function AuthForm({ kind, available, requiresCurrentPassword = false, com
       {kind === "sign-in" ? <Link href="/recuperar-senha">Esqueci a senha</Link> : <Link href="/entrar">Voltar para entrar</Link>}
       {kind === "reset" && <Link href="/recuperar-senha">Solicitar outro link</Link>}
     </nav>
-    {kind === "sign-in" && <p className="auth-registration">O cadastro é fechado. Para solicitar acesso, fale com quem administra o Segundo Cérebro.</p>}
+    {kind === "sign-in" && <p className="auth-registration">{signupAvailable ? <>Ainda não tem conta? <Link href="/criar-conta">Criar conta gratuita</Link></> : "O cadastro é fechado. Para solicitar acesso, fale com quem administra o Segundo Cérebro."}</p>}
   </>;
 }

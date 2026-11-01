@@ -42,8 +42,9 @@ function Capitulo({ item, ordem }: { item: ConteudoCapitulo; ordem: "texto-prime
 }
 
 /** Apresentação pública do produto: três capítulos com telas reais do app em demonstração. */
-export function LandingPage({ cadastroAberto = false }: { cadastroAberto?: boolean }) {
-  const acesso = acessoPara(cadastroAberto);
+export function LandingPage({ cadastroAberto = false, signupQuery = '' }: { cadastroAberto?: boolean; signupQuery?: string }) {
+  const base = acessoPara(cadastroAberto);
+  const acesso = cadastroAberto && signupQuery ? { ...base, principal: {...base.principal,href:base.principal.href+signupQuery}, cabecalho: {...base.cabecalho, criar:base.cabecalho.criar ? {...base.cabecalho.criar,href:base.cabecalho.criar.href+signupQuery}:null} } : base;
   return (
     <div className="conheca" id="topo">
       <a className="skip-link" href="#conteudo">Pular para o conteúdo</a>

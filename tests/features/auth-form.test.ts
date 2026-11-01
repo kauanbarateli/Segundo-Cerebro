@@ -25,6 +25,15 @@ function namedInputs(html: string) {
 describe("estados renderizados dos formulários de autenticação", () => {
   beforeEach(() => { actionResult.state = { status: "idle" }; actionResult.pending = false; });
 
+  it("mostra criação de conta apenas quando a capacidade do servidor está disponível", () => {
+    const closed=render({kind:"sign-in",available:true});
+    expect(closed).toContain("O cadastro é fechado");
+    const open=render({kind:"sign-in",available:true,signupAvailable:true});
+    expect(open).toContain('href="/criar-conta"');
+    expect(open).toContain("Criar conta gratuita");
+    expect(open).not.toContain("O cadastro é fechado");
+  });
+
   it.each(["change", "reset"] as const)("retoma %s pelo contexto do servidor sem pedir outra senha", (kind) => {
     const html = render({ kind, available: true, completionPending: true, requiresCurrentPassword: true });
     expect(html).toContain("Concluir proteção da conta");

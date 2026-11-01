@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { INDEXACAO_PUBLICA } from "@/components/features/conheca/content";
 import { LandingPage } from "@/components/features/conheca/landing-page";
-import { readSignupCapability } from "@/lib/access/signup-capability";
+import { frontBCapabilities } from "@/lib/access/front-b-capabilities-server";
+import { signupOriginQuery } from "@/core/acquisition/signup-origin-transport";
 
 const titulo = "Segundo Cérebro · Capture agora, encontre depois";
 const descricao = "Notas, tarefas, agenda, hábitos, finanças e senhas num só lugar, ligados entre si. Conheça o Segundo Cérebro.";
@@ -37,6 +38,8 @@ export function generateMetadata(): Metadata {
   };
 }
 
-export default function ConhecaPage() {
-  return <LandingPage cadastroAberto={readSignupCapability().available} />;
+export default async function ConhecaPage({searchParams}:{searchParams:Promise<Record<string,string|string[]|undefined>>}) {
+  const capability=frontBCapabilities();
+  const signupQuery=capability.signup ? signupOriginQuery(await searchParams) : '';
+  return <LandingPage cadastroAberto={capability.signup} signupQuery={signupQuery} />;
 }

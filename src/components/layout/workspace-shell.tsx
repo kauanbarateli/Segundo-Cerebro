@@ -77,8 +77,8 @@ function BottomLink({ route, pathname }: { route: WorkspaceRoute; pathname: stri
 
 const CLOSED_DESTINATIONS: OptionalDestinations = { feedback: false, updates: false };
 
-export function WorkspaceShell({ children, avatarId = null, displayName = null, destinations = CLOSED_DESTINATIONS }: {
-  children: ReactNode; avatarId?: string | null; displayName?: string | null; destinations?: OptionalDestinations;
+export function WorkspaceShell({ children, avatarId = null, displayName = null, destinations = CLOSED_DESTINATIONS, metricsAvailable = false }: {
+  children: ReactNode; avatarId?: string | null; displayName?: string | null; destinations?: OptionalDestinations; metricsAvailable?: boolean;
 }) {
   const pathname = usePathname();
   const optional = resolveOptionalNavigation(destinations);
@@ -316,6 +316,7 @@ export function WorkspaceShell({ children, avatarId = null, displayName = null, 
           {navigation.utility.length > 0 && <div className="shell-nav-group shell-nav-utility">
             {navigation.utility.map((route) => <RouteLink key={route.feature} route={route} pathname={pathname} />)}
           </div>}
+          {metricsAvailable && <div className="shell-nav-group shell-nav-utility"><Link className="shell-nav-link" href="/metricas" aria-label="Métricas" data-nav-tip="Métricas" aria-current={pathname==='/metricas'?'page':undefined}><Icons.Activity /><span className="shell-nav-label">Métricas</span></Link></div>}
         </nav>
 
         <div className="shell-sidebar-footer">
