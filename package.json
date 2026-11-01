@@ -62,10 +62,12 @@
   },
   "overrides": {
     "@serwist/next@9.5.13": {
-      "zod": "4.6.6"
+      "zod": "4.6.6",
+      "glob": "14.0.3"
     },
     "@serwist/build@9.5.13": {
-      "zod": "4.6.6"
+      "zod": "4.6.6",
+      "glob": "14.0.3"
     },
     "@serwist/webpack-plugin@9.5.13": {
       "zod": "4.6.6"
@@ -75,6 +77,9 @@
     },
     "next": {
       "postcss": "8.5.29"
+    },
+    "@sentry/bundler-plugins@11.6.0": {
+      "glob": "14.0.3"
     }
   },
   "devDependencies": {
