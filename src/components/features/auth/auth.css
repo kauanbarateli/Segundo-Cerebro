@@ -13,6 +13,7 @@
 .auth-heading h1 { font-size:var(--type-h2); font-weight:var(--weight-h2); line-height:var(--leading-h2); letter-spacing:var(--tracking-h2); }
 .auth-heading p, .auth-registration { font-size:var(--type-corpo); color:var(--ink-muted); line-height:var(--leading-corpo); }
 .auth-form { display:grid; gap:var(--space-4); min-width:0; }
+.auth-form__fields { display:grid; gap:var(--space-4); min-width:0; margin:0; padding:0; border:0; }
 .auth-password { display:grid; grid-template-columns:minmax(0,1fr) var(--target); gap:var(--space-2) 0; align-items:center; }
 .auth-password .field { display:contents; }
 .auth-password .field__label { grid-column:1 / -1; grid-row:1; }

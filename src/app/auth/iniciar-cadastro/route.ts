@@ -12,15 +12,20 @@ import { SIGNUP_UTM_FIELDS } from "@/core/acquisition/signup-origin";
 
 export const dynamic = "force-dynamic";
 const fields = ["email", "password", "acceptedLegal", "termsVersion", "privacyVersion", "consentedOrigin", ...SIGNUP_UTM_FIELDS] as const;
+type SignupStatus = "sent" | "wait" | "invalid" | "unavailable";
+function resultResponse(request: NextRequest, config: Parameters<typeof signupRedirect>[0], status: SignupStatus) {
+  if (request.headers.get("accept") !== "application/json") return signupRedirect(config, `/cadastro?status=${status}`);
+  return NextResponse.json({ status }, { headers: { ...noStoreHeaders(), "Referrer-Policy": "no-referrer", "X-Content-Type-Options": "nosniff" } });
+}
 export async function POST(request: NextRequest) {
   try {
     const config = readAuthConfiguration();
     if (config.mode !== "supabase" || !signupEnabled(config)) return new NextResponse(null, { status: 503, headers: noStoreHeaders() });
     if (!sameOrigin(request.headers.get("origin"), config.appOrigin)) return new NextResponse(null, { status: 403, headers: noStoreHeaders() });
     const form = await readSignupForm(request, fields);
-    if (!form) return signupRedirect(config, "/cadastro?status=invalid");
+    if (!form) return resultResponse(request, config, "invalid");
     const result = await requestPublicSignup(createSignupRequestPorts(config), { email: form.email, password: form.password, acceptedLegal: form.acceptedLegal === "yes", termsVersion: form.termsVersion, privacyVersion: form.privacyVersion }, { terms: LEGAL_DOCUMENTS.termos.version, privacy: LEGAL_DOCUMENTS.privacidade.version }, { consented: form.consentedOrigin === "yes", candidate: form });
     const status = result.status === "accepted" ? "sent" : result.status === "rate-limited" ? "wait" : result.status === "invalid" ? "invalid" : "unavailable";
-    return signupRedirect(config, `/cadastro?status=${status}`);
+    return resultResponse(request, config, status);
   } catch { return new NextResponse(null, { status: 503, headers: noStoreHeaders() }); }
 }
