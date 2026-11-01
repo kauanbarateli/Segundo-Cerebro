@@ -40,6 +40,7 @@ WITH expected_proc(signature,result,argnames,definer,volatility,language,body_ha
  WHERE p.oid IS NULL OR pg_catalog.pg_get_userbyid(p.proowner)<>'postgres'
  OR pg_catalog.pg_get_function_result(p.oid) IS DISTINCT FROM e.result
  OR p.proargnames IS DISTINCT FROM e.argnames OR p.prosecdef IS DISTINCT FROM e.definer
+ OR p.proisstrict IS DISTINCT FROM false
  OR p.provolatile::text IS DISTINCT FROM e.volatility OR l.lanname IS DISTINCT FROM e.language
  OR p.proconfig IS DISTINCT FROM ARRAY['search_path=""']::text[]
  OR pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(pg_catalog.replace(p.prosrc,E'\r\n',E'\n'),'UTF8')),'hex') IS DISTINCT FROM e.body_hash
@@ -79,8 +80,12 @@ WITH expected_proc(signature,result,argnames,definer,volatility,language,body_ha
   ('app_private.feedback_requests', 'feedback_requests_pkey', 'p', '8c8464f42472e42ee190fc91ca8db79b5351d3a4609040516578d229c56f6fa5'),
   ('app_private.feedback_requests', 'feedback_requests_user_id_client_id_key', 'u', '879612feec494fa45bed29faa9c7e9281da89a3f0c7773b7e4d988de79eb8989'),
   ('app_private.feedback_requests', 'feedback_requests_user_id_fkey', 'f', '7dffc1fe5c72443147ef9227e966626cdc6e5997f36e90bcc553577512766d2a'),
+  ('app_private.onboarding_entries', 'onboarding_entries_pkey', 'p', '44756d887704fc88d8d0adc5c0c431103c555b4f8e6a4ddef6f7a7f6b4110606'),
   ('app_private.onboarding_entries', 'onboarding_entries_source_intent_fkey', 'f', '1f2416013526510cba22dd19db0a77133830e1a01eea50b1e9db32a931d1cd7e'),
   ('app_private.onboarding_entries', 'onboarding_entries_source_intent_key', 'u', '33ae35b7fb6dcd8e7034589cc00a376178cc04cce1955081b10bc447e5d857eb'),
+  ('app_private.onboarding_entries', 'onboarding_entries_source_operation_fkey', 'f', '33bcbf47f249e18c31dedaf7dedfc6aa8ea8210596b04807bb23f7f8b9c8b12b'),
+  ('app_private.onboarding_entries', 'onboarding_entries_source_operation_key', 'u', '045c7289070ebace55f491c1129da96a23b0a33fbe1e2f00e1af862d95f804a7'),
+  ('app_private.onboarding_entries', 'onboarding_entries_user_id_fkey', 'f', '7dffc1fe5c72443147ef9227e966626cdc6e5997f36e90bcc553577512766d2a'),
   ('app_private.onboarding_entries', 'onboarding_entry_source_check', 'c', '3bc7e2e6293dc41032d1da38174cd9a407efe0bb4496e1ce9f58554b19e0d3ae'),
   ('app_private.signup_intents', 'signup_intents_binding_hash_check', 'c', '8df280428322d534a5d0ef970f7f26873e75f29273eea86150ee6be8933ae205'),
   ('app_private.signup_intents', 'signup_intents_binding_hash_key', 'u', 'aee2045076c32a4a8e677f204e4d62c8f940fa34e930ba82a2d2c3d74de6cffa'),
@@ -110,10 +115,36 @@ WITH expected_proc(signature,result,argnames,definer,volatility,language,body_ha
   ('app_private.user_admission', 'user_admission_pkey', 'p', '44756d887704fc88d8d0adc5c0c431103c555b4f8e6a4ddef6f7a7f6b4110606'),
   ('app_private.user_admission', 'user_admission_state_check', 'c', '53464237956bf16d26f4a7949bfa025bba93e0335434a4608fa5ff6370ca338c'),
   ('app_private.user_admission', 'user_admission_user_id_fkey', 'f', '7dffc1fe5c72443147ef9227e966626cdc6e5997f36e90bcc553577512766d2a'),
-  ('public.domain_events', 'domain_events_entity_type_check', 'c', 'e0dd19f398b8fb1c6b96776f682ebcf5c119f42229cb9136d614c31ad29163e7')
+  ('public.domain_events', 'calendar_metadata_only', 'c', 'ec332a8f5ac067e7787bfed50e681c3960de763a9cf1d85355f756e952978c2f'),
+  ('public.domain_events', 'domain_events_action_check', 'c', '23d74f1371849431005a78083ead5018d0a0bca382cff5932ef0249472c1ba18'),
+  ('public.domain_events', 'domain_events_after_check', 'c', '2d2afc89a59ef895956362da9a4a920a9304a9fef6f15d71d68e9a5940e8e3a3'),
+  ('public.domain_events', 'domain_events_before_check', 'c', '4bc1a0de65673a35c522d293af145b71aec5906495a7273e1cd50e16a6244846'),
+  ('public.domain_events', 'domain_events_canal_check', 'c', '86eec093f59cbcbdbee4430455a6140055483849ae6c2652a3eba63285a74f59'),
+  ('public.domain_events', 'domain_events_capture_task_payload_check', 'c', '375cbcf4e2e116e86ca8f3b359dd90ea3c612c8f3979020ab5d5d6be8c0fc680'),
+  ('public.domain_events', 'domain_events_check', 'c', 'a5dfd926800633c03c1817e6b09d22ec527f1184663aae50910c4f64390db568'),
+  ('public.domain_events', 'domain_events_check1', 'c', 'cbc9a137a4e3aa3d5faae895aef6c692aea3a5232f0a7da06cc6834939d7a788'),
+  ('public.domain_events', 'domain_events_entity_type_check', 'c', 'e0dd19f398b8fb1c6b96776f682ebcf5c119f42229cb9136d614c31ad29163e7'),
+  ('public.domain_events', 'domain_events_pkey', 'p', '8c8464f42472e42ee190fc91ca8db79b5351d3a4609040516578d229c56f6fa5'),
+  ('public.domain_events', 'domain_events_user_id_fkey', 'f', '7dffc1fe5c72443147ef9227e966626cdc6e5997f36e90bcc553577512766d2a'),
+  ('public.domain_events', 'vault_metadata_only', 'c', '6da74a0c91be2f21a416eabe9eeb18e798246ab4d5b88b31f0bcabb8a06d3512')
 ), constraint_fail AS (
  SELECT e.tab||'.'||e.name AS object FROM expected_constraint e LEFT JOIN pg_catalog.pg_constraint c ON c.conrelid=pg_catalog.to_regclass(e.tab) AND c.conname=e.name
  WHERE c.oid IS NULL OR c.contype::text IS DISTINCT FROM e.kind OR NOT c.convalidated OR pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(pg_catalog.pg_get_constraintdef(c.oid),'UTF8')),'hex') IS DISTINCT FROM e.definition_hash
+), constraint_set_fail AS (
+ SELECT DISTINCT e.tab AS object FROM expected_constraint e
+ WHERE EXISTS (SELECT 1 FROM pg_catalog.pg_constraint c WHERE c.conrelid=pg_catalog.to_regclass(e.tab) AND c.contype<>'n'
+   AND NOT EXISTS (SELECT 1 FROM expected_constraint expected WHERE expected.tab=e.tab AND expected.name=c.conname AND expected.kind=c.contype::text))
+), fk_trigger_fail AS (
+ SELECT e.tab||'.'||e.name AS object FROM expected_constraint e
+ JOIN pg_catalog.pg_constraint c ON c.conrelid=pg_catalog.to_regclass(e.tab) AND c.conname=e.name AND c.contype='f'
+ WHERE c.condeferrable OR c.condeferred OR (SELECT count(*) FROM pg_catalog.pg_trigger t WHERE t.tgconstraint=c.oid)<>4
+ OR EXISTS (SELECT 1 FROM (VALUES
+  (c.conrelid,5,'RI_FKey_check_ins'),(c.conrelid,17,'RI_FKey_check_upd'),
+  (c.confrelid,9,CASE c.confdeltype WHEN 'a' THEN 'RI_FKey_noaction_del' WHEN 'r' THEN 'RI_FKey_restrict_del' WHEN 'c' THEN 'RI_FKey_cascade_del' WHEN 'n' THEN 'RI_FKey_setnull_del' WHEN 'd' THEN 'RI_FKey_setdefault_del' END),
+  (c.confrelid,17,CASE c.confupdtype WHEN 'a' THEN 'RI_FKey_noaction_upd' WHEN 'r' THEN 'RI_FKey_restrict_upd' WHEN 'c' THEN 'RI_FKey_cascade_upd' WHEN 'n' THEN 'RI_FKey_setnull_upd' WHEN 'd' THEN 'RI_FKey_setdefault_upd' END)
+ ) AS expected(relid,kind,fn) WHERE (SELECT count(*) FROM pg_catalog.pg_trigger t JOIN pg_catalog.pg_proc p ON p.oid=t.tgfoid JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace
+   WHERE t.tgconstraint=c.oid AND t.tgrelid=expected.relid AND t.tgtype=expected.kind AND t.tgisinternal AND t.tgenabled='O'
+   AND NOT t.tgdeferrable AND NOT t.tginitdeferred AND t.tgnargs=0 AND t.tgqual IS NULL AND p.proname=expected.fn AND n.nspname='pg_catalog')<>1)
 ), expected_index(name,definition_hash) AS (VALUES
   ('app_private.feedback_requests_owner_created', 'e63a1d174b10a20c9fecb753f035efac799767f596707e431faab79bbcd6a08d'),
   ('app_private.signup_intents_expiry', '91ac55af1c2ecbd98207e33545963cf6c344b0007fa8197e49dd27658f641352'),
@@ -124,9 +155,31 @@ WITH expected_proc(signature,result,argnames,definer,volatility,language,body_ha
  WHERE c.oid IS NULL OR NOT coalesce(i.indisvalid,false) OR NOT coalesce(i.indisready,false) OR pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(pg_catalog.pg_get_indexdef(c.oid),'UTF8')),'hex') IS DISTINCT FROM e.definition_hash
 ), expected_trigger(tab,name,definition) AS (VALUES
  ('auth.users','second_brain_admission_created','CREATE TRIGGER second_brain_admission_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION app_private.admission_new_identity()'),
- ('app_private.admin_operations','admission_verified_admin_completion','CREATE TRIGGER admission_verified_admin_completion AFTER UPDATE OF phase ON app_private.admin_operations FOR EACH ROW EXECUTE FUNCTION app_private.admission_admin_completed()')
+ ('auth.users','second_brain_admin_creation_final','CREATE CONSTRAINT TRIGGER second_brain_admin_creation_final AFTER INSERT ON auth.users DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION app_private.check_admin_auth_creation_final()'),
+ ('auth.users','second_brain_identity_created','CREATE TRIGGER second_brain_identity_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION app_private.on_auth_user_created()'),
+ ('app_private.admin_operations','admission_verified_admin_completion','CREATE TRIGGER admission_verified_admin_completion AFTER UPDATE OF phase ON app_private.admin_operations FOR EACH ROW EXECUTE FUNCTION app_private.admission_admin_completed()'),
+ ('app_private.admin_operations','onboarding_verified_admin_completion','CREATE TRIGGER onboarding_verified_admin_completion AFTER UPDATE OF phase ON app_private.admin_operations FOR EACH ROW EXECUTE FUNCTION app_private.onboarding_enroll_admin()'),
+ ('public.domain_events','capture_task_event','CREATE TRIGGER capture_task_event BEFORE INSERT OR UPDATE ON public.domain_events FOR EACH ROW EXECUTE FUNCTION app_private.capture_task_event()'),
+ ('public.domain_events','capture_task_revision','CREATE TRIGGER capture_task_revision AFTER INSERT OR DELETE OR UPDATE ON public.domain_events FOR EACH ROW EXECUTE FUNCTION app_private.capture_task_bump()'),
+ ('public.domain_events','finance_revision','CREATE TRIGGER finance_revision AFTER INSERT OR DELETE OR UPDATE ON public.domain_events FOR EACH ROW EXECUTE FUNCTION app_private.finance_bump()'),
+ ('public.domain_events','projects_habits_revision','CREATE TRIGGER projects_habits_revision AFTER INSERT OR DELETE OR UPDATE ON public.domain_events FOR EACH ROW EXECUTE FUNCTION app_private.projects_habits_bump()'),
+ ('public.domain_events','vault_revision','CREATE TRIGGER vault_revision AFTER INSERT OR DELETE OR UPDATE ON public.domain_events FOR EACH ROW EXECUTE FUNCTION app_private.vault_bump()')
 ), trigger_fail AS (
  SELECT e.tab||'.'||e.name AS object FROM expected_trigger e LEFT JOIN pg_catalog.pg_trigger t ON t.tgrelid=pg_catalog.to_regclass(e.tab) AND t.tgname=e.name AND NOT t.tgisinternal
  WHERE t.oid IS NULL OR t.tgenabled<>'O' OR pg_catalog.pg_get_triggerdef(t.oid) IS DISTINCT FROM e.definition
-), failures AS (SELECT 'function' kind,object FROM proc_fail UNION ALL SELECT 'table',object FROM table_fail UNION ALL SELECT 'column',object FROM onboarding_column_fail UNION ALL SELECT 'constraint',object FROM constraint_fail UNION ALL SELECT 'index',object FROM index_fail UNION ALL SELECT 'trigger',object FROM trigger_fail)
+), trigger_set_fail AS (
+ SELECT n.nspname||'.'||c.relname||'.'||t.tgname AS object FROM pg_catalog.pg_trigger t
+ JOIN pg_catalog.pg_class c ON c.oid=t.tgrelid JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+ WHERE NOT t.tgisinternal AND (n.nspname||'.'||c.relname IN (SELECT name FROM expected_table)
+   OR n.nspname||'.'||c.relname IN ('app_private.onboarding_entries','app_private.admin_operations','auth.users','public.domain_events'))
+ AND NOT EXISTS (SELECT 1 FROM expected_trigger e WHERE e.tab=n.nspname||'.'||c.relname AND e.name=t.tgname)
+), internal_trigger_set_fail AS (
+ SELECT n.nspname||'.'||r.relname AS object FROM pg_catalog.pg_trigger t
+ JOIN pg_catalog.pg_class r ON r.oid=t.tgrelid JOIN pg_catalog.pg_namespace n ON n.oid=r.relnamespace
+ WHERE t.tgisinternal AND (n.nspname||'.'||r.relname IN (SELECT name FROM expected_table)
+   OR n.nspname||'.'||r.relname IN ('app_private.onboarding_entries','public.domain_events'))
+ AND NOT EXISTS (SELECT 1 FROM expected_constraint e JOIN pg_catalog.pg_constraint c
+   ON c.conrelid=pg_catalog.to_regclass(e.tab) AND c.conname=e.name AND c.contype='f'
+   WHERE t.tgconstraint=c.oid)
+), failures AS (SELECT 'function' kind,object FROM proc_fail UNION ALL SELECT 'table',object FROM table_fail UNION ALL SELECT 'column',object FROM onboarding_column_fail UNION ALL SELECT 'constraint',object FROM constraint_fail UNION ALL SELECT 'constraint_set',object FROM constraint_set_fail UNION ALL SELECT 'fk_trigger',object FROM fk_trigger_fail UNION ALL SELECT 'index',object FROM index_fail UNION ALL SELECT 'trigger',object FROM trigger_fail UNION ALL SELECT 'trigger_set',object FROM trigger_set_fail UNION ALL SELECT 'internal_trigger_set',object FROM internal_trigger_set_fail)
 SELECT jsonb_build_object('check','front_b_additive_catalogue','ok',NOT EXISTS(SELECT 1 FROM failures),'failures',coalesce((SELECT jsonb_agg(jsonb_build_object('kind',kind,'object',object) ORDER BY kind,object) FROM failures),'[]'::jsonb)) AS result;
