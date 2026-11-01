@@ -1,7 +1,7 @@
 /** Browser/React interaction only. Auth, HTTP and persistence are synthetic;
  * no Supabase, real account, database, hosted environment or delivery claim.
  * Context routing blocks unexpected HTTP(S), not process-wide network or WebSockets. */
-import { expect, test, type Page, type Request } from "@playwright/test";
+import { expect, test, type BrowserContext, type Page, type Request } from "@playwright/test";
 import { resolve } from "node:path";
 import { rolldown } from "rolldown";
 
@@ -46,12 +46,23 @@ async function mount(page: Page, mode: Mode) {
   page.on("pageerror", error => trace.errors.push(error.message));
   page.on("requestfinished", request => { if (request === firstPost) settleTerminal?.("finished"); });
   page.on("requestfailed", request => { if (request === firstPost) settleTerminal?.("failed"); });
+  // Diagnostic only: no DOM, URL, account ID, message or network payload is recorded.
+  await page.addInitScript(() => {
+    const samples: { event: string; target: string; visibility: string; focused: boolean; trusted: boolean }[] = [];
+    const record = (event: Event) => { if (samples.length < 100) samples.push({ event: event.type, target: event.target === window ? "window" : event.target === document ? "document" : "element", visibility: document.visibilityState, focused: document.hasFocus(), trusted: event.isTrusted }); };
+    window.addEventListener("focus", record, true); window.addEventListener("blur", record, true);
+    document.addEventListener("visibilitychange", record, true);
+    Object.assign(globalThis, { __feedbackFocusEvidence: samples });
+  });
   await page.context().route("**/*", async route => {
     const request = route.request(), url = new URL(request.url());
     if (url.origin !== origin) { trace.unexpected.push("FOREIGN_ORIGIN"); await route.abort(); return; }
     const json = (value: unknown, status = 200) => route.fulfill({ status, contentType: "application/json", headers: { "Cache-Control": "private, no-store" }, body: JSON.stringify(value) });
     if (request.method() === "GET" && request.isNavigationRequest() && url.pathname === "/" && !url.search) {
       await route.fulfill({ contentType: "text/html", body: '<!doctype html><html lang="pt-BR"><head><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><main id="feedback-session"></main></body></html>' }); return;
+    }
+    if (request.method() === "GET" && request.isNavigationRequest() && url.pathname === "/focus-control" && !url.search) {
+      await route.fulfill({ contentType: "text/html", body: '<!doctype html><html lang="pt-BR"><head><link rel="icon" href="data:,"></head><body><button type="button">Aba de controle</button></body></html>' }); return;
     }
     if (url.pathname !== "/api/feedback" || url.search || request.headers()["x-expected-user-id"] !== owner) { trace.unexpected.push("UNEXPECTED_REQUEST"); await route.abort(); return; }
     if (request.method() === "GET") {
@@ -110,14 +121,62 @@ async function mount(page: Page, mode: Mode) {
 
 function clean(trace: Awaited<ReturnType<typeof mount>>["trace"]) { expect(trace.unexpected).toEqual([]); expect(trace.errors).toEqual([]); }
 
+type FocusEventSample = { event: string; target: string; visibility: string; focused: boolean; trusted: boolean };
+async function evidence(page: Page): Promise<FocusEventSample[]> {
+  return page.evaluate(() => (globalThis as unknown as { __feedbackFocusEvidence: FocusEventSample[] }).__feedbackFocusEvidence);
+}
+async function awaitLoss(page: Page, from: number): Promise<number> {
+  await expect.poll(async () => (await evidence(page)).slice(from).some(sample => sample.trusted && (
+    (sample.event === "blur" && sample.target === "window") ||
+    (sample.event === "visibilitychange" && sample.target === "document" && sample.visibility === "hidden")
+  ))).toBe(true);
+  return (await evidence(page)).length;
+}
+async function controlPage(context: BrowserContext, page: Page): Promise<{ other: Page; checkpoint: number }> {
+  const before = (await evidence(page)).length;
+  const other = await context.newPage();
+  await other.goto(origin + "/focus-control");
+  await focusControl(other);
+  return { other, checkpoint: await awaitLoss(page, before) };
+}
+async function focusControl(other: Page) {
+  await other.bringToFront();
+  await other.getByRole("button", { name: "Aba de controle" }).click();
+  await expect.poll(() => other.evaluate(() => document.hasFocus())).toBe(true);
+}
+async function enterControl(other: Page, page: Page): Promise<number> {
+  const before = (await evidence(page)).length;
+  await focusControl(other);
+  return awaitLoss(page, before);
+}
+async function returnToFeedback(page: Page, from: number) {
+  await page.bringToFront();
+  // Do not synthesize focus or visibility events: require actual browser focus.
+  await expect.poll(() => page.evaluate(() => document.hasFocus() && document.visibilityState === "visible")).toBe(true);
+  await expect.poll(async () => (await evidence(page)).slice(from).some(sample => sample.trusted && (
+    (sample.event === "focus" && sample.target === "window" && sample.visibility === "visible") ||
+    (sample.event === "visibilitychange" && sample.target === "document" && sample.visibility === "visible")
+  ))).toBe(true);
+}
+
+test.afterEach(async ({ page }, info) => {
+  if (info.status === info.expectedStatus || page.isClosed()) return;
+  const evidence = await page.evaluate(() => ({
+    visibility: document.visibilityState,
+    focused: document.hasFocus(),
+    events: (globalThis as unknown as { __feedbackFocusEvidence?: unknown }).__feedbackFocusEvidence ?? [],
+  })).catch(() => ({ unavailable: true }));
+  await info.attach("feedback-focus-evidence", { contentType: "application/json", body: Buffer.from(JSON.stringify(evidence)) });
+});
+
 test("outra conta ao retornar à aba oculta dados mesmo com POST anterior pendente e confirmação atrasada", async ({ page, context }) => {
   const fixture = await mount(page, "pending");
   await page.getByLabel("Mensagem", { exact: true }).fill(draftText);
   await page.getByRole("button", { name: "Enviar mensagem", exact: true }).click();
   await expect.poll(() => fixture.trace.posts.length).toBe(1);
   const original = fixture.trace.posts[0]!;
-  const other = await context.newPage(); await other.bringToFront();
-  fixture.setActor("B"); await page.bringToFront();
+  const { other, checkpoint } = await controlPage(context, page);
+  fixture.setActor("B"); await returnToFeedback(page, checkpoint);
   await expect.poll(() => fixture.trace.reads.includes("B")).toBe(true);
   await expect(page.getByRole("heading", { name: "Confirme sua conta" })).toBeVisible();
   await expect(page.getByLabel("Mensagem", { exact: true })).toHaveCount(0);
@@ -128,7 +187,7 @@ test("outra conta ao retornar à aba oculta dados mesmo com POST anterior penden
   await page.evaluate(() => new Promise<void>(resolveFrame => requestAnimationFrame(() => resolveFrame())));
   await expect(page.getByRole("heading", { name: "Confirme sua conta" })).toBeVisible();
   await expect(page.getByText("Mensagem recebida.", { exact: true })).toHaveCount(0);
-  await other.bringToFront(); fixture.setActor("A"); await page.bringToFront();
+  const secondLoss = await enterControl(other, page); fixture.setActor("A"); await returnToFeedback(page, secondLoss);
   await expect(page.getByRole("button", { name: "Verificar envio", exact: true })).toBeVisible();
   await expect(page.getByLabel("Mensagem", { exact: true })).toHaveValue(draftText);
   await page.getByRole("button", { name: "Verificar envio", exact: true }).click();
@@ -156,10 +215,10 @@ test("respostas 2xx incompletas ou divergentes não confirmam e repetem o mesmo 
 
 test("resposta GET antiga de A não reabre histórico depois da troca para B", async ({ page, context }) => {
   const fixture = await mount(page, "delayed-get");
-  const other = await context.newPage(); await other.bringToFront();
-  fixture.holdNextRead(); await page.bringToFront();
+  const { other, checkpoint } = await controlPage(context, page);
+  fixture.holdNextRead(); await returnToFeedback(page, checkpoint);
   await expect.poll(() => fixture.trace.heldReads).toBe(1);
-  await other.bringToFront(); fixture.setActor("B"); await page.bringToFront();
+  const secondLoss = await enterControl(other, page); fixture.setActor("B"); await returnToFeedback(page, secondLoss);
   await expect.poll(() => fixture.trace.reads.includes("B")).toBe(true);
   await expect(page.getByRole("heading", { name: "Confirme sua conta" })).toBeVisible();
   const stale = page.waitForResponse(response => response.url() === origin + "/api/feedback" && response.request().method() === "GET" && response.status() === 200);
@@ -173,7 +232,7 @@ test("resposta GET antiga de A não reabre histórico depois da troca para B", a
 
 test("GET 200 inválido permanece fechado até que a leitura autenticada seja válida", async ({ page, context }) => {
   const fixture = await mount(page, "invalid-get");
-  const other = await context.newPage(); await other.bringToFront(); fixture.setReadMode("ok-false"); await page.bringToFront();
+  const { other, checkpoint } = await controlPage(context, page); fixture.setReadMode("ok-false"); await returnToFeedback(page, checkpoint);
   await expect(page.getByRole("heading", { name: "Confirme sua conta" })).toBeVisible();
   await expect(page.getByText("Não foi possível verificar agora. Tente novamente.", { exact: true })).toBeVisible();
   for (const readMode of ["invalid-date", "invalid-cursor"] as const) {
