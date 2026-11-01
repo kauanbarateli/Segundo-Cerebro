@@ -127,6 +127,13 @@ test("entry graph admits the extracted pure terminal contract and keeps runtime,
   assert.match(runner,/assertGoalNativeEntryModule\(path,info\.dynamicallyImportedIds\);requireThat\(await realpath\(info\.id\)===info\.id,"GRAPH_REFUSED"\)/);
   assert.match(runner,/requireThat\(prior&&hash\(await canonical\(path\)\)===prior\.sha256,"GRAPH_REFUSED"\)/);
 });
+test("source evidence closes both reviewed canonical helpers without admitting them to the bundle", async () => {
+  const {sourceClosure,assertGoalNativeCanonicalSourceClosure,GOAL_NATIVE_CANONICAL_SOURCE_SEEDS,GOAL_NATIVE_CANONICAL_SOURCE_CLOSURE,assertGoalNativeEntryModule}=await import("../../scripts/verification/finance-goals-terminal-native-ci.mjs");
+  assert.deepEqual(await sourceClosure(GOAL_NATIVE_CANONICAL_SOURCE_SEEDS),GOAL_NATIVE_CANONICAL_SOURCE_CLOSURE);
+  assert.doesNotThrow(()=>assertGoalNativeCanonicalSourceClosure([...GOAL_NATIVE_CANONICAL_SOURCE_CLOSURE]));
+  for(const altered of [GOAL_NATIVE_CANONICAL_SOURCE_CLOSURE.slice(1),[...GOAL_NATIVE_CANONICAL_SOURCE_CLOSURE,"tests/helpers/extra.mjs"].sort(),[...GOAL_NATIVE_CANONICAL_SOURCE_CLOSURE].reverse(),null]) assert.throws(()=>assertGoalNativeCanonicalSourceClosure(altered),{code:"SOURCE_REFUSED"});
+  for(const path of ["tests/helpers/canonical-front-b-source.mjs","tests/helpers/canonical-front-b-source.d.mts","tests/helpers/local-canonical-sql.ts"]) assert.throws(()=>assertGoalNativeEntryModule(path,[]),{code:"GRAPH_REFUSED"});
+});
 test("additive oldSource is the exact private executor copied by M1, never the public wrapper body", async () => {
   const original=(await source("proposals/finance-goals/04-commit.sql")).replaceAll("\r\n","\n");
   const signature="(p_user uuid,p_session uuid,p_operation text,p_request jsonb)";
