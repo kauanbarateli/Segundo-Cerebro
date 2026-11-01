@@ -7,8 +7,8 @@ As skills executáveis ficam espelhadas, com arquivos idênticos, em `.agents/sk
 Usar a [Impeccable local](../.agents/skills/impeccable/SKILL.md) para implementação e revisão da interface conforme solicitado pelo mantenedor. O diretório foi copiado integralmente da skill existente no planejamento, com referências, configurações de agentes, launchers e fontes JavaScript; não inclui executáveis baixados, caches ou `node_modules`.
 
 - Origem: `.agents/skills/impeccable` da pasta de planejamento aprovada, consultada em 07/10/2026.
-- Versão do `SKILL.md`: `metadata.version: 4.4.0`.
-- Versão registrada no launcher: `scripts/VERSION: 0.1.6`. São metadados distintos; não presumir que um substitui o outro.
+- Versão do `SKILL.md`: `metadata.version: 4.8.0` (atualização autorizada via `npx impeccable update`; executáveis gerados permanecem fora do Git).
+- Versão registrada no launcher: `scripts/VERSION: 0.1.18`. São metadados distintos; não presumir que um substitui o outro.
 - Não há commit Git comprovado para esse snapshot local. Os hashes atuais do arquivo de entrada e da árvore completa estão no lock.
 - Ajuste local rastreado no lock: corrigido o link de `reference/degraded/asset-producer.md` para `../component-review.md`; o caminho original repetia `reference/` e não resolvia. As duas cópias receberam a mesma correção.
 - O launcher pode baixar um executável quando acionado. A cópia não o executa nem comprova detector/audit aprovado. Antes de uso, ler o `SKILL.md` e seguir as limitações do ambiente e o fallback ali documentado.
