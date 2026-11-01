@@ -43,7 +43,7 @@ export const DRIVE_FRONT_AB_SOURCES = Object.freeze([
   Object.freeze({path:"src/components/features/capturar/requests.ts",bytes:1457,sha256:"1a62a6ebe5880086da36a52f2216164f5cfc981c0f2f41860e92db57466d0e18"}),
   Object.freeze({path:"src/components/features/capturar/use-image-attachments.ts",bytes:2924,sha256:"351fe757215ed69ef2000e765e313a5c80ef1ff5b0352d4f816da860c6ecbcea"}),
   Object.freeze({path:"src/lib/access/front-b-capabilities-server.ts",bytes:593,sha256:"58f3a4affe0a27414295259e6f0b8dd60f103de52e9d0ef001b4c71150f44d5c"}),
-  Object.freeze({path:"src/lib/auth/signup-http.ts",bytes:2971,sha256:"d4b2ed8a43d13084e78df87018440e27b9aac1ed113271b1bade2a9df1631a11"}),
+  Object.freeze({path:"src/lib/auth/signup-http.ts",bytes:3975,sha256:"6230f9b22678db82bf43acac9a699261c43c1c69ff4ae6b9bf7fabf8374f02f3"}),
   Object.freeze({path:"src/lib/navigation/optional-destinations.ts",bytes:1975,sha256:"8b1fa3518080d1a0f663f674eb9ec30769b0a10db2d7536276e16e4cb16b4cd3"}),
 ]);
 export function driveRefuse(code){const e=new Error(DRIVE_CODES.includes(code)?code:"BROWSER_REFUSED");e.name="DriveBrowserFailure";e.stack=e.name+": "+e.message;throw e;}
