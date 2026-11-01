@@ -8,7 +8,7 @@ Em banco PGlite descartável e sem conexão remota, `node scripts/test-local-sql
 
 ## Referência de produção observada anteriormente
 
-A [auditoria de leitura da Frente B](https://github.com/kauanbarateli/Segundo-Cerebro/blob/codex/plano-entrega-inicial-20261031/docs/planejamento/20-entrega-inicial-20261031/base-planejamento-completo/16-auditoria-supabase.md) identificou cinco entradas no ledger para 27 arquivos, com estruturas posteriores no catálogo. Seu resultado bruto de catálogo tem uma divergência: o wrapper de onboarding está na variante operacional PT409, enquanto a cadeia canônica local contém o wrapper original. Não foi feita nova leitura remota nesta execução; números e estado são da auditoria de 31/10, não uma verificação atual.
+A [auditoria de leitura da Frente B](https://github.com/kauanbarateli/Segundo-Cerebro/blob/codex/plano-entrega-inicial-20261031/docs/planejamento/20-entrega-inicial-20261031/base-planejamento-completo/16-auditoria-supabase.md) identificou cinco entradas no ledger para 27 arquivos, com estruturas posteriores no catálogo. Uma nova leitura do MCP pessoal confirmou a URL `rishenjoikgmfubmnfiu.supabase.co`, as mesmas cinco entradas e o catálogo bruto com **2.512 verificações, uma divergência** em `public.onboarding_call`. A consulta de classificação [verify-onboarding-conflict-code.sql](../../supabase/operations/verify-onboarding-conflict-code.sql) retornou `ok=true` no mesmo projeto: corpo PT409 normalizado, metadados e grants correspondem ao patch versionado. A cadeia canônica local mantém o wrapper original.
 
 Não reaplicar as 22 migrations não registradas, não reparar ledger em lote e não reverter o PT409 para satisfazer o catálogo antigo. Preservar assinatura, grants e erro HTTP 409 do patch.
 
@@ -16,7 +16,7 @@ Não reaplicar as 22 migrations não registradas, não reparar ledger em lote e 
 
 1. Reconfirmar projeto, ledger, catálogo e backup/recuperação por leitura autorizada, sem consultar dados pessoais.
 2. Comparar por objeto a cadeia reproduzida e as substituições posteriores com o catálogo atual e os registros operacionais; produzir procedimento revisado por migration, sem presumir proveniência.
-3. Atualizar formalmente a expectativa de release para distinguir a versão canônica do wrapper e o patch PT409 instalado, com as verificações de corpo e privilégios preservadas. Adaptar também os consumidores derivados do catálogo e testes de regressão.
+3. A classificação separada do patch está disponível e foi conferida em leitura. Integrar formalmente os dois resultados ao protocolo de release, sem alterar silenciosamente os consumidores que fixam o catálogo canônico; acrescentar testes negativos para alterações de corpo e privilégios e validar os consumidores derivados.
 4. Ensaiar caminho aditivo em QA autorizado e provar o conflito HTTP 409, os fluxos Admin/onboarding e isolamento, com recuperação e reversão documentadas.
 5. Só considerar reconciliado quando houver evidência suficiente de ledger e objetos, QA e procedimento revisado. O teste local desta página não equivale a esses aceites.
 
