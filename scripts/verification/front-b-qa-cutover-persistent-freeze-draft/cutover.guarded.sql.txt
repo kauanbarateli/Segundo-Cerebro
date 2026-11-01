@@ -34,6 +34,31 @@ do $acl_check$ declare e record;ok boolean;begin
    into ok from pg_catalog.pg_proc p join pg_catalog.pg_language l on l.oid=p.prolang where p.oid=pg_catalog.to_regprocedure(e.signature);
   if ok is distinct from true then raise exception 'QA_ACL_OR_BODY_REFUSED'; end if;
  end loop;end $acl_check$;
+
+do $integrity_028_pt409$ declare old_path text:=pg_catalog.current_setting('search_path'); begin
+ perform pg_catalog.set_config('search_path','pg_catalog, public',true);
+ if not coalesce((select count(*)=1 and bool_and(name='m028_front_b_signup_feedback_metrics_qa' and cardinality(statements)=1 and array_lower(statements,1)=1 and encode(sha256(convert_to(statements[1],'UTF8')),'hex')='bbb652684f1c526f4601c33b575c8d1cf6338feba34ab9a2d58166646faba4d7') from supabase_migrations.schema_migrations where version='20261101172256'),false)
+  or (coalesce((select
+    p.prokind = 'f' and not p.proretset and p.prorettype = 'jsonb'::regtype
+    and l.lanname = 'plpgsql' and p.provolatile = 'v' and not p.prosecdef
+    and not p.proisstrict and not p.proleakproof and p.proparallel = 'u' and p.provariadic = 0
+    and p.proconfig = array['search_path=""'] and pg_get_userbyid(p.proowner) = 'postgres'
+    and p.proargnames = array['p_user','p_session','p_operation','p_request']::text[]
+    and p.proargmodes is null and p.pronargdefaults = 0
+    and octet_length(convert_to(replace(p.prosrc,E'\r\n',E'\n'),'UTF8')) = 198
+    and encode(sha256(convert_to(replace(p.prosrc,E'\r\n',E'\n'),'UTF8')),'hex') = '59b03c44483704520a5300bb940111cec5c24694e6668a56b6e6574527ed021a'
+    and (select count(*) from aclexplode(coalesce(p.proacl,acldefault('f',p.proowner)))) = 2
+    and exists(select 1 from aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a
+      where a.grantee = p.proowner and a.grantor = p.proowner and a.privilege_type = 'EXECUTE' and not a.is_grantable)
+    and exists(select 1 from aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a
+      where a.grantee = 'service_role'::regrole and a.grantor = p.proowner and a.privilege_type = 'EXECUTE' and not a.is_grantable)
+    and not exists(select 1 from aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a
+      where a.grantor <> p.proowner or a.is_grantable or a.privilege_type <> 'EXECUTE'
+        or (a.grantee <> p.proowner and a.grantee <> 'service_role'::regrole))
+    from pg_proc p join pg_language l on l.oid = p.prolang
+    where p.oid = to_regprocedure('public.onboarding_call(uuid,uuid,text,jsonb)')), false)) is distinct from true then raise exception 'LEDGER_028_OR_PT409_REFUSED'; end if;
+ perform pg_catalog.set_config('search_path',old_path,true);
+end $integrity_028_pt409$;
 do $freeze_guard$ begin raise exception 'FREEZE_DRAIN_AND_QA_AUTHORIZATION_NOT_PROVEN'; end $freeze_guard$;
 
 do $freeze_check$ declare fn oid; begin
