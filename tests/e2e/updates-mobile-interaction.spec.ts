@@ -38,9 +38,9 @@ async function serve(context: BrowserContext, theme: "light" | "dark") {
       blocked.push("UNEXPECTED_REQUEST"); await route.abort(); return;
     }
     if (url.pathname === "/inicio") {
-      await route.fulfill({ contentType: "text/html", body: "<!doctype html><html lang='pt-BR'><head><link rel='icon' href='data:,'></head><body><h1>Destino sintético</h1></body></html>" }); return;
+      await route.fulfill({ contentType: "text/html; charset=utf-8", body: "<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'><link rel='icon' href='data:,'></head><body><h1>Destino sintético</h1></body></html>" }); return;
     }
-    await route.fulfill({ contentType: "text/html", body: `<!doctype html><html lang="pt-BR" data-theme="${theme}"><head><link rel="icon" href="data:,"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${css}</style></head><body><main id="updates-mobile-test"></main></body></html>` });
+    await route.fulfill({ contentType: "text/html; charset=utf-8", body: `<!doctype html><html lang="pt-BR" data-theme="${theme}"><head><meta charset="utf-8"><link rel="icon" href="data:,"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${css}</style></head><body><main id="updates-mobile-test"></main></body></html>` });
   });
   return blocked;
 }
@@ -50,7 +50,9 @@ for (const width of [320, 390]) for (const theme of ["light", "dark"] as const) 
     await page.setViewportSize({ width, height: 844 });
     const blocked = await serve(context, theme), errors: string[] = [];
     page.on("pageerror", () => errors.push("PAGE_ERROR"));
-    await page.goto(origin + "/"); await page.addScriptTag({ content: script });
+    const initialResponse = await page.goto(origin + "/");
+    expect(initialResponse?.headers()["content-type"]).toMatch(/charset=utf-8/i);
+    await page.addScriptTag({ content: script });
     const filter = page.getByRole("combobox", { name: "Etapa" });
     await expect(filter).toBeVisible(); await expect(filter).toHaveValue("all");
     await expect(page.locator("#updates-planned")).toBeVisible();
@@ -72,7 +74,10 @@ for (const width of [320, 390]) for (const theme of ["light", "dark"] as const) 
     }
     const evidence = page.getByRole("link", { name: "Ver entrega: Entrega sintética" });
     await expect(evidence).toHaveAttribute("href", "/inicio");
-    await page.keyboard.press("Tab"); await expect(evidence).toBeFocused(); await page.keyboard.press("Enter");
+    await page.keyboard.press("Tab"); await expect(evidence).toBeFocused();
+    const destinationResponse = page.waitForResponse(response => response.url() === origin + "/inicio" && response.request().isNavigationRequest());
+    await page.keyboard.press("Enter");
+    expect((await destinationResponse).headers()["content-type"]).toMatch(/charset=utf-8/i);
     await expect(page).toHaveURL(origin + "/inicio"); await expect(page.getByRole("heading", { name: "Destino sintético" })).toBeVisible();
     expect(blocked).toEqual([]); expect(errors).toEqual([]);
   });
@@ -83,7 +88,9 @@ test("mudança de largura preserva o foco e restaura todas as etapas", async ({ 
   await page.setViewportSize({ width: 390, height: 844 });
   const blocked = await serve(context, "light"), errors: string[] = [];
   page.on("pageerror", () => errors.push("PAGE_ERROR"));
-  await page.goto(origin + "/"); await page.addScriptTag({ content: script });
+  const initialResponse = await page.goto(origin + "/");
+  expect(initialResponse?.headers()["content-type"]).toMatch(/charset=utf-8/i);
+  await page.addScriptTag({ content: script });
   const filter = page.getByRole("combobox", { name: "Etapa" });
   await expect(filter).toBeVisible();
   await filter.selectOption("planned");
@@ -96,7 +103,10 @@ test("mudança de largura preserva o foco e restaura todas as etapas", async ({ 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(filter).toHaveValue("all");
   await expect(evidence).toBeVisible(); await expect(evidence).toBeFocused();
+  const destinationResponse = page.waitForResponse(response => response.url() === origin + "/inicio" && response.request().isNavigationRequest());
   await page.keyboard.press("Enter");
+  expect((await destinationResponse).headers()["content-type"]).toMatch(/charset=utf-8/i);
   await expect(page).toHaveURL(origin + "/inicio");
+  await expect(page.getByRole("heading", { name: "Destino sintético" })).toBeVisible();
   expect(blocked).toEqual([]); expect(errors).toEqual([]);
 });
