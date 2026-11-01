@@ -1,0 +1,20 @@
+.signup-metrics { display:grid; gap:var(--space-4); max-width:1200px; min-width:0; }
+.signup-metrics__filters { display:flex; flex-wrap:wrap; gap:var(--space-3); align-items:end; }
+.signup-metrics__filters .field { min-width:150px; flex:1 1 150px; }
+.signup-metrics__note { color:var(--ink-muted); font-size:var(--type-legenda); line-height:1.5; margin:0; }
+.signup-metrics__summary { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--space-3); }
+.signup-metrics__summary section,.signup-metrics__panel { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-lg); padding:var(--space-5); min-width:0; }
+.signup-metrics__summary p,.signup-metrics__panel p { color:var(--ink-muted); margin:0; }
+.signup-metrics__summary strong { display:block; font-size:2rem; line-height:1.2; margin:var(--space-2) 0; }
+.signup-metrics__summary small { color:var(--ink-muted); }
+.signup-metrics__panel { display:grid; gap:var(--space-4); }
+.signup-metrics__panel h2 { margin:0; font-size:var(--type-h3); }
+.signup-metrics__panel-heading { display:flex; align-items:end; justify-content:space-between; gap:var(--space-4); flex-wrap:wrap; }
+.signup-metrics__panel-heading p { margin-top:var(--space-1); }
+.signup-metrics__series,.signup-metrics__origins { list-style:none; padding:0; margin:0; display:grid; gap:var(--space-2); }
+.signup-metrics__series { max-height:360px; overflow:auto; }
+.signup-metrics__series li { display:grid; grid-template-columns:72px minmax(0,1fr) 40px; gap:var(--space-2); align-items:center; font-size:var(--type-legenda); }
+.signup-metrics__bar { background:var(--surface-muted); border-radius:999px; height:8px; overflow:hidden; }
+.signup-metrics__bar i { display:block; background:var(--ink); height:100%; border-radius:inherit; }
+.signup-metrics__origins li { display:flex; gap:var(--space-3); justify-content:space-between; padding:var(--space-2) 0; border-bottom:1px solid var(--line); overflow-wrap:anywhere; }
+@media(max-width:600px) { .signup-metrics__summary { grid-template-columns:1fr; } .signup-metrics__filters .ui-button { width:100%; } }

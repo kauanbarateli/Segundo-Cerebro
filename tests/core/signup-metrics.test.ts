@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { prepareOriginDistribution } from "../../src/core/acquisition/signup-metrics";
+import { parseMetricQuery, parseSignupMetrics, prepareOriginDistribution } from "../../src/core/acquisition/signup-metrics";
 
 describe("distribuição agregada de origens", () => {
   it("mantém a população completa e reúne grupos pequenos sem expor valores", () => {
@@ -22,4 +22,22 @@ describe("distribuição agregada de origens", () => {
     expect(prepareOriginDistribution(501, Array.from({ length: 501 }, (_, index) => ({ value: String(index), count: 1 })))).toBeNull();
     expect(prepareOriginDistribution(Number.MAX_SAFE_INTEGER + 1, [])).toBeNull();
   });
+});
+
+describe('contrato do relatório',()=>{
+ const query={start:'2026-10-01',end:'2026-10-31',zone:'America/Fortaleza' as const,bucket:'month' as const};
+ const rows=[{kind:'value',value:'busca',count:5},{kind:'other',value:null,count:2}];
+ const result={...query,totalPublic:7,stock:{total:1,legacy:1,admin:0,public:0,unclassified:0},series:[{period:'2026-10-01',count:7}],distributions:{utm_source:rows,utm_medium:rows,utm_campaign:rows,utm_term:rows,utm_content:rows}};
+ it('limita período, dimensão e parâmetros duplicados',()=>{
+  expect(parseMetricQuery(new URLSearchParams(query))).toEqual(query);
+  expect(parseMetricQuery(new URLSearchParams({...query,start:'2026-02-30'}))).toBeNull();
+  expect(parseMetricQuery(new URLSearchParams({...query,start:'2020-01-01'}))).toBeNull();
+  const extra=new URLSearchParams(query); extra.append('start','2026-10-02'); expect(parseMetricQuery(extra)).toBeNull();
+ });
+ it('recusa contagens divergentes, grupos pequenos revelados e campos inesperados',()=>{
+  expect(parseSignupMetrics(result,query)).toEqual(result);
+  expect(parseSignupMetrics({...result,series:[{period:'2026-10-01',count:6}]},query)).toBeNull();
+  expect(parseSignupMetrics({...result,distributions:{...result.distributions,utm_source:[{kind:'value',value:'individual',count:2},{kind:'other',value:null,count:5}]}},query)).toBeNull();
+  expect(parseSignupMetrics({...result,email:'privado'},query)).toBeNull();
+ });
 });
