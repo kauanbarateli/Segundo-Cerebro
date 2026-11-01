@@ -85,6 +85,7 @@ export async function execute(env=process.env){
   home=await mkdtemp(join(env.RUNNER_TEMP,'sc-fb-race-'));if(await realpath(home)!==home)fail();os.HOME=home;os.DOCKER_CONFIG=join(home,'docker-config');
   await run(['pull','--platform','linux/amd64',IMAGE],300000,{capture:false});const image=requireImage(json((await run(['image','inspect','--format','{{json .}}',IMAGE])).stdout));
   for(const kind of ['reservation','start','renewal','fence','legacy']){
+   process.stderr.write(JSON.stringify({stage:'case-start',kind})+'\n');
    const nonce=randomBytes(16).toString('hex'),name='sc-front-b-offline-'+nonce,label='sc.front-b-offline='+nonce;let id=null,created=false,ok=false;const sessions=[];
    const owned=async()=>{const a=await list('name=^/'+name+'$'),b=await list('label='+label);if(a.length>1||b.length>1||JSON.stringify(a)!==JSON.stringify(b)||a.some(x=>!ID.test(x)))fail();return a[0]??null;};
    try{
@@ -99,6 +100,7 @@ export async function execute(env=process.env){
     const checked=async sql=>psql(sameSessionGuard(nonce,systemIdentifier)+requireSqlBytes(Buffer.from(sql)).toString('utf8'));
     if(kind==='reservation'||kind==='start'){await checked(qualified.fixture.toString('utf8'));await checked(qualified.candidate.toString('utf8'));}
     else for(const sql of kind==='legacy'?[sameBrowser.fixture,sameBrowser.foundation]:[sameBrowser.fixture,sameBrowser.foundation,sameBrowser.composition,sameBrowser.seed])await checked(sql.toString('utf8'));
+    process.stderr.write(JSON.stringify({stage:'case-fixture-ready',kind})+'\n');
     const context={nonce,systemIdentifier,user:'10000000-0000-4000-8000-000000000001',session:'20000000-0000-4000-8000-000000000001',intent:'30000000-0000-4000-8000-000000000001',requestA:'40000000-0000-4000-8000-000000000001',requestB:'40000000-0000-4000-8000-000000000002'};
     if(kind==='reservation')for(const nullCase of ['intent_state','intent_expiry','admission_origin','admission_state','identity_null']){const result=json(await checked(nullCaseSql(context,nullCase)));if(result.kind!=='null-refused'||result.case!==nullCase||Object.keys(result).length!==2)fail();const baseline=json(await checked(nullBaselineSql(context)));if(baseline.kind!=='baseline'||baseline.intact!==true||Object.keys(baseline).length!==2)fail();}
     let generation=null;if(kind==='start'){const seed=json(await checked(seedStartSql(context)));if(seed.kind!=='seed'||seed.result?.status!=='acquired'||seed.result.requestId!==context.requestA||!/^[0-9a-f-]{36}$/i.test(seed.result.generation))fail();generation=seed.result.generation;}
@@ -106,7 +108,7 @@ export async function execute(env=process.env){
     if(kind==='legacy')results.push(await observeLegacyPruneRace(ports,{nonce,systemIdentifier},sameBrowser.composition.toString('utf8')));
     else if(kind==='renewal'||kind==='fence')results.push(await observeRetentionRace(ports,{nonce,systemIdentifier,user:context.user,session:context.session,intent:context.intent,request:context.requestA},kind));
     else results.push(await observeReservationRace(ports,context,generation));
-    requireOfflineContainer(await inspect(id),id,name,image,nonce);ok=true;
+    process.stderr.write(JSON.stringify({stage:'case-observed',kind})+'\n');requireOfflineContainer(await inspect(id),id,name,image,nonce);ok=true;
    }finally{
     const cleanupAllowed=mayTeardown(groupKnown,pending.size,sessions.map(s=>s.state()));if(!cleanupAllowed)allClean=false;
     if(cleanupAllowed)try{const found=await owned();if(id&&found!==id)fail();if(!id)id=found;if(id){const state=await inspect(id);requireOfflineContainer(state,id,name,image,nonce,state.State?.Running);await run(['rm','--force','--volumes',id],60000,{capture:false});}if(await owned()!==null||id&&(await list('id='+id)).length!==0||created&&!id)fail();await run(['info','--format','{{json .ID}}']);}catch{allClean=false;}
