@@ -1,4 +1,11 @@
-import { SIGNUP_UTM_FIELDS } from './signup-origin';
+import { parseSignupOrigin, SIGNUP_UTM_FIELDS, type SignupOrigin } from './signup-origin';
+
+/** Read only unique UTM fields after the user chooses to share origin. */
+export function signupOriginFromSearch(params: URLSearchParams): SignupOrigin | null {
+ const candidate:Record<string,string>={};
+ for(const key of SIGNUP_UTM_FIELDS) { const values=params.getAll(key); if(values.length===1) candidate[key]=values[0]!; }
+ return parseSignupOrigin(true,candidate);
+}
 
 /** Transport only the five allowed parameters; collection still requires consent. */
 export function signupOriginQuery(input: Readonly<Record<string, string | string[] | undefined>>): string {

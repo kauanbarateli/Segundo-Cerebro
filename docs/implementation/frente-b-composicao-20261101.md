@@ -4,7 +4,9 @@ Esta branch reúne as candidatas de reconciliação, cadastro, origem, métricas
 
 **Atualização na branch de integração:** os retratos da Frente A foram incorporados conforme [composição das frentes](composicao-frentes-20261101.md), sem substituir a necessidade de revalidar seus SHAs. O responsável dispensou a configuração de SMTP no QA e solicitou o teste de e-mail em produção; consultar a [inspeção e decisão](auth-qa-inspecao-20261101.md). Os ensaios de schema no QA, os gates das alterações remotas e os testes reais dos fluxos continuam necessários.
 
-A política de privacidade candidata passou à versão 0.3: descreve somente os cinco campos UTM, a opção de recusa/retirada e a ausência de domínio ou histórico na função de origem. Também reflete a informação do responsável sobre uso do Resend para autenticação, mantendo explícita a conferência pendente de retenção e transferência internacional. A verificação de logs dos provedores continua separada dessa descrição, e a revisão operacional e de privacidade permanece necessária antes da liberação.
+A política de privacidade candidata passou à versão 0.4: descreve somente os cinco campos UTM, prazo de uso de 12 meses ou até retirada, a dependência da rotina operacional para exclusão física, a opção de recusa/retirada e a ausência de domínio ou histórico na função de origem. Também reflete a informação do responsável sobre uso do Resend para autenticação, mantendo explícita a conferência pendente de retenção e transferência internacional. A verificação de logs dos provedores continua separada dessa descrição, e a revisão operacional e de privacidade permanece necessária antes da liberação.
+
+Uma revisão dos critérios da Frente B corrigiu a ausência do canal de suporte no histórico privado, o redirecionamento automático do transporte privilegiado de feedback, a falta de links verificáveis em entregas lançadas e de acesso condicionado ao feedback no quadro de atualizações. O formulário de cadastro direto agora descarta UTMs duplicadas por campo, como já fazia o caminho pela landing. As provas de Auth hospedado, retenção efetiva e duas contas continuam pendentes.
 
 ## Evidências
 

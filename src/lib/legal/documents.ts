@@ -9,7 +9,7 @@ export const LEGAL_DOCUMENTS = {
     "slug": "privacidade",
     "title": "Política de privacidade",
     "summary": "Como usamos e protegemos suas informações, quais escolhas você tem e como exercer seus direitos.",
-    "version": "0.3 · origem de cadastro",
+    "version": "0.4 · origem de cadastro",
     "updatedAt": "2026-11-01",
     "notice": "Esta versão incorpora o inventário técnico do uso atual. A conferência de contratos, destinos internacionais e procedimentos operacionais permanece em revisão. A contratação por assinatura não está aberta.",
     "sections": [
@@ -81,7 +81,7 @@ export const LEGAL_DOCUMENTS = {
           "Cookies de login seguem a configuração do provedor de autenticação, com limite técnico de persistência de até 400 dias, sujeito a expiração antecipada e verificação de sessão no servidor. Esse limite não garante acesso por esse período. Os controles próprios de recuperação têm prazos de uma hora, dez ou quinze minutos conforme a etapa; o retorno de autorização Google usa dez minutos. São removidos ou substituídos nos respectivos fluxos.",
           "Tema e estado da navegação podem permanecer no dispositivo até alteração ou limpeza. Rascunhos de Capturar e envios pendentes também podem guardar conteúdo pessoal localmente, sem prazo automático e sem cifragem própria desse armazenamento. Já os rascunhos do editor de Conhecimento ficam em memória e não sobrevivem à recarga. A confirmação do envio e a saída da conta acionam as limpezas previstas, sujeitas ao funcionamento do navegador. Use cuidado em dispositivos compartilhados; limpar dados do site pode apagar trabalho ainda não sincronizado e não apaga, por si só, o que já está na conta.",
           "O modo de demonstração usa dados e preferências locais de exemplo. A instalação guarda recursos públicos para a tela offline e a interface; o cache previsto não inclui páginas pessoais ou respostas de API. As chaves de sessão abertas do Cofre ficam em memória, com as proteções de bloqueio próprias do módulo.",
-          "Quando a origem de cadastro estiver disponível, você poderá autorizar o registro dos parâmetros utm_source, utm_medium, utm_campaign, utm_term e utm_content informados no acesso. A escolha é facultativa e pode ser recusada ou retirada sem impedir o cadastro. Essa função não registra domínio de origem, endereço completo nem histórico de navegação. Não usaremos outro armazenamento para contornar essa escolha."
+          "Quando a origem de cadastro estiver disponível, você poderá autorizar o registro dos parâmetros utm_source, utm_medium, utm_campaign, utm_term e utm_content informados no acesso. A escolha é facultativa e pode ser recusada ou retirada sem impedir o cadastro. A origem é usada por até 12 meses após a conclusão do cadastro ou até a retirada; a exclusão física depende da rotina operacional, e cópias de segurança seguem sua política. Essa função não registra domínio de origem, endereço completo nem histórico de navegação. Não usaremos outro armazenamento para contornar essa escolha."
         ]
       },
       {

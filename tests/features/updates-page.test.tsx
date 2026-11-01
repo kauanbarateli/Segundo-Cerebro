@@ -2,11 +2,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
 const guards = vi.hoisted(() => ({ requireUser: vi.fn() }));
+const capabilities = vi.hoisted(() => ({ frontB: vi.fn() }));
 vi.mock("@/lib/auth/guards", () => ({ requireUser: guards.requireUser }));
+vi.mock("@/lib/access/front-b-capabilities-server", () => ({ frontBCapabilities: capabilities.frontB }));
 import UpdatesPage from "../../src/app/(workspace)/atualizacoes/page";
+import { UpdatesBoard } from "../../src/components/features/atualizacoes/updates-board";
+import { updateEvidenceHref } from "../../src/components/features/atualizacoes/content";
 
 describe("atualizações autenticadas", () => {
-  beforeEach(() => { guards.requireUser.mockReset(); });
+  beforeEach(() => { guards.requireUser.mockReset(); capabilities.frontB.mockReturnValue({ schema: false }); });
 
   it("recusa a página quando a sessão é recusada", async () => {
     guards.requireUser.mockRejectedValue(new Error("redirect:/entrar"));
@@ -26,5 +30,21 @@ describe("atualizações autenticadas", () => {
     expect(html.match(/data-active="true"/g)).toHaveLength(1);
     expect(html.match(/data-active="false"/g)).toHaveLength(4);
     expect(html).not.toContain("Enviar sugestão");
+  });
+
+  it("oferece sugestões apenas quando o feedback está disponível", async () => {
+    guards.requireUser.mockResolvedValue({ userId: "test-user" });
+    capabilities.frontB.mockReturnValue({ schema: true });
+    const html = renderToStaticMarkup(await UpdatesPage());
+    expect(html).toContain('href="/feedback"');
+    expect(html).toContain("Enviar sugestão");
+  });
+
+  it("liga entregas lançadas à evidência segura", () => {
+    const html = renderToStaticMarkup(<UpdatesBoard entries={[{ id: "u1", title: "Novo calendário", summary: "Disponível.", state: "released", updatedAt: "2026-10-31", order: 1, evidence: "/calendario" }]} />);
+    expect(html).toContain('href="/calendario"');
+    expect(html).toContain('aria-label="Ver entrega: Novo calendário"');
+    expect(updateEvidenceHref("https://example.org/entrega")).toBe("https://example.org/entrega");
+    for (const unsafe of ["javascript:alert(1)", "//example.org/", "https://user:secret@example.org/", "/\\example.org", "not-a-url"]) expect(updateEvidenceHref(unsafe)).toBeNull();
   });
 });

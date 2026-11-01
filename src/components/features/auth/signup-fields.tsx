@@ -4,7 +4,8 @@ import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Icons } from "@/components/ui/icons";
-import { parseSignupOrigin, SIGNUP_UTM_FIELDS, type SignupOrigin } from "@/core/acquisition/signup-origin";
+import type { SignupOrigin } from "@/core/acquisition/signup-origin";
+import { signupOriginFromSearch } from "@/core/acquisition/signup-origin-transport";
 
 export function SignupPassword() {
   const [revealed, setRevealed] = useState(false);
@@ -41,9 +42,7 @@ export function SignupOriginChoice() {
   function choose(value: boolean) {
     setChecked(value);
     if (!value) { setOrigin(null); return; }
-    const query = new URLSearchParams(window.location.search), candidate: Record<string, string> = {};
-    for (const field of SIGNUP_UTM_FIELDS) { const item = query.get(field); if (item !== null) candidate[field] = item; }
-    setOrigin(parseSignupOrigin(true, candidate));
+    setOrigin(signupOriginFromSearch(new URLSearchParams(window.location.search)));
   }
   return <div className="auth-legal">
     <label className="auth-legal-check" htmlFor={id}><span className="auth-legal-control">

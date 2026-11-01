@@ -29,7 +29,7 @@ export async function feedbackRpc(config: SupabaseAuthConfig, actor: Authenticat
   let response: Response;
   try {
     response = await fetch(new URL(`/rest/v1/rpc/${writing ? "feedback_submit" : "feedback_list"}`, config.supabaseUrl), {
-      method: "POST", cache: "no-store", signal: AbortSignal.timeout(30_000),
+      method: "POST", cache: "no-store", redirect: "error", signal: AbortSignal.timeout(30_000),
       headers: { apikey: config.secretKey, Authorization: `Bearer ${config.secretKey}`, "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });

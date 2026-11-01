@@ -9,7 +9,7 @@ const categories = [
   ["improvement", "Melhoria"], ["other", "Outro"],
 ] as const;
 
-export function FeedbackWorkspace({ userId }: { userId: string }) {
+export function FeedbackWorkspace({ userId, supportEmail }: { userId: string; supportEmail: string }) {
   const [items, setItems] = useState<Item[]>([]);
   const [category, setCategory] = useState("suggestion"), [text, setText] = useState("");
   const [loading, setLoading] = useState(true), [sending, setSending] = useState(false);
@@ -67,6 +67,7 @@ export function FeedbackWorkspace({ userId }: { userId: string }) {
         {uncertain && <button type="button" disabled={sending} onClick={() => { setUncertain(false); intent.current = null; setText(""); setError(""); void load(); }}>Descartar rascunho e atualizar histórico</button>}
       </form>
       <section className="feedback-panel" aria-labelledby="feedback-history"><h2 id="feedback-history">Suas mensagens</h2>
+        <p className="feedback-hint">Precisa de ajuda? <a href={`mailto:${supportEmail}`}>Falar com o suporte</a></p>
         {items.length > 0 && <ul className="feedback-list">{items.map((item) => <li key={item.id}><strong>{categories.find(([key]) => key === item.category)?.[1] ?? "Mensagem"}</strong><span>Recebida</span><p>{item.text}</p><time dateTime={item.createdAt}>{new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium" }).format(new Date(item.createdAt))}</time></li>)}</ul>}
         {loading ? <p>Carregando mensagens…</p> : loadError ? <><p role="alert">Não foi possível carregar suas mensagens.</p><button type="button" onClick={() => void load()}>Tentar novamente</button></> : items.length === 0 ? <p>Nenhuma mensagem enviada ainda.</p> : next && <button type="button" onClick={() => void load(next)}>Carregar mais</button>}
       </section>
