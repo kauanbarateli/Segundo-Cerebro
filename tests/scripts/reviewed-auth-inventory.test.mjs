@@ -22,7 +22,10 @@ test('fechamentos recusam omissão, substituição e reordenação sem alterar 0
  const finance=await current27SourceClosure(fileURLToPath(new URL('../../',import.meta.url)));assert.deepEqual(finance,CURRENT27_EXPECTED_SOURCES);qualify(finance,'88921c32009028ee89ab3b70577ff55671a0678265464a02510eb6113ff0924f','bb6fa457547a0f67f70d9e87713019a3c92a1d91139f357068e7f91accef4147');
  for(const changed of [finance.filter(x=>x!==name),[...finance].reverse(),[...finance.filter(x=>x!==name),'tests/helpers/foreign.mjs'].sort()])assert.throws(()=>assertCurrent27SourceSet(changed),{code:'SOURCE_REFUSED'});
  const browser=await deriveAdminBrowserSourcePaths(),drive=[...new Set([...ADMIN_LOCAL_SOURCE_PATHS,...await deriveDriveSourcePaths()])].sort();assertAdminBrowserSourcePaths(browser);assertDriveSourcePaths(drive);
- assert.equal(hash(browser),'35a7214fe9431c6c3e67f119fa270afdaf3d97f669c4c8fa0cd63c713c167e3a');assert.equal(hash(drive),'5631da45e3401d538bef4e704574f9abf4382be3c7b97db8336a5e913d1ee2a1');
+ // Before the inventory changes: browser 35a7214fe9431c6c3e67f119fa270afdaf3d97f669c4c8fa0cd63c713c167e3a;
+ // Drive 5631da45e3401d538bef4e704574f9abf4382be3c7b97db8336a5e913d1ee2a1.
+ qualify(browser,'ad93fb418e68102fa814fb6642b46323535e9ef3d1cde9258608e5d00fd733fb','5cbb1a063ccc9cee96a462b1bb7bc12daa3ff4962435b13ef27e84afcf69d0a0');
+ qualify(drive,'629bfb2a39651b023760d1981a29ea2541bed3610c2fa4a5f5788e0a3ee25a2f','c86edce223d955229084f27cb8637613787d0bf136f1c038440aad6c9fc43fbd');
  assert.ok((await deriveFoundationSources()).includes(name));assert.ok(STORAGE_SOURCE_PATHS.includes(name));
 });
 test('helper alterado é recusado pelo fechamento financeiro antes da projeção',async()=>{

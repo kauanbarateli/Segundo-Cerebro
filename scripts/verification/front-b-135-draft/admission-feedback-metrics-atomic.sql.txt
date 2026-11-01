@@ -1,0 +1,1199 @@
+-- GUARDED REVIEW CANDIDATE. NOT A MIGRATION. DO NOT APPLY.
+-- Admission, feedback and metrics share one transaction and the admission domain-events lock.
+BEGIN;
+DO $scratch_guard$ BEGIN RAISE EXCEPTION 'UNREVIEWED SCRATCH SQL: DO NOT APPLY'; END $scratch_guard$;
+
+-- ADMISSION SOURCE SHA256 bcf4da212db7fc310df9b72df252fab226b6cde6ea9c2b1f3715740f73c151fd
+
+-- BEGIN REVIEWED COMPONENT admission (sha256 7f74cad88fa6e4bff01dd7bcf37e3de5eb94c581f6e11ade372e8c7e82b1946c)
+-- DRAFT ONLY. No public signup, promotion, remote application or release is authorized.
+-- Requires full review of legacy cohorts, Admin and Auth recovery before promotion.
+
+
+set local lock_timeout='5s';
+set local statement_timeout='60s';
+
+-- REVIEW DRAFT: fragment for an isolated test only; never execute remotely.
+-- The caller must already be inside the original candidate's transaction.
+lock table app_private.admin_operations in share row exclusive mode;
+lock table auth.users in share row exclusive mode;
+
+do $legacy_guard$
+begin
+ if exists (
+  select 1 from app_private.admin_operations op
+  where op.command='admin.user.create' and op.phase<>'complete'
+ ) then
+  raise exception 'Unfinished administrative creation requires review.' using errcode='23514';
+ end if;
+ if exists (
+  select 1 from auth.users u
+  join app_private.admin_operations op on op.target_user_id=u.id
+  where op.command='admin.user.create' and op.phase='complete'
+   and (op.active_execution is not null or
+        u.raw_app_meta_data->>'sc_admin_operation' is distinct from op.operation_id::text)
+ ) then
+  raise exception 'Administrative creation evidence requires review.' using errcode='23514';
+ end if;
+ if exists (
+  select 1 from auth.users u where u.email_confirmed_at is null
+   and not exists (
+    select 1 from app_private.admin_operations op
+    where op.target_user_id=u.id and op.command='admin.user.create'
+     and op.phase='complete' and op.active_execution is null
+     and u.raw_app_meta_data->>'sc_admin_operation'=op.operation_id::text
+   )
+ ) then
+  raise exception 'Unconfirmed legacy identity requires review.' using errcode='23514';
+ end if;
+end
+$legacy_guard$;
+
+lock table public.domain_events in access exclusive mode;
+do $sc_027_pin$ begin
+ if not exists(select 1 from pg_constraint c where c.conrelid='public.domain_events'::regclass and c.conname='domain_events_entity_type_check' and c.contype='c' and c.convalidated and c.conislocal and not c.connoinherit and c.coninhcount=0 and c.conparentid=0 and not c.condeferrable and not c.condeferred and pg_get_constraintdef(c.oid,false)='CHECK (((entity_type = ANY (ARRAY[''profile''::text, ''preference''::text, ''module_preference''::text, ''role''::text, ''moderation''::text, ''entitlement''::text, ''authentication''::text, ''capture''::text, ''task''::text, ''finance_account''::text, ''finance_category''::text, ''finance_tag''::text, ''finance_transaction''::text, ''finance_budget''::text])) OR (entity_type = ANY (ARRAY[''knowledge_notebook''::text, ''knowledge_page''::text, ''knowledge_link''::text])) OR (entity_type = ANY (ARRAY[''project''::text, ''habit''::text, ''habit_entry''::text, ''habit_pause''::text, ''project_container''::text])) OR (entity_type = ANY (ARRAY[''drive_folder''::text, ''drive_file''::text])) OR (entity_type = ''vault_metadata''::text) OR (entity_type = ANY (ARRAY[''calendar_account''::text, ''calendar_source''::text, ''calendar_event''::text, ''calendar_sync''::text])) OR (entity_type = ANY (ARRAY[''onboarding_round''::text, ''onboarding_entry''::text, ''profile_focus''::text, ''project_context''::text])) OR (entity_type = ANY (ARRAY[''finance_series''::text, ''finance_series_occurrence''::text])) OR (entity_type = ANY (ARRAY[''finance_goal''::text, ''finance_goal_reservation''::text, ''finance_goal_release''::text, ''finance_goal_highlight''::text])) OR (entity_type = ''finance_goal_disposition''::text)))' and pg_get_expr(c.conbin,c.conrelid,false)='((entity_type = ANY (ARRAY[''profile''::text, ''preference''::text, ''module_preference''::text, ''role''::text, ''moderation''::text, ''entitlement''::text, ''authentication''::text, ''capture''::text, ''task''::text, ''finance_account''::text, ''finance_category''::text, ''finance_tag''::text, ''finance_transaction''::text, ''finance_budget''::text])) OR (entity_type = ANY (ARRAY[''knowledge_notebook''::text, ''knowledge_page''::text, ''knowledge_link''::text])) OR (entity_type = ANY (ARRAY[''project''::text, ''habit''::text, ''habit_entry''::text, ''habit_pause''::text, ''project_container''::text])) OR (entity_type = ANY (ARRAY[''drive_folder''::text, ''drive_file''::text])) OR (entity_type = ''vault_metadata''::text) OR (entity_type = ANY (ARRAY[''calendar_account''::text, ''calendar_source''::text, ''calendar_event''::text, ''calendar_sync''::text])) OR (entity_type = ANY (ARRAY[''onboarding_round''::text, ''onboarding_entry''::text, ''profile_focus''::text, ''project_context''::text])) OR (entity_type = ANY (ARRAY[''finance_series''::text, ''finance_series_occurrence''::text])) OR (entity_type = ANY (ARRAY[''finance_goal''::text, ''finance_goal_reservation''::text, ''finance_goal_release''::text, ''finance_goal_highlight''::text])) OR (entity_type = ''finance_goal_disposition''::text))') then
+  raise exception 'historical domain event constraint refused' using errcode='23514';
+ end if;
+end $sc_027_pin$;
+create table app_private.user_admission (
+ user_id uuid primary key references auth.users(id) on delete cascade,
+ origin text not null check(origin in ('legacy','admin','public','unclassified')),
+ state text not null check(state in ('pending','admitted')),
+ admitted_at timestamptz,
+ check((state='admitted')=(admitted_at is not null)),
+ check(state<>'admitted' or origin in ('legacy','admin','public'))
+);
+alter table app_private.user_admission enable row level security;
+revoke all on app_private.user_admission from public,anon,authenticated,service_role;
+
+-- Absence of a setting is closed. Enabling requires a separate reviewed operation.
+create table app_private.signup_settings (
+ singleton boolean primary key default true check(singleton),
+ enabled boolean not null default false
+);
+alter table app_private.signup_settings enable row level security;
+revoke all on app_private.signup_settings from public,anon,authenticated,service_role;
+
+-- The binding pointer is an opaque random secret, stored here only as SHA-256.
+-- The subject is a server-created HMAC, never an email or a client authority.
+create function app_private.valid_signup_origin(p_origin jsonb) returns boolean
+language sql immutable set search_path='' as $$
+ select coalesce(jsonb_typeof(p_origin)='object' and p_origin<>'{}'::jsonb
+  and octet_length(p_origin::text)<=1024
+  and p_origin-array['utm_source','utm_medium','utm_campaign','utm_term','utm_content']='{}'::jsonb
+  and not exists(select 1 from jsonb_each(p_origin) e where jsonb_typeof(e.value)<>'string'
+   or char_length(e.value #>> '{}') not between 1 and 200 or e.value #>> '{}' <> btrim(e.value #>> '{}')
+   or (e.value #>> '{}') ~ '[[:cntrl:]<>]'),false);
+$$;
+revoke all on function app_private.valid_signup_origin(jsonb) from public,anon,authenticated,service_role;
+
+create table app_private.signup_intents (
+ id uuid primary key default gen_random_uuid(),
+ binding_hash text unique check(binding_hash is null or binding_hash ~ '^[a-f0-9]{64}$'),
+ subject_hash text check(subject_hash is null or subject_hash ~ '^[a-f0-9]{64}$'),
+ terms_version text not null check(char_length(terms_version) between 1 and 100),
+ privacy_version text not null check(char_length(privacy_version) between 1 and 100),
+ expires_at timestamptz not null,
+ state text not null default 'pending' check(state in ('pending','bound','consumed')),
+ user_id uuid unique references auth.users(id) on delete cascade,
+ created_at timestamptz not null default now(),consumed_at timestamptz,
+ origin jsonb,origin_consent_version text,origin_consented_at timestamptz,
+ check((origin is null and origin_consent_version is null and origin_consented_at is null)
+    or (app_private.valid_signup_origin(origin) and origin_consent_version is not null and char_length(origin_consent_version) between 1 and 100 and origin_consented_at is not null)),
+ check(state<>'consumed' or origin is null),
+ check((state='pending' and user_id is null and binding_hash is not null and subject_hash is not null and consumed_at is null)
+    or (state='bound' and user_id is not null and binding_hash is null and subject_hash is not null and consumed_at is null)
+    or (state='consumed' and user_id is not null and binding_hash is null and consumed_at is not null))
+);
+alter table app_private.signup_intents enable row level security;
+revoke all on app_private.signup_intents from public,anon,authenticated,service_role;
+create index signup_intents_expiry on app_private.signup_intents(expires_at,id) where state in ('pending','bound');
+create index signup_intents_retention on app_private.signup_intents(consumed_at,id) where state='consumed' and subject_hash is not null;
+
+create table app_private.signup_origins (
+ user_id uuid primary key references auth.users(id) on delete cascade,
+ origin jsonb not null check(app_private.valid_signup_origin(origin)),
+ consent_version text not null check(char_length(consent_version) between 1 and 100),
+ consented_at timestamptz not null,expires_at timestamptz not null
+);
+alter table app_private.signup_origins enable row level security;
+revoke all on app_private.signup_origins from public,anon,authenticated,service_role;
+create index signup_origins_expiry on app_private.signup_origins(expires_at,user_id);
+
+create function app_private.signup_intent_create(p_binding_hash text,p_subject_hash text,p_terms text,p_privacy text,p_expires timestamptz,p_origin jsonb,p_origin_version text) returns uuid
+language plpgsql security definer set search_path='' as $$ declare v_id uuid; begin
+ perform 1 from app_private.signup_settings where singleton and enabled for share;
+ if not found then raise exception 'Signup unavailable.' using errcode='42501'; end if;
+ if p_binding_hash is null or p_binding_hash !~ '^[a-f0-9]{64}$' or p_subject_hash is null or p_subject_hash !~ '^[a-f0-9]{64}$'
+  or p_terms is null or char_length(p_terms) not between 1 and 100 or p_privacy is null or char_length(p_privacy) not between 1 and 100
+  or p_expires is null or p_expires<=now() or p_expires>now()+interval '1 hour'
+  or (p_origin is null and p_origin_version is not null)
+  or (p_origin is not null and (not app_private.valid_signup_origin(p_origin) or p_origin_version is null or char_length(p_origin_version) not between 1 and 100)) then
+  raise exception 'Invalid signup intent.' using errcode='22023';
+ end if;
+ insert into app_private.signup_intents(binding_hash,subject_hash,terms_version,privacy_version,expires_at,origin,origin_consent_version,origin_consented_at)
+ values(p_binding_hash,p_subject_hash,p_terms,p_privacy,p_expires,p_origin,p_origin_version,case when p_origin is null then null else now() end) returning id into v_id;
+ return v_id;
+end $$;
+create function public.signup_intent_create(p_binding_hash text,p_subject_hash text,p_terms text,p_privacy text,p_expires timestamptz,p_origin jsonb,p_origin_version text) returns uuid
+language sql security invoker set search_path='' as $$ select app_private.signup_intent_create(p_binding_hash,p_subject_hash,p_terms,p_privacy,p_expires,p_origin,p_origin_version) $$;
+revoke all on function app_private.signup_intent_create(text,text,text,text,timestamptz,jsonb,text),public.signup_intent_create(text,text,text,text,timestamptz,jsonb,text) from public,anon,authenticated,service_role;
+grant execute on function app_private.signup_intent_create(text,text,text,text,timestamptz,jsonb,text),public.signup_intent_create(text,text,text,text,timestamptz,jsonb,text) to service_role;
+
+-- Only a trusted confirmation channel may attest that the email holder has
+-- explicitly set a password after OTP verification. This table alone is not proof.
+create table app_private.signup_password_proofs (
+ intent_id uuid primary key references app_private.signup_intents(id) on delete cascade,
+ user_id uuid not null references auth.users(id) on delete cascade,
+ session_id uuid not null references auth.sessions(id) on delete cascade,
+ expires_at timestamptz not null, consumed_at timestamptz
+);
+alter table app_private.signup_password_proofs enable row level security;
+revoke all on app_private.signup_password_proofs from public,anon,authenticated,service_role;
+
+-- Expand the origin contract. Existing verified Admin inserts continue to use
+-- their non-null operation and default origin; a public origin needs an intent.
+alter table app_private.onboarding_entries alter column source_operation drop not null;
+alter table app_private.onboarding_entries add column source_kind text not null default 'admin';
+alter table app_private.onboarding_entries add column source_intent uuid unique references app_private.signup_intents(id);
+alter table app_private.onboarding_entries add constraint onboarding_entry_source_check check(
+ (source_kind='admin' and source_operation is not null and source_intent is null) or
+ (source_kind='public' and source_operation is null and source_intent is not null)
+);
+
+do $$ declare expression text; begin
+ select pg_get_expr(conbin,conrelid) into strict expression from pg_constraint
+  where conrelid='public.domain_events'::regclass and conname='domain_events_entity_type_check';
+ alter table public.domain_events drop constraint domain_events_entity_type_check;
+ execute format('alter table public.domain_events add constraint domain_events_entity_type_check check ((%s) or entity_type in (''signup_admission'',''signup_origin''))',expression);
+end $$;
+
+-- For pending users only: validate session and moderation without granting
+-- module access. No user-controlled metadata participates in this predicate.
+create function app_private.signup_pending_identity(p_user uuid,p_session uuid) returns boolean
+language sql stable security definer set search_path='' as $$
+ select p_user is not null and p_session is not null and exists(
+  select 1 from auth.users u join auth.sessions s on s.user_id=u.id
+  join public.user_moderation m on m.user_id=u.id
+  where u.id=p_user and s.id=p_session and u.email_confirmed_at is not null
+   and not u.is_anonymous and u.deleted_at is null and (u.banned_until is null or u.banned_until<=now())
+   and (s.not_after is null or s.not_after>now()) and m.status='active' and not m.must_change_password
+ );
+$$;
+revoke all on function app_private.signup_pending_identity(uuid,uuid) from public,anon,authenticated,service_role;
+
+-- After OTP verification, the server can find only the intent bound to the
+-- verified Auth ID. The subject hash must be recomputed from verified identity.
+create function app_private.signup_find_bound_intent(p_user uuid,p_session uuid,p_subject_hash text) returns jsonb
+language plpgsql security definer set search_path='' as $$ declare i app_private.signup_intents; begin
+ if not app_private.signup_pending_identity(p_user,p_session) then raise exception 'Signup unavailable.' using errcode='42501'; end if;
+ select * into i from app_private.signup_intents where user_id=p_user and subject_hash=p_subject_hash and
+  ((state='bound' and expires_at>now()) or (state='consumed' and exists(select 1 from app_private.user_admission a where a.user_id=p_user and a.origin='public' and a.state='admitted')));
+ if not found then return null; end if;
+ if i.state='bound' and not exists(select 1 from app_private.signup_settings where singleton and enabled) then raise exception 'Signup unavailable.' using errcode='42501'; end if;
+ return jsonb_build_object('intentId',i.id,'termsVersion',i.terms_version,'privacyVersion',i.privacy_version,'state',i.state,'originPending',i.origin is not null);
+end $$;
+create function public.signup_find_bound_intent(p_user uuid,p_session uuid,p_subject_hash text) returns jsonb
+language sql security invoker set search_path='' as $$ select app_private.signup_find_bound_intent(p_user,p_session,p_subject_hash) $$;
+revoke all on function app_private.signup_find_bound_intent(uuid,uuid,text),public.signup_find_bound_intent(uuid,uuid,text) from public,anon,authenticated,service_role;
+grant execute on function app_private.signup_find_bound_intent(uuid,uuid,text),public.signup_find_bound_intent(uuid,uuid,text) to service_role;
+
+-- Only the server path that has just verified a signup OTP may call this.
+-- This recovers an expired/missing intent for an existing pending identity;
+-- ownership of the email alone does not admit the identity or keep its password.
+create function app_private.signup_recover_verified_intent(p_user uuid,p_session uuid,p_subject_hash text,p_terms text,p_privacy text) returns jsonb
+language plpgsql security definer set search_path='' as $$ declare i app_private.signup_intents; a app_private.user_admission; begin
+ perform 1 from auth.users where id=p_user for share;
+ perform 1 from auth.sessions where id=p_session and user_id=p_user for share;
+ perform 1 from public.user_moderation where user_id=p_user for share;
+ if not app_private.signup_pending_identity(p_user,p_session) then raise exception 'Signup unavailable.' using errcode='42501'; end if;
+ perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(p_user::text || ':signup',0));
+ perform 1 from app_private.signup_settings where singleton and enabled for share;
+ if not found or p_subject_hash is null or p_subject_hash !~ '^[a-f0-9]{64}$' or p_terms is null or char_length(p_terms) not between 1 and 100 or p_privacy is null or char_length(p_privacy) not between 1 and 100
+  then raise exception 'Signup unavailable.' using errcode='42501'; end if;
+ -- Under the same advisory lock, never replace an intent with an extant fence.
+ if pg_catalog.to_regclass('app_private.signup_completion_fences_draft') is null then raise exception 'Signup unavailable.' using errcode='42501'; end if;
+ if exists(select 1 from app_private.signup_completion_fences_draft f where f.user_id=p_user) then raise exception 'Signup unavailable.' using errcode='42501'; end if;
+ select * into a from app_private.user_admission where user_id=p_user for update;
+ if not found or a.origin<>'unclassified' or a.state<>'pending' then raise exception 'Signup unavailable.' using errcode='42501'; end if;
+ select * into i from app_private.signup_intents where user_id=p_user for update;
+ if found then
+  if exists(select 1 from app_private.signup_completion_fences_draft f where f.intent_id=i.id) then raise exception 'Signup unavailable.' using errcode='42501'; end if;
+  if i.state<>'bound' or i.subject_hash is distinct from p_subject_hash then raise exception 'Signup unavailable.' using errcode='42501'; end if;
+  if i.expires_at<=pg_catalog.clock_timestamp() then delete from app_private.signup_intents where id=i.id; i:=null;
+  else update app_private.signup_intents set terms_version=p_terms,privacy_version=p_privacy where id=i.id returning * into i; end if;
+ end if;
+ if i.id is null then
+  insert into app_private.signup_intents(binding_hash,subject_hash,terms_version,privacy_version,expires_at,state,user_id)
+   values(null,p_subject_hash,p_terms,p_privacy,pg_catalog.clock_timestamp()+interval '30 minutes','bound',p_user) returning * into i;
+ end if;
+ return jsonb_build_object('intentId',i.id,'termsVersion',i.terms_version,'privacyVersion',i.privacy_version,'state',i.state,'originPending',i.origin is not null);
+end $$;
+create function public.signup_recover_verified_intent(p_user uuid,p_session uuid,p_subject_hash text,p_terms text,p_privacy text) returns jsonb
+language sql security invoker set search_path='' as $$ select app_private.signup_recover_verified_intent(p_user,p_session,p_subject_hash,p_terms,p_privacy) $$;
+revoke all on function app_private.signup_recover_verified_intent(uuid,uuid,text,text,text),public.signup_recover_verified_intent(uuid,uuid,text,text,text) from public,anon,authenticated,service_role;
+grant execute on function app_private.signup_recover_verified_intent(uuid,uuid,text,text,text),public.signup_recover_verified_intent(uuid,uuid,text,text,text) to service_role;
+
+create function app_private.signup_discard_pending_origin(p_user uuid,p_session uuid,p_intent uuid,p_subject_hash text) returns jsonb
+language plpgsql security definer set search_path='' as $$ declare i app_private.signup_intents; begin
+ perform 1 from auth.users where id=p_user for share;
+ perform 1 from auth.sessions where id=p_session and user_id=p_user for share;
+ perform 1 from public.user_moderation where user_id=p_user for share;
+ if not app_private.signup_pending_identity(p_user,p_session) then raise exception 'Signup unavailable.' using errcode='42501'; end if;
+ perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(p_user::text || ':signup',0));
+ select * into i from app_private.signup_intents where id=p_intent for update;
+ if not found or i.user_id is distinct from p_user or i.subject_hash is distinct from p_subject_hash or i.state<>'bound' then raise exception 'Signup unavailable.' using errcode='42501'; end if;
+ if i.origin is null then return jsonb_build_object('status','absent'); end if;
+ update app_private.signup_intents set origin=null,origin_consent_version=null,origin_consented_at=null where id=i.id;
+ return jsonb_build_object('status','discarded');
+end $$;
+create function public.signup_discard_pending_origin(p_user uuid,p_session uuid,p_intent uuid,p_subject_hash text) returns jsonb
+language sql security invoker set search_path='' as $$ select app_private.signup_discard_pending_origin(p_user,p_session,p_intent,p_subject_hash) $$;
+revoke all on function app_private.signup_discard_pending_origin(uuid,uuid,uuid,text),public.signup_discard_pending_origin(uuid,uuid,uuid,text) from public,anon,authenticated,service_role;
+grant execute on function app_private.signup_discard_pending_origin(uuid,uuid,uuid,text),public.signup_discard_pending_origin(uuid,uuid,uuid,text) to service_role;
+
+create function app_private.signup_attest_password_reset(p_user uuid,p_session uuid,p_intent uuid,p_subject_hash text) returns void
+language plpgsql security definer set search_path='' as $$ declare i app_private.signup_intents; begin
+ perform 1 from auth.users where id=p_user for share;
+ perform 1 from auth.sessions where id=p_session and user_id=p_user for share;
+ perform 1 from public.user_moderation where user_id=p_user for share;
+ if not app_private.signup_pending_identity(p_user,p_session) then raise exception 'Signup unavailable.' using errcode='42501'; end if;
+ perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(p_user::text || ':signup',0));
+ perform 1 from app_private.signup_settings where singleton and enabled for share;
+ if not found then raise exception 'Signup unavailable.' using errcode='42501'; end if;
+ select * into i from app_private.signup_intents where id=p_intent for update;
+ if not found or i.user_id is distinct from p_user or i.state<>'bound' or i.expires_at<=now() or i.subject_hash is distinct from p_subject_hash
+  then raise exception 'Signup unavailable.' using errcode='42501'; end if;
+ insert into app_private.signup_password_proofs(intent_id,user_id,session_id,expires_at)
+ values(i.id,p_user,p_session,least(i.expires_at,now()+interval '10 minutes'))
+ on conflict(intent_id) do update set user_id=excluded.user_id,session_id=excluded.session_id,expires_at=excluded.expires_at,consumed_at=null
+ where app_private.signup_password_proofs.consumed_at is null;
+ if not found then raise exception 'Signup unavailable.' using errcode='42501'; end if;
+end $$;
+create function public.signup_attest_password_reset(p_user uuid,p_session uuid,p_intent uuid,p_subject_hash text) returns void
+language sql security invoker set search_path='' as $$ select app_private.signup_attest_password_reset(p_user,p_session,p_intent,p_subject_hash) $$;
+
+create function app_private.signup_complete(p_user uuid,p_session uuid,p_intent uuid,p_subject_hash text,p_terms text,p_privacy text,p_accept_origin boolean,p_origin_version text) returns jsonb
+language plpgsql security definer set search_path='' as $$ declare i app_private.signup_intents; a app_private.user_admission; v_enabled boolean; begin
+ perform 1 from auth.users where id=p_user for share;
+ perform 1 from auth.sessions where id=p_session and user_id=p_user for share;
+ perform 1 from public.user_moderation where user_id=p_user for share;
+ if not app_private.signup_pending_identity(p_user,p_session) then raise exception 'Signup unavailable.' using errcode='42501'; end if;
+ perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(p_user::text || ':signup',0));
+ select enabled into v_enabled from app_private.signup_settings where singleton for share;
+ select * into i from app_private.signup_intents where id=p_intent for update;
+ if not found or i.user_id is distinct from p_user or i.subject_hash is distinct from p_subject_hash or i.terms_version is distinct from p_terms or i.privacy_version is distinct from p_privacy
+  then raise exception 'Signup unavailable.' using errcode='42501'; end if;
+ select * into a from app_private.user_admission where user_id=p_user for update;
+ if not found then raise exception 'Signup unavailable.' using errcode='42501'; end if;
+ if i.state='consumed' and a.origin='public' and a.state='admitted' then return jsonb_build_object('status','already_admitted'); end if;
+ if v_enabled is distinct from true then raise exception 'Signup unavailable.' using errcode='42501'; end if;
+ if p_accept_origin is null or (p_accept_origin and i.origin is not null and (p_origin_version is null or p_origin_version is distinct from i.origin_consent_version)) then raise exception 'Signup unavailable.' using errcode='22023'; end if;
+ if i.state<>'bound' or i.expires_at<=now() or a.origin<>'unclassified' or a.state<>'pending' or not exists(
+  select 1 from app_private.signup_password_proofs p where p.intent_id=i.id and p.user_id=p_user and p.session_id=p_session and p.consumed_at is null and p.expires_at>now()
+ ) then raise exception 'Signup unavailable.' using errcode='42501'; end if;
+ update app_private.signup_password_proofs set consumed_at=now() where intent_id=i.id;
+ if p_accept_origin and i.origin is not null then
+  insert into app_private.signup_origins(user_id,origin,consent_version,consented_at,expires_at)
+  values(p_user,i.origin,i.origin_consent_version,now(),now()+interval '12 months');
+  perform app_private.append_event(p_user,'signup_origin',p_user,'created','web',null,jsonb_build_object('consent','granted'));
+ end if;
+ update app_private.signup_intents set state='consumed',consumed_at=now(),origin=null,origin_consent_version=null,origin_consented_at=null where id=i.id;
+ update app_private.user_admission set origin='public',state='admitted',admitted_at=now() where user_id=p_user;
+ insert into app_private.onboarding_entries(user_id,source_operation,source_kind,source_intent) values(p_user,null,'public',i.id);
+ perform app_private.append_event(p_user,'signup_admission',p_user,'created','web',null,jsonb_build_object('user_id',p_user,'origin','public'));
+ perform app_private.append_event(p_user,'onboarding_entry',p_user,'created','web',null,jsonb_build_object('user_id',p_user,'eligibility','new_explicit','schema_version',1));
+ return jsonb_build_object('status','admitted');
+end $$;
+create function public.signup_complete(p_user uuid,p_session uuid,p_intent uuid,p_subject_hash text,p_terms text,p_privacy text,p_accept_origin boolean,p_origin_version text) returns jsonb
+language sql security invoker set search_path='' as $$ select app_private.signup_complete(p_user,p_session,p_intent,p_subject_hash,p_terms,p_privacy,p_accept_origin,p_origin_version) $$;
+revoke all on function app_private.signup_attest_password_reset(uuid,uuid,uuid,text),public.signup_attest_password_reset(uuid,uuid,uuid,text),app_private.signup_complete(uuid,uuid,uuid,text,text,text,boolean,text),public.signup_complete(uuid,uuid,uuid,text,text,text,boolean,text) from public,anon,authenticated,service_role;
+grant execute on function app_private.signup_attest_password_reset(uuid,uuid,uuid,text),public.signup_attest_password_reset(uuid,uuid,uuid,text),app_private.signup_complete(uuid,uuid,uuid,text,text,text,boolean,text),public.signup_complete(uuid,uuid,uuid,text,text,text,boolean,text) to service_role;
+
+-- User can inspect status/withdraw, but cannot read campaign values through RPC.
+create function app_private.signup_origin_status(p_user uuid,p_session uuid) returns jsonb language plpgsql security definer set search_path='' as $$ begin
+ perform 1 from auth.users where id=p_user for share;
+ perform 1 from auth.sessions where id=p_session and user_id=p_user for share;
+ perform 1 from public.user_moderation where user_id=p_user for share;
+ perform app_private.require_actor(p_user,p_session);
+ return coalesce((select jsonb_build_object('status','active','expiresAt',expires_at) from app_private.signup_origins where user_id=p_user and expires_at>now()),jsonb_build_object('status','absent','expiresAt',null));
+end $$;
+create function app_private.signup_origin_withdraw(p_user uuid,p_session uuid) returns jsonb language plpgsql security definer set search_path='' as $$ begin
+ perform 1 from auth.users where id=p_user for share;
+ perform 1 from auth.sessions where id=p_session and user_id=p_user for share;
+ perform 1 from public.user_moderation where user_id=p_user for share;
+ perform app_private.require_actor(p_user,p_session);
+ perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(p_user::text || ':signup-origin',0));
+ delete from app_private.signup_origins where user_id=p_user;
+ if found then
+  perform app_private.append_event(p_user,'signup_origin',p_user,'deleted','web',null,jsonb_build_object('consent','withdrawn'));
+  return jsonb_build_object('status','withdrawn');
+ end if;
+ return jsonb_build_object('status','absent');
+end $$;
+create function public.signup_origin_status(p_user uuid,p_session uuid) returns jsonb language sql security invoker set search_path='' as $$ select app_private.signup_origin_status(p_user,p_session) $$;
+create function public.signup_origin_withdraw(p_user uuid,p_session uuid) returns jsonb language sql security invoker set search_path='' as $$ select app_private.signup_origin_withdraw(p_user,p_session) $$;
+revoke all on function app_private.signup_origin_status(uuid,uuid),app_private.signup_origin_withdraw(uuid,uuid),public.signup_origin_status(uuid,uuid),public.signup_origin_withdraw(uuid,uuid) from public,anon,authenticated,service_role;
+grant execute on function app_private.signup_origin_status(uuid,uuid),app_private.signup_origin_withdraw(uuid,uuid),public.signup_origin_status(uuid,uuid),public.signup_origin_withdraw(uuid,uuid) to service_role;
+
+-- Operator-invoked, bounded retention; no schedule is installed by this SQL.
+CREATE FUNCTION app_private.signup_prune() RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE r record; locked_id uuid; cutoff timestamptz;
+ removed integer:=0; scrubbed integer:=0; origins_removed integer:=0; protected integer:=0; expired_origins integer:=0; n integer;
+BEGIN
+  IF pg_catalog.current_setting('transaction_isolation') IS DISTINCT FROM 'read committed' THEN
+    RAISE EXCEPTION 'signup_prune requires read committed';
+  END IF;
+ cutoff:=pg_catalog.clock_timestamp();
+ -- Read candidates without row locks, then take the per-user advisory lock
+ -- before locking bound rows. Try/skip avoids waiting on competing holders.
+ FOR r IN SELECT i.id,i.user_id,i.state FROM app_private.signup_intents i
+  WHERE i.state IN ('pending','bound') AND i.expires_at<=cutoff
+   AND (i.origin IS NOT NULL OR NOT EXISTS(SELECT 1 FROM app_private.signup_completion_fences_draft f WHERE f.intent_id=i.id OR (i.user_id IS NOT NULL AND f.user_id=i.user_id)))
+  ORDER BY i.expires_at,i.id LIMIT 500 LOOP
+  IF r.state='bound' THEN
+   IF r.user_id IS NULL OR NOT pg_catalog.pg_try_advisory_xact_lock(pg_catalog.hashtextextended(r.user_id::text || ':signup',0)) THEN CONTINUE; END IF;
+   SELECT i.id INTO locked_id FROM app_private.signup_intents i WHERE i.id=r.id AND i.user_id=r.user_id AND i.state='bound' AND i.expires_at<=pg_catalog.clock_timestamp() FOR UPDATE SKIP LOCKED;
+   IF NOT FOUND THEN CONTINUE; END IF;
+   -- Separate statement after lock acquisition; every new writer must obey
+   -- the same advisory lock. Old or owner-level bypass remains a cutover gate.
+   IF EXISTS(SELECT 1 FROM app_private.signup_completion_fences_draft WHERE user_id=r.user_id OR intent_id=r.id) THEN
+    protected:=protected+1;
+    -- Even when existing identifiers disagree, remove expired attribution
+    -- from this locked intent; never change a mismatched fence.
+    UPDATE app_private.signup_intents SET origin=NULL,origin_consent_version=NULL,origin_consented_at=NULL WHERE id=r.id AND origin IS NOT NULL;
+    GET DIAGNOSTICS n=ROW_COUNT; expired_origins:=expired_origins+n;
+    UPDATE app_private.signup_completion_fences_draft SET origin_expired=true,updated_at=pg_catalog.now() WHERE user_id=r.user_id AND intent_id=r.id AND NOT origin_expired;
+    CONTINUE;
+   END IF;
+   DELETE FROM app_private.signup_intents WHERE id=r.id AND user_id=r.user_id AND state='bound' AND expires_at<=pg_catalog.clock_timestamp()
+    AND NOT EXISTS(SELECT 1 FROM app_private.signup_completion_fences_draft WHERE user_id=r.user_id OR intent_id=r.id);
+  ELSE
+   -- Unbound intent: lock row directly; it cannot have a normal fence until
+   -- binding, which also needs that row. Recheck state and absence after lock.
+   SELECT i.id INTO locked_id FROM app_private.signup_intents i WHERE i.id=r.id AND i.user_id IS NULL AND i.state='pending' AND i.expires_at<=pg_catalog.clock_timestamp() FOR UPDATE SKIP LOCKED;
+   IF NOT FOUND THEN CONTINUE; END IF;
+   DELETE FROM app_private.signup_intents WHERE id=r.id AND user_id IS NULL AND state='pending' AND expires_at<=pg_catalog.clock_timestamp()
+    AND NOT EXISTS(SELECT 1 FROM app_private.signup_completion_fences_draft WHERE intent_id=r.id);
+  END IF;
+  GET DIAGNOSTICS n=ROW_COUNT; removed:=removed+n;
+ END LOOP;
+ UPDATE app_private.signup_intents SET subject_hash=NULL WHERE id IN (
+  SELECT id FROM app_private.signup_intents WHERE state='consumed' AND subject_hash IS NOT NULL AND consumed_at<=cutoff-interval '24 hours'
+  ORDER BY consumed_at,id FOR UPDATE SKIP LOCKED LIMIT 500
+ );
+ GET DIAGNOSTICS scrubbed=ROW_COUNT;
+ DELETE FROM app_private.signup_origins WHERE user_id IN (
+  SELECT user_id FROM app_private.signup_origins WHERE expires_at<=cutoff ORDER BY expires_at,user_id FOR UPDATE SKIP LOCKED LIMIT 500
+ );
+ GET DIAGNOSTICS origins_removed=ROW_COUNT;
+ RETURN pg_catalog.jsonb_build_object('expiredRemoved',removed,'consumedScrubbed',scrubbed,'originsRemoved',origins_removed,'fencedExamined',protected,'expiredOriginsCleared',expired_origins);
+END $$;
+create function public.signup_prune() returns jsonb language sql security invoker set search_path='' as $$ select app_private.signup_prune() $$;
+revoke all on function app_private.signup_prune(),public.signup_prune() from public,anon,authenticated,service_role;
+grant execute on function app_private.signup_prune(),public.signup_prune() to service_role;
+
+-- Historical confirmed identities retain access; unconfirmed, non-Admin users
+-- remain pending until a separately reviewed proof-of-possession flow exists.
+insert into app_private.user_admission(user_id,origin,state,admitted_at)
+select u.id,
+ case when exists(select 1 from app_private.admin_operations o where o.target_user_id=u.id and o.command='admin.user.create' and o.phase='complete') then 'admin'
+      when u.email_confirmed_at is not null then 'legacy' else 'unclassified' end,
+ case when u.email_confirmed_at is not null or exists(select 1 from app_private.admin_operations o where o.target_user_id=u.id and o.command='admin.user.create' and o.phase='complete') then 'admitted' else 'pending' end,
+ case when u.email_confirmed_at is not null or exists(select 1 from app_private.admin_operations o where o.target_user_id=u.id and o.command='admin.user.create' and o.phase='complete') then now() else null end
+from auth.users u;
+
+create function app_private.admission_new_identity() returns trigger
+language plpgsql security definer set search_path='' as $$ declare pointer text; begin
+ insert into app_private.user_admission(user_id,origin,state) values(new.id,'unclassified','pending');
+ -- Binding is possible only during the INSERT of a newly created Auth identity;
+ -- subsequent metadata updates or a duplicate signup cannot bind an old account.
+ pointer:=new.raw_user_meta_data->>'sc_signup_pointer';
+ if pointer is not null and pointer ~ '^[A-Za-z0-9_-]{43,128}$' then
+  update app_private.signup_intents set state='bound',user_id=new.id,binding_hash=null
+   where binding_hash=encode(sha256(convert_to(pointer,'UTF8')),'hex') and state='pending' and expires_at>now();
+ end if;
+ -- Remove the transient pointer from this INSERT snapshot; Auth integration must
+ -- verify GoTrue does not subsequently restore it before using this candidate.
+ if new.raw_user_meta_data ? 'sc_signup_pointer' then
+  update auth.users set raw_user_meta_data=raw_user_meta_data-'sc_signup_pointer' where id=new.id;
+ end if;
+ return new;
+end $$;
+revoke all on function app_private.admission_new_identity() from public,anon,authenticated,service_role;
+create trigger second_brain_admission_created after insert on auth.users for each row execute function app_private.admission_new_identity();
+
+-- The existing verified Admin saga supplies its own origin; no public metadata
+-- or email comparison is authority to admit a user.
+create function app_private.admission_admin_completed() returns trigger
+language plpgsql security definer set search_path='' as $$ begin
+ if new.command='admin.user.create' and new.phase='complete' and old.phase<>'complete' then
+  if not exists(select 1 from auth.users u where u.id=new.target_user_id and u.raw_app_meta_data->>'sc_admin_operation'=new.operation_id::text)
+   then raise exception 'Unverified administrative admission.' using errcode='23514'; end if;
+  update app_private.user_admission set origin='admin',state='admitted',admitted_at=now()
+   where user_id=new.target_user_id and origin='unclassified' and state='pending';
+  if not found and not exists(select 1 from app_private.user_admission where user_id=new.target_user_id and origin='admin' and state='admitted')
+   then raise exception 'Administrative admission unavailable.' using errcode='23514'; end if;
+ end if;
+ return new;
+end $$;
+revoke all on function app_private.admission_admin_completed() from public,anon,authenticated,service_role;
+create trigger admission_verified_admin_completion after update of phase on app_private.admin_operations
+for each row execute function app_private.admission_admin_completed();
+
+-- Expand the shared session predicate; moderation and existing entitlements stay independent.
+create or replace function app_private.session_active(p_user uuid,p_session uuid) returns boolean
+language sql stable security definer set search_path='' as $$
+ select p_user is not null and p_session is not null and exists (
+  select 1 from auth.sessions s join auth.users u on u.id=s.user_id
+  join public.user_moderation m on m.user_id=u.id
+  join app_private.user_admission a on a.user_id=u.id and a.state='admitted'
+  where s.id=p_session and s.user_id=p_user and m.status='active'
+   and not u.is_anonymous and u.deleted_at is null and (u.banned_until is null or u.banned_until<=now())
+   and (s.not_after is null or s.not_after>now())
+ );
+$$;
+-- END REVIEWED COMPONENT admission
+
+-- BEGIN REVIEWED COMPONENT reservation (sha256 98ee128612c8320bfac98777a12d4b991d6b80315063039be1600b2474837d22)
+-- UNREVIEWED SCRATCH CANDIDATE. Not a migration. Never apply to a hosted database.
+-- The diagnostic harness removes only this exact guard in an in-memory fixture.
+
+
+
+CREATE TABLE app_private.signup_completion_fences_draft (
+ user_id uuid PRIMARY KEY,
+ intent_id uuid NOT NULL UNIQUE,
+ owner_session_id uuid NOT NULL,
+ request_id uuid NOT NULL,
+ generation uuid NOT NULL,
+ phase text NOT NULL CHECK (phase IN ('reserved','auth_in_flight','uncertain','password_acknowledged','complete')),
+ terms_version text NOT NULL CHECK (pg_catalog.char_length(terms_version) BETWEEN 1 AND 100),
+ privacy_version text NOT NULL CHECK (pg_catalog.char_length(privacy_version) BETWEEN 1 AND 100),
+ origin_accepted boolean NOT NULL,
+ origin_consent_version text,
+ origin_withdrawn boolean NOT NULL DEFAULT false,
+ created_at timestamptz NOT NULL DEFAULT pg_catalog.now(),
+ updated_at timestamptz NOT NULL DEFAULT pg_catalog.now(),
+ CHECK ((origin_accepted AND origin_consent_version IS NOT NULL AND pg_catalog.char_length(origin_consent_version) BETWEEN 1 AND 100)
+     OR (NOT origin_accepted AND origin_consent_version IS NULL))
+);
+ALTER TABLE app_private.signup_completion_fences_draft ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON app_private.signup_completion_fences_draft FROM PUBLIC, anon, authenticated, service_role;
+-- Intentionally no DELETE, automatic expiry, reset, cascade, direct access or policy.
+-- A reviewed account-deletion/tombstone policy remains required.
+
+-- Only server-side callers with service_role may use wrappers. The server must
+-- bind arguments to getUser/getClaims and a signed checkpoint; this SQL cannot
+-- authenticate a browser when invoked using a privileged service credential.
+CREATE FUNCTION app_private.draft_completion_context(p_user uuid,p_session uuid,p_intent uuid,p_subject_hash text,p_require_enabled boolean,p_require_live boolean)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE v_intent app_private.signup_intents; v_admission app_private.user_admission;
+BEGIN
+ IF p_user IS NULL OR p_session IS NULL OR p_intent IS NULL OR p_subject_hash IS NULL OR p_subject_hash !~ '^[a-f0-9]{64}$' OR p_require_enabled IS NULL OR p_require_live IS NULL THEN
+  RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501';
+ END IF;
+ PERFORM 1 FROM auth.users WHERE id=p_user FOR SHARE;
+ PERFORM 1 FROM auth.sessions WHERE id=p_session AND user_id=p_user FOR SHARE;
+ PERFORM 1 FROM public.user_moderation WHERE user_id=p_user FOR SHARE;
+ IF app_private.signup_pending_identity(p_user,p_session) IS NOT TRUE THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ PERFORM pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(p_user::text || ':signup',0));
+ IF p_require_enabled THEN
+  PERFORM 1 FROM app_private.signup_settings WHERE singleton AND enabled FOR SHARE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ END IF;
+ SELECT * INTO v_intent FROM app_private.signup_intents WHERE id=p_intent FOR UPDATE;
+ IF NOT FOUND OR v_intent.user_id IS DISTINCT FROM p_user OR v_intent.subject_hash IS DISTINCT FROM p_subject_hash
+  OR v_intent.state IS DISTINCT FROM 'bound' OR v_intent.expires_at IS NULL OR (p_require_live AND v_intent.expires_at<=pg_catalog.clock_timestamp()) THEN
+  RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501';
+ END IF;
+ SELECT * INTO v_admission FROM app_private.user_admission WHERE user_id=p_user FOR UPDATE;
+ IF NOT FOUND OR v_admission.origin IS DISTINCT FROM 'unclassified' OR v_admission.state IS DISTINCT FROM 'pending' THEN
+  RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501';
+ END IF;
+ -- The admission lock may itself wait beyond the intent deadline.
+ IF p_require_live AND (v_intent.expires_at IS NULL OR v_intent.expires_at<=pg_catalog.clock_timestamp()) THEN
+  RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501';
+ END IF;
+END $$;
+REVOKE ALL ON FUNCTION app_private.draft_completion_context(uuid,uuid,uuid,text,boolean,boolean) FROM PUBLIC,anon,authenticated,service_role;
+
+CREATE FUNCTION app_private.draft_reserve_completion(p_user uuid,p_session uuid,p_intent uuid,p_subject_hash text,p_request uuid,p_terms text,p_privacy text,p_accept_origin boolean,p_origin_version text)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE i app_private.signup_intents; v_generation uuid; v_effective boolean;
+BEGIN
+ IF p_request IS NULL OR p_terms IS NULL OR p_privacy IS NULL OR p_accept_origin IS NULL THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ PERFORM app_private.draft_completion_context(p_user,p_session,p_intent,p_subject_hash,true,true);
+ SELECT * INTO i FROM app_private.signup_intents WHERE id=p_intent;
+ IF i.terms_version IS DISTINCT FROM p_terms OR i.privacy_version IS DISTINCT FROM p_privacy THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ v_effective := p_accept_origin AND i.origin IS NOT NULL;
+ IF (v_effective AND (p_origin_version IS NULL OR p_origin_version IS DISTINCT FROM i.origin_consent_version)) OR (NOT v_effective AND p_origin_version IS NOT NULL) THEN
+  RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501';
+ END IF;
+ -- A losing request cannot alter the winning decision here. Withdrawal is a
+ -- separate explicitly authorized monotonic operation below.
+ IF EXISTS(SELECT 1 FROM app_private.signup_completion_fences_draft WHERE user_id=p_user) THEN RETURN pg_catalog.jsonb_build_object('status','pending'); END IF;
+ IF NOT v_effective AND i.origin IS NOT NULL THEN
+  UPDATE app_private.signup_intents SET origin=NULL,origin_consent_version=NULL,origin_consented_at=NULL WHERE id=p_intent;
+ END IF;
+ INSERT INTO app_private.signup_completion_fences_draft(user_id,intent_id,owner_session_id,request_id,generation,phase,terms_version,privacy_version,origin_accepted,origin_consent_version)
+ VALUES(p_user,p_intent,p_session,p_request,pg_catalog.gen_random_uuid(),'reserved',p_terms,p_privacy,v_effective,CASE WHEN v_effective THEN p_origin_version ELSE NULL END)
+ ON CONFLICT DO NOTHING RETURNING generation INTO v_generation;
+ IF v_generation IS NULL THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ RETURN pg_catalog.jsonb_build_object('status','acquired','requestId',p_request,'generation',v_generation);
+END $$;
+
+CREATE FUNCTION app_private.draft_start_completion(p_user uuid,p_session uuid,p_intent uuid,p_subject_hash text,p_request uuid,p_generation uuid)
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+BEGIN
+ PERFORM app_private.draft_completion_context(p_user,p_session,p_intent,p_subject_hash,true,true);
+ UPDATE app_private.signup_completion_fences_draft f SET phase='auth_in_flight',updated_at=pg_catalog.now()
+ WHERE f.user_id=p_user AND f.intent_id=p_intent AND f.owner_session_id=p_session AND f.request_id=p_request AND f.generation=p_generation AND f.phase='reserved'
+ AND EXISTS(SELECT 1 FROM app_private.signup_intents i WHERE i.id=p_intent AND i.terms_version=f.terms_version AND i.privacy_version=f.privacy_version);
+ RETURN FOUND;
+END $$;
+
+CREATE FUNCTION app_private.draft_mark_uncertain(p_user uuid,p_session uuid,p_intent uuid,p_subject_hash text,p_request uuid,p_generation uuid)
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+BEGIN
+ PERFORM app_private.draft_completion_context(p_user,p_session,p_intent,p_subject_hash,false,false);
+ UPDATE app_private.signup_completion_fences_draft SET phase='uncertain',updated_at=pg_catalog.now()
+ WHERE user_id=p_user AND intent_id=p_intent AND owner_session_id=p_session AND request_id=p_request AND generation=p_generation AND phase='auth_in_flight';
+ RETURN FOUND;
+END $$;
+
+-- This only records a trusted server's assertion. No SQL proof exists that
+-- GoTrue completed. A full implementation must atomically create any password
+-- proof and revalidate Auth identity. This draft MUST NOT be used for admission.
+CREATE FUNCTION app_private.draft_ack_completion(p_user uuid,p_session uuid,p_intent uuid,p_subject_hash text,p_request uuid,p_generation uuid)
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+BEGIN
+ PERFORM app_private.draft_completion_context(p_user,p_session,p_intent,p_subject_hash,true,true);
+ UPDATE app_private.signup_completion_fences_draft SET phase='password_acknowledged',updated_at=pg_catalog.now()
+ WHERE user_id=p_user AND intent_id=p_intent AND owner_session_id=p_session AND request_id=p_request AND generation=p_generation AND phase='auth_in_flight';
+ RETURN FOUND;
+END $$;
+
+-- Pending-intent withdrawal only. Post-admission withdrawal and cross-version
+-- coordination with existing signup_origin_withdraw remain unresolved.
+CREATE FUNCTION app_private.draft_withdraw_pending_origin(p_user uuid,p_session uuid,p_intent uuid,p_subject_hash text)
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+BEGIN
+ PERFORM app_private.draft_completion_context(p_user,p_session,p_intent,p_subject_hash,false,false);
+ UPDATE app_private.signup_intents SET origin=NULL,origin_consent_version=NULL,origin_consented_at=NULL WHERE id=p_intent;
+ UPDATE app_private.signup_completion_fences_draft SET origin_withdrawn=true,updated_at=pg_catalog.now() WHERE user_id=p_user AND intent_id=p_intent;
+ RETURN true;
+END $$;
+
+REVOKE ALL ON FUNCTION app_private.draft_reserve_completion(uuid,uuid,uuid,text,uuid,text,text,boolean,text),app_private.draft_start_completion(uuid,uuid,uuid,text,uuid,uuid),app_private.draft_mark_uncertain(uuid,uuid,uuid,text,uuid,uuid),app_private.draft_ack_completion(uuid,uuid,uuid,text,uuid,uuid),app_private.draft_withdraw_pending_origin(uuid,uuid,uuid,text) FROM PUBLIC,anon,authenticated,service_role;
+-- Private functions only: no public wrappers are exposed in this draft.
+GRANT EXECUTE ON FUNCTION app_private.draft_reserve_completion(uuid,uuid,uuid,text,uuid,text,text,boolean,text),app_private.draft_start_completion(uuid,uuid,uuid,text,uuid,uuid),app_private.draft_mark_uncertain(uuid,uuid,uuid,text,uuid,uuid),app_private.draft_ack_completion(uuid,uuid,uuid,text,uuid,uuid),app_private.draft_withdraw_pending_origin(uuid,uuid,uuid,text) TO service_role;
+-- END REVIEWED COMPONENT reservation
+
+-- BEGIN REVIEWED COMPONENT transactional (sha256 6009cee4b32db17c1504e4019f202f732b523bf331dc6ed71229cfaeeafcda05)
+-- UNREVIEWED SCRATCH ONLY. Not a migration. Do not apply on any persistent DB.
+-- Depends on unapproved 028 and #190 draft; neither is assumed installed.
+
+
+
+-- Distinguishes retention expiry from a user's explicit withdrawal.
+ALTER TABLE app_private.signup_completion_fences_draft ADD COLUMN origin_expired boolean NOT NULL DEFAULT false;
+
+-- Revoke bypasses only in this candidate transaction. The actual cutover must
+-- additionally fence all old roles, open requests, versions and direct callers.
+REVOKE ALL ON FUNCTION app_private.draft_ack_completion(uuid,uuid,uuid,text,uuid,uuid) FROM PUBLIC,anon,authenticated,service_role;
+REVOKE ALL ON FUNCTION app_private.signup_attest_password_reset(uuid,uuid,uuid,text),public.signup_attest_password_reset(uuid,uuid,uuid,text),app_private.signup_complete(uuid,uuid,uuid,text,text,text,boolean,text),public.signup_complete(uuid,uuid,uuid,text,text,text,boolean,text) FROM PUBLIC,anon,authenticated,service_role;
+
+-- Server assertion only: no SQL statement can prove the external GoTrue effect.
+-- Identity and same session must be verified again by trusted server after Auth.
+CREATE FUNCTION app_private.draft_ack_with_proof(p_user uuid,p_session uuid,p_intent uuid,p_subject_hash text,p_request uuid,p_generation uuid)
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE f app_private.signup_completion_fences_draft; i app_private.signup_intents;
+BEGIN
+ PERFORM app_private.draft_completion_context(p_user,p_session,p_intent,p_subject_hash,true,true);
+ SELECT * INTO f FROM app_private.signup_completion_fences_draft WHERE user_id=p_user AND intent_id=p_intent
+  AND owner_session_id=p_session AND request_id=p_request AND generation=p_generation FOR UPDATE;
+ IF NOT FOUND OR f.phase IS DISTINCT FROM 'auth_in_flight' THEN RETURN false; END IF;
+ SELECT * INTO STRICT i FROM app_private.signup_intents WHERE id=p_intent;
+ INSERT INTO app_private.signup_password_proofs(intent_id,user_id,session_id,expires_at)
+ VALUES(i.id,p_user,p_session,least(i.expires_at,pg_catalog.now()+interval '10 minutes'))
+ ON CONFLICT(intent_id) DO UPDATE SET user_id=excluded.user_id,session_id=excluded.session_id,
+  expires_at=excluded.expires_at,consumed_at=NULL
+ WHERE app_private.signup_password_proofs.consumed_at IS NULL;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ UPDATE app_private.signup_completion_fences_draft SET phase='password_acknowledged',updated_at=pg_catalog.now()
+  WHERE user_id=p_user AND intent_id=p_intent AND owner_session_id=p_session AND request_id=p_request
+   AND generation=p_generation AND phase='auth_in_flight';
+ IF NOT FOUND THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ RETURN true;
+END $$;
+
+-- Read-only idempotent confirmation. The trusted server binds these IDs to a
+-- verified session and signed checkpoint; this function is not browser auth.
+-- No subject hash is needed: retention may scrub it after admission.
+CREATE FUNCTION app_private.draft_confirm_complete(p_user uuid,p_session uuid,p_intent uuid)
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+BEGIN
+ IF p_user IS NULL OR p_session IS NULL OR p_intent IS NULL THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ PERFORM 1 FROM auth.users WHERE id=p_user FOR SHARE;
+ PERFORM 1 FROM auth.sessions WHERE id=p_session AND user_id=p_user FOR SHARE;
+ PERFORM 1 FROM public.user_moderation WHERE user_id=p_user FOR SHARE;
+ IF app_private.signup_pending_identity(p_user,p_session) IS NOT TRUE THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ PERFORM pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(p_user::text || ':signup',0));
+ PERFORM 1 FROM app_private.signup_intents WHERE id=p_intent AND user_id=p_user AND state='consumed' FOR SHARE;
+ IF NOT FOUND THEN RETURN false; END IF;
+ PERFORM 1 FROM app_private.user_admission WHERE user_id=p_user AND origin='public' AND state='admitted' FOR SHARE;
+ IF NOT FOUND THEN RETURN false; END IF;
+ PERFORM 1 FROM app_private.signup_completion_fences_draft WHERE user_id=p_user AND owner_session_id=p_session AND intent_id=p_intent AND phase='complete' FOR SHARE;
+ IF NOT FOUND THEN RETURN false; END IF;
+ RETURN EXISTS(SELECT 1 FROM app_private.onboarding_entries WHERE user_id=p_user AND source_kind='public' AND source_intent=p_intent);
+END $$;
+
+-- Input versions are supplied by trusted server; SQL does not independently
+-- discover the currently published legal or origin-consent document versions.
+CREATE FUNCTION app_private.draft_finish_fenced(p_user uuid,p_session uuid,p_intent uuid,p_subject_hash text,p_request uuid,p_generation uuid,p_current_terms text,p_current_privacy text,p_current_origin text)
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE f app_private.signup_completion_fences_draft; i app_private.signup_intents;
+BEGIN
+ -- Only a positively verified completed operation may bypass bound/pending;
+ -- stale request/generation must not be reported as a matching finish.
+ IF app_private.draft_confirm_complete(p_user,p_session,p_intent) THEN
+  RETURN EXISTS(SELECT 1 FROM app_private.signup_completion_fences_draft WHERE user_id=p_user AND owner_session_id=p_session
+   AND intent_id=p_intent AND request_id=p_request AND generation=p_generation AND phase='complete');
+ END IF;
+ PERFORM app_private.draft_completion_context(p_user,p_session,p_intent,p_subject_hash,true,true);
+ SELECT * INTO f FROM app_private.signup_completion_fences_draft WHERE user_id=p_user AND intent_id=p_intent
+  AND owner_session_id=p_session AND request_id=p_request AND generation=p_generation FOR UPDATE;
+ IF NOT FOUND OR f.phase IS DISTINCT FROM 'password_acknowledged' THEN RETURN false; END IF;
+ SELECT * INTO STRICT i FROM app_private.signup_intents WHERE id=p_intent;
+ IF p_current_terms IS NULL OR p_current_privacy IS NULL OR f.terms_version IS DISTINCT FROM p_current_terms
+  OR f.privacy_version IS DISTINCT FROM p_current_privacy OR i.terms_version IS DISTINCT FROM f.terms_version
+  OR i.privacy_version IS DISTINCT FROM f.privacy_version THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ IF NOT f.origin_accepted AND i.origin IS NOT NULL THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ IF f.origin_accepted AND NOT f.origin_withdrawn AND NOT f.origin_expired AND i.origin IS NOT NULL AND
+  (p_current_origin IS NULL OR f.origin_consent_version IS DISTINCT FROM p_current_origin
+   OR i.origin_consent_version IS DISTINCT FROM f.origin_consent_version) THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ -- The proof row may be contended; check its expiry only after acquiring it.
+ PERFORM 1 FROM app_private.signup_password_proofs WHERE intent_id=i.id FOR UPDATE;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ UPDATE app_private.signup_password_proofs SET consumed_at=pg_catalog.now()
+  WHERE intent_id=i.id AND user_id=p_user AND session_id=p_session AND consumed_at IS NULL AND expires_at>pg_catalog.clock_timestamp();
+ IF NOT FOUND THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ -- Recheck after all locks and proof work. A deadline crossed while waiting
+ -- must not turn a stale consent into a newly persisted attribution.
+ IF i.expires_at IS NULL OR i.expires_at<=pg_catalog.clock_timestamp() THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ IF f.origin_accepted AND NOT f.origin_withdrawn AND NOT f.origin_expired AND i.origin IS NOT NULL THEN
+  INSERT INTO app_private.signup_origins(user_id,origin,consent_version,consented_at,expires_at)
+   VALUES(p_user,i.origin,i.origin_consent_version,pg_catalog.now(),pg_catalog.now()+interval '12 months');
+  PERFORM app_private.append_event(p_user,'signup_origin',p_user,'created','web',NULL,pg_catalog.jsonb_build_object('consent','granted'));
+ END IF;
+ UPDATE app_private.signup_intents SET state='consumed',consumed_at=pg_catalog.now(),origin=NULL,origin_consent_version=NULL,origin_consented_at=NULL
+  WHERE id=i.id AND user_id=p_user AND state='bound';
+ IF NOT FOUND THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ UPDATE app_private.user_admission SET origin='public',state='admitted',admitted_at=pg_catalog.now()
+  WHERE user_id=p_user AND origin='unclassified' AND state='pending';
+ IF NOT FOUND THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ INSERT INTO app_private.onboarding_entries(user_id,source_operation,source_kind,source_intent) VALUES(p_user,NULL,'public',i.id);
+ PERFORM app_private.append_event(p_user,'signup_admission',p_user,'created','web',NULL,pg_catalog.jsonb_build_object('user_id',p_user,'origin','public'));
+ PERFORM app_private.append_event(p_user,'onboarding_entry',p_user,'created','web',NULL,pg_catalog.jsonb_build_object('user_id',p_user,'eligibility','new_explicit','schema_version',1));
+ UPDATE app_private.signup_completion_fences_draft SET phase='complete',updated_at=pg_catalog.now()
+  WHERE user_id=p_user AND intent_id=p_intent AND owner_session_id=p_session AND request_id=p_request
+   AND generation=p_generation AND phase='password_acknowledged';
+ IF NOT FOUND THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ RETURN true;
+END $$;
+
+-- Privacy withdrawal is independent of the forced-password flag. It still
+-- requires an active verified owner/session and a non-blocked confirmed user.
+CREATE FUNCTION app_private.draft_withdraw_identity(p_user uuid,p_session uuid)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path='' AS $$
+ SELECT p_user IS NOT NULL AND p_session IS NOT NULL AND EXISTS(
+  SELECT 1 FROM auth.users u JOIN auth.sessions s ON s.user_id=u.id JOIN public.user_moderation m ON m.user_id=u.id
+  WHERE u.id=p_user AND s.id=p_session AND u.email_confirmed_at IS NOT NULL AND NOT u.is_anonymous
+   AND u.deleted_at IS NULL AND (u.banned_until IS NULL OR u.banned_until<=pg_catalog.now())
+   AND (s.not_after IS NULL OR s.not_after>pg_catalog.now()) AND m.status='active');
+$$;
+REVOKE ALL ON FUNCTION app_private.draft_withdraw_identity(uuid,uuid) FROM PUBLIC,anon,authenticated,service_role;
+
+-- Monotonic withdrawal across pending and completed states, on the same
+-- per-user signup lock as reserve and finish. No new consent is written.
+CREATE FUNCTION app_private.draft_withdraw_origin(p_user uuid,p_session uuid,p_intent uuid,p_subject_hash text)
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE i app_private.signup_intents; a app_private.user_admission; f app_private.signup_completion_fences_draft; removed boolean;
+BEGIN
+ IF p_user IS NULL OR p_session IS NULL OR p_intent IS NULL THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ PERFORM 1 FROM auth.users WHERE id=p_user FOR SHARE;
+ PERFORM 1 FROM auth.sessions WHERE id=p_session AND user_id=p_user FOR SHARE;
+ PERFORM 1 FROM public.user_moderation WHERE user_id=p_user FOR SHARE;
+ IF app_private.draft_withdraw_identity(p_user,p_session) IS NOT TRUE THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ PERFORM pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(p_user::text || ':signup',0));
+ SELECT * INTO i FROM app_private.signup_intents WHERE id=p_intent AND user_id=p_user FOR UPDATE;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ SELECT * INTO a FROM app_private.user_admission WHERE user_id=p_user FOR UPDATE;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ SELECT * INTO f FROM app_private.signup_completion_fences_draft WHERE user_id=p_user FOR UPDATE;
+ IF FOUND AND f.intent_id IS DISTINCT FROM p_intent THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ IF i.state='bound' AND a.origin='unclassified' AND a.state='pending' AND i.subject_hash IS NOT DISTINCT FROM p_subject_hash AND p_subject_hash ~ '^[a-f0-9]{64}$' THEN
+  UPDATE app_private.signup_intents SET origin=NULL,origin_consent_version=NULL,origin_consented_at=NULL WHERE id=p_intent;
+  UPDATE app_private.signup_completion_fences_draft SET origin_withdrawn=true,updated_at=pg_catalog.now() WHERE user_id=p_user AND intent_id=p_intent;
+  RETURN true;
+ END IF;
+ -- A current verified session of the same owner may withdraw after admission;
+ -- unlike idempotent finish, this does not require the original session.
+ IF i.state='consumed' AND a.origin='public' AND a.state='admitted' AND f.phase='complete' THEN
+  UPDATE app_private.signup_completion_fences_draft SET origin_withdrawn=true,updated_at=pg_catalog.now() WHERE user_id=p_user AND intent_id=p_intent;
+  DELETE FROM app_private.signup_origins WHERE user_id=p_user;
+  removed:=FOUND;
+  IF removed THEN PERFORM app_private.append_event(p_user,'signup_origin',p_user,'deleted','web',NULL,pg_catalog.jsonb_build_object('consent','withdrawn')); END IF;
+  RETURN true;
+ END IF;
+ RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501';
+END $$;
+
+-- Separate authenticated settings command: no browser-supplied intent, legal
+-- version, checkpoint or password. Runtime derives p_user/p_session from Auth.
+CREATE FUNCTION app_private.draft_withdraw_current(p_user uuid,p_session uuid)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE intent_changed integer:=0; stored_changed integer:=0;
+BEGIN
+ IF p_user IS NULL OR p_session IS NULL THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ PERFORM 1 FROM auth.users WHERE id=p_user FOR SHARE;
+ PERFORM 1 FROM auth.sessions WHERE id=p_session AND user_id=p_user FOR SHARE;
+ PERFORM 1 FROM public.user_moderation WHERE user_id=p_user FOR SHARE;
+ IF app_private.draft_withdraw_identity(p_user,p_session) IS NOT TRUE THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ PERFORM pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(p_user::text || ':signup',0));
+ PERFORM 1 FROM app_private.signup_intents WHERE user_id=p_user FOR UPDATE;
+ UPDATE app_private.signup_intents SET origin=NULL,origin_consent_version=NULL,origin_consented_at=NULL WHERE user_id=p_user AND state='bound' AND origin IS NOT NULL;
+ GET DIAGNOSTICS intent_changed=ROW_COUNT;
+ PERFORM 1 FROM app_private.user_admission WHERE user_id=p_user FOR UPDATE;
+ PERFORM 1 FROM app_private.signup_completion_fences_draft WHERE user_id=p_user FOR UPDATE;
+ UPDATE app_private.signup_completion_fences_draft SET origin_withdrawn=true,updated_at=pg_catalog.now() WHERE user_id=p_user AND NOT origin_withdrawn;
+ DELETE FROM app_private.signup_origins WHERE user_id=p_user;
+ GET DIAGNOSTICS stored_changed=ROW_COUNT;
+ IF intent_changed+stored_changed>0 THEN
+  PERFORM app_private.append_event(p_user,'signup_origin',p_user,'deleted','web',NULL,pg_catalog.jsonb_build_object('consent','withdrawn'));
+  RETURN pg_catalog.jsonb_build_object('status','withdrawn');
+ END IF;
+ RETURN pg_catalog.jsonb_build_object('status','absent');
+END $$;
+
+-- Existing public wrapper is left in place and delegates through this private
+-- function. Actual replacement requires prior exact-body/ACL qualification.
+CREATE OR REPLACE FUNCTION app_private.signup_origin_withdraw(p_user uuid,p_session uuid)
+RETURNS jsonb LANGUAGE sql SECURITY DEFINER SET search_path='' AS $$
+ SELECT app_private.draft_withdraw_current(p_user,p_session)
+$$;
+
+REVOKE ALL ON FUNCTION app_private.draft_ack_with_proof(uuid,uuid,uuid,text,uuid,uuid),app_private.draft_confirm_complete(uuid,uuid,uuid),app_private.draft_finish_fenced(uuid,uuid,uuid,text,uuid,uuid,text,text,text),app_private.draft_withdraw_origin(uuid,uuid,uuid,text),app_private.draft_withdraw_current(uuid,uuid) FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION app_private.draft_ack_with_proof(uuid,uuid,uuid,text,uuid,uuid),app_private.draft_confirm_complete(uuid,uuid,uuid),app_private.draft_finish_fenced(uuid,uuid,uuid,text,uuid,uuid,text,text,text),app_private.draft_withdraw_origin(uuid,uuid,uuid,text),app_private.draft_withdraw_current(uuid,uuid) TO service_role;
+-- No public wrappers, no provider recovery, no production cutover.
+-- END REVIEWED COMPONENT transactional
+
+-- BEGIN REVIEWED COMPONENT wrappers (sha256 ac0058e20faf5e90503b1e7a6a17b72d9f598f1a1e4c5d2c883db0d11abf4567)
+-- UNREVIEWED SCRATCH. NEVER APPLY. Depends on guarded reservation and transactional drafts.
+
+
+
+CREATE FUNCTION public.signup_fence_reserve(p_user uuid,p_session uuid,p_intent uuid,p_subject_hash text,p_request uuid,p_terms text,p_privacy text,p_accept_origin boolean,p_origin_version text) RETURNS jsonb
+LANGUAGE sql SECURITY DEFINER SET search_path='' AS $$ SELECT app_private.draft_reserve_completion(p_user,p_session,p_intent,p_subject_hash,p_request,p_terms,p_privacy,p_accept_origin,p_origin_version) $$;
+REVOKE ALL ON FUNCTION public.signup_fence_reserve(uuid,uuid,uuid,text,uuid,text,text,boolean,text) FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION public.signup_fence_reserve(uuid,uuid,uuid,text,uuid,text,text,boolean,text) TO service_role;
+
+CREATE FUNCTION public.signup_fence_start(p_user uuid,p_session uuid,p_intent uuid,p_subject_hash text,p_request uuid,p_generation uuid) RETURNS boolean
+LANGUAGE sql SECURITY DEFINER SET search_path='' AS $$ SELECT app_private.draft_start_completion(p_user,p_session,p_intent,p_subject_hash,p_request,p_generation) $$;
+REVOKE ALL ON FUNCTION public.signup_fence_start(uuid,uuid,uuid,text,uuid,uuid) FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION public.signup_fence_start(uuid,uuid,uuid,text,uuid,uuid) TO service_role;
+
+CREATE FUNCTION public.signup_fence_uncertain(p_user uuid,p_session uuid,p_intent uuid,p_subject_hash text,p_request uuid,p_generation uuid) RETURNS boolean
+LANGUAGE sql SECURITY DEFINER SET search_path='' AS $$ SELECT app_private.draft_mark_uncertain(p_user,p_session,p_intent,p_subject_hash,p_request,p_generation) $$;
+REVOKE ALL ON FUNCTION public.signup_fence_uncertain(uuid,uuid,uuid,text,uuid,uuid) FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION public.signup_fence_uncertain(uuid,uuid,uuid,text,uuid,uuid) TO service_role;
+
+CREATE FUNCTION public.signup_fence_ack(p_user uuid,p_session uuid,p_intent uuid,p_subject_hash text,p_request uuid,p_generation uuid) RETURNS boolean
+LANGUAGE sql SECURITY DEFINER SET search_path='' AS $$ SELECT app_private.draft_ack_with_proof(p_user,p_session,p_intent,p_subject_hash,p_request,p_generation) $$;
+REVOKE ALL ON FUNCTION public.signup_fence_ack(uuid,uuid,uuid,text,uuid,uuid) FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION public.signup_fence_ack(uuid,uuid,uuid,text,uuid,uuid) TO service_role;
+
+CREATE FUNCTION public.signup_fence_finish(p_user uuid,p_session uuid,p_intent uuid,p_subject_hash text,p_request uuid,p_generation uuid,p_current_terms text,p_current_privacy text,p_current_origin text) RETURNS boolean
+LANGUAGE sql SECURITY DEFINER SET search_path='' AS $$ SELECT app_private.draft_finish_fenced(p_user,p_session,p_intent,p_subject_hash,p_request,p_generation,p_current_terms,p_current_privacy,p_current_origin) $$;
+REVOKE ALL ON FUNCTION public.signup_fence_finish(uuid,uuid,uuid,text,uuid,uuid,text,text,text) FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION public.signup_fence_finish(uuid,uuid,uuid,text,uuid,uuid,text,text,text) TO service_role;
+
+CREATE FUNCTION public.signup_fence_confirm(p_user uuid,p_session uuid,p_intent uuid) RETURNS boolean
+LANGUAGE sql SECURITY DEFINER SET search_path='' AS $$ SELECT app_private.draft_confirm_complete(p_user,p_session,p_intent) $$;
+REVOKE ALL ON FUNCTION public.signup_fence_confirm(uuid,uuid,uuid) FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION public.signup_fence_confirm(uuid,uuid,uuid) TO service_role;
+
+CREATE FUNCTION public.signup_fence_withdraw(p_user uuid,p_session uuid) RETURNS jsonb
+LANGUAGE sql SECURITY DEFINER SET search_path='' AS $$ SELECT app_private.draft_withdraw_current(p_user,p_session) $$;
+REVOKE ALL ON FUNCTION public.signup_fence_withdraw(uuid,uuid) FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION public.signup_fence_withdraw(uuid,uuid) TO service_role;
+-- END REVIEWED COMPONENT wrappers
+
+-- Close the remaining legacy discard entrypoint before the single commit.
+REVOKE ALL ON FUNCTION app_private.signup_discard_pending_origin(uuid,uuid,uuid,text),public.signup_discard_pending_origin(uuid,uuid,uuid,text) FROM PUBLIC,anon,authenticated,service_role;
+
+
+-- FEEDBACK SOURCE SHA256 62d32577c5946474895c6e6e485b68d0de4fac034442b4b296430b6b09b85f0b
+-- Feedback's standalone event guard is omitted only here: the admission pin and lock are held in this transaction.
+DO $fresh_only$ BEGIN
+ IF current_user <> 'postgres' OR pg_catalog.to_regclass('app_private.feedback_requests') IS NOT NULL
+ OR pg_catalog.to_regclass('app_private.feedback_barriers_draft') IS NOT NULL
+ OR pg_catalog.to_regprocedure('app_private.feedback_submit(uuid,uuid,uuid,text,text)') IS NOT NULL
+ OR pg_catalog.to_regprocedure('public.feedback_submit(uuid,uuid,uuid,text,text)') IS NOT NULL
+ OR pg_catalog.to_regprocedure('app_private.feedback_list(uuid,uuid,timestamp with time zone,uuid)') IS NOT NULL
+ OR pg_catalog.to_regprocedure('public.feedback_list(uuid,uuid,timestamp with time zone,uuid)') IS NOT NULL
+ THEN RAISE EXCEPTION 'FEEDBACK_FRESH_FOUNDATION_REFUSED'; END IF;
+END $fresh_only$;
+set local lock_timeout='5s';
+set local statement_timeout='60s';
+
+create table app_private.feedback_requests (
+ id uuid primary key default gen_random_uuid(),
+ user_id uuid not null references auth.users(id) on delete cascade,
+ client_id uuid not null,
+ category text not null check (category in ('suggestion','complaint','problem','improvement','other')),
+ message text not null check (char_length(btrim(message)) between 10 and 5000),
+ created_at timestamptz not null default now(),
+ unique (user_id,client_id)
+);
+alter table app_private.feedback_requests enable row level security;
+revoke all on app_private.feedback_requests from public,anon,authenticated,service_role;
+create index feedback_requests_owner_created on app_private.feedback_requests(user_id,created_at desc,id desc);
+
+do $$ declare expression text; begin
+ select pg_get_expr(conbin,conrelid) into strict expression from pg_constraint
+  where conrelid='public.domain_events'::regclass and conname='domain_events_entity_type_check';
+ alter table public.domain_events drop constraint domain_events_entity_type_check;
+ execute format('alter table public.domain_events add constraint domain_events_entity_type_check check ((%s) or entity_type = ''feedback_request'')',expression);
+end $$;
+
+create function app_private.feedback_list(p_user uuid,p_session uuid,p_before timestamptz,p_before_id uuid) returns jsonb
+language plpgsql security definer set search_path='' as $$
+begin
+ perform app_private.require_actor(p_user,p_session);
+ if (p_before is null)<>(p_before_id is null) then raise exception 'Invalid cursor.' using errcode='22023'; end if;
+ return coalesce((select jsonb_agg(jsonb_build_object('id',f.id,'category',f.category,'text',f.message,'status','received','createdAt',f.created_at) order by f.created_at desc,f.id desc)
+  from (select * from app_private.feedback_requests where user_id=p_user and (p_before is null or (created_at,id)<(p_before,p_before_id)) order by created_at desc,id desc limit 51) f),'[]'::jsonb);
+end $$;
+
+create function public.feedback_list(p_user uuid,p_session uuid,p_before timestamptz,p_before_id uuid) returns jsonb
+language sql security invoker set search_path='' as $$ select app_private.feedback_list(p_user,p_session,p_before,p_before_id) $$;
+revoke all on function app_private.feedback_list(uuid,uuid,timestamptz,uuid), public.feedback_list(uuid,uuid,timestamptz,uuid) from public,anon,authenticated,service_role;
+grant execute on function app_private.feedback_list(uuid,uuid,timestamptz,uuid), public.feedback_list(uuid,uuid,timestamptz,uuid) to service_role;
+
+CREATE TABLE app_private.feedback_barriers_draft (
+ user_id uuid NOT NULL,
+ client_id uuid NOT NULL,
+ phase text NOT NULL CHECK (phase IN ('submitted','cancelled')),
+ feedback_id uuid,
+ created_at timestamptz NOT NULL DEFAULT pg_catalog.now(),
+ PRIMARY KEY(user_id,client_id),
+ CHECK ((phase='submitted' AND feedback_id IS NOT NULL) OR (phase='cancelled' AND feedback_id IS NULL))
+);
+ALTER TABLE app_private.feedback_barriers_draft ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON app_private.feedback_barriers_draft FROM PUBLIC,anon,authenticated,service_role;
+-- Deliberately no TTL/cascade or FK: retention, deletion and tombstones require
+-- a reviewed design. Never interpret this sketch as an approved policy.
+
+-- This helper serializes both operations; PK is the uniqueness constraint.
+-- Hash collisions only over-serialize. Existing writers DO NOT take this lock.
+CREATE FUNCTION app_private.draft_feedback_lock(p_user uuid,p_client uuid) RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$ BEGIN
+ IF p_user IS NULL OR p_client IS NULL THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='42501'; END IF;
+ PERFORM pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(p_user::text || ':' || p_client::text || ':feedback',0));
+END $$;
+REVOKE ALL ON FUNCTION app_private.draft_feedback_lock(uuid,uuid) FROM PUBLIC,anon,authenticated,service_role;
+
+CREATE FUNCTION app_private.draft_feedback_actor(p_user uuid,p_session uuid) RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$ BEGIN
+ PERFORM 1 FROM auth.users WHERE id=p_user FOR SHARE;
+ PERFORM 1 FROM auth.sessions WHERE id=p_session AND user_id=p_user FOR SHARE;
+ PERFORM 1 FROM public.user_moderation WHERE user_id=p_user FOR SHARE;
+ PERFORM app_private.require_actor(p_user,p_session);
+END $$;
+REVOKE ALL ON FUNCTION app_private.draft_feedback_actor(uuid,uuid) FROM PUBLIC,anon,authenticated,service_role;
+
+CREATE FUNCTION app_private.draft_feedback_submit(p_user uuid,p_session uuid,p_client uuid,p_category text,p_message text) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE v_barrier app_private.feedback_barriers_draft; v_row app_private.feedback_requests;
+BEGIN
+ PERFORM app_private.draft_feedback_actor(p_user,p_session);
+ IF p_client IS NULL OR p_category IS NULL OR p_category NOT IN ('suggestion','complaint','problem','improvement','other')
+  OR p_message IS NULL OR pg_catalog.char_length(pg_catalog.btrim(p_message)) NOT BETWEEN 10 AND 5000
+  OR p_message ~ '[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]' THEN RAISE EXCEPTION 'Invalid feedback.' USING ERRCODE='22023'; END IF;
+ PERFORM app_private.draft_feedback_lock(p_user,p_client);
+ SELECT * INTO v_barrier FROM app_private.feedback_barriers_draft WHERE user_id=p_user AND client_id=p_client FOR UPDATE;
+ IF FOUND THEN
+  IF v_barrier.phase='cancelled' THEN
+   IF EXISTS(SELECT 1 FROM app_private.feedback_requests WHERE user_id=p_user AND client_id=p_client) THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='55000'; END IF;
+   RETURN pg_catalog.jsonb_build_object('status','cancelled','clientId',p_client);
+  END IF;
+  SELECT * INTO v_row FROM app_private.feedback_requests WHERE id=v_barrier.feedback_id AND user_id=p_user AND client_id=p_client;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='55000'; END IF;
+  IF v_row.category IS DISTINCT FROM p_category OR v_row.message IS DISTINCT FROM pg_catalog.btrim(p_message) THEN RAISE EXCEPTION 'Conflicting request.' USING ERRCODE='23505'; END IF;
+ ELSE
+  -- A committed legacy row may be adopted only under the same keyed lock.
+  SELECT * INTO v_row FROM app_private.feedback_requests WHERE user_id=p_user AND client_id=p_client FOR UPDATE;
+  IF FOUND THEN
+   IF v_row.category IS DISTINCT FROM p_category OR v_row.message IS DISTINCT FROM pg_catalog.btrim(p_message) THEN RAISE EXCEPTION 'Conflicting request.' USING ERRCODE='23505'; END IF;
+  ELSE
+   INSERT INTO app_private.feedback_requests(user_id,client_id,category,message) VALUES(p_user,p_client,p_category,pg_catalog.btrim(p_message)) RETURNING * INTO v_row;
+   PERFORM app_private.append_event(p_user,'feedback_request',v_row.id,'created','web',NULL,
+    pg_catalog.jsonb_build_object('id',v_row.id,'category',v_row.category,'status','received'));
+  END IF;
+  INSERT INTO app_private.feedback_barriers_draft(user_id,client_id,phase,feedback_id) VALUES(p_user,p_client,'submitted',v_row.id);
+ END IF;
+ RETURN pg_catalog.jsonb_build_object('status','submitted','clientId',p_client,'feedbackId',v_row.id);
+END $$;
+
+CREATE FUNCTION app_private.draft_feedback_cancel(p_user uuid,p_session uuid,p_client uuid) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE v_barrier app_private.feedback_barriers_draft; v_legacy_id uuid;
+BEGIN
+ PERFORM app_private.draft_feedback_actor(p_user,p_session);
+ IF p_client IS NULL THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='42501'; END IF;
+ PERFORM app_private.draft_feedback_lock(p_user,p_client);
+ SELECT * INTO v_barrier FROM app_private.feedback_barriers_draft WHERE user_id=p_user AND client_id=p_client FOR UPDATE;
+ IF NOT FOUND THEN
+  -- Only a committed same-owner legacy row proves an earlier submission.
+  SELECT id INTO v_legacy_id FROM app_private.feedback_requests WHERE user_id=p_user AND client_id=p_client FOR UPDATE;
+  IF FOUND THEN
+   INSERT INTO app_private.feedback_barriers_draft(user_id,client_id,phase,feedback_id) VALUES(p_user,p_client,'submitted',v_legacy_id);
+   RETURN pg_catalog.jsonb_build_object('status','submitted','clientId',p_client,'feedbackId',v_legacy_id);
+  END IF;
+  INSERT INTO app_private.feedback_barriers_draft(user_id,client_id,phase) VALUES(p_user,p_client,'cancelled');
+  RETURN pg_catalog.jsonb_build_object('status','cancelled','clientId',p_client);
+ END IF;
+ IF v_barrier.phase='cancelled' THEN
+   IF EXISTS(SELECT 1 FROM app_private.feedback_requests WHERE user_id=p_user AND client_id=p_client) THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='55000'; END IF;
+   RETURN pg_catalog.jsonb_build_object('status','cancelled','clientId',p_client);
+  END IF;
+ IF NOT EXISTS(SELECT 1 FROM app_private.feedback_requests WHERE id=v_barrier.feedback_id AND user_id=p_user AND client_id=p_client) THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='55000'; END IF;
+ RETURN pg_catalog.jsonb_build_object('status','submitted','clientId',p_client,'feedbackId',v_barrier.feedback_id);
+END $$;
+
+CREATE FUNCTION app_private.draft_feedback_status(p_user uuid,p_session uuid,p_client uuid) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE v_barrier app_private.feedback_barriers_draft; v_legacy_id uuid;
+BEGIN
+ PERFORM app_private.draft_feedback_actor(p_user,p_session);
+ IF p_client IS NULL THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='42501'; END IF;
+ -- Even the status path locks before adopting a committed legacy row.
+ PERFORM app_private.draft_feedback_lock(p_user,p_client);
+ SELECT * INTO v_barrier FROM app_private.feedback_barriers_draft WHERE user_id=p_user AND client_id=p_client FOR UPDATE;
+ IF NOT FOUND THEN
+  SELECT id INTO v_legacy_id FROM app_private.feedback_requests WHERE user_id=p_user AND client_id=p_client FOR UPDATE;
+  IF FOUND THEN
+   INSERT INTO app_private.feedback_barriers_draft(user_id,client_id,phase,feedback_id) VALUES(p_user,p_client,'submitted',v_legacy_id);
+   RETURN pg_catalog.jsonb_build_object('status','submitted','clientId',p_client,'feedbackId',v_legacy_id);
+  END IF;
+  RETURN pg_catalog.jsonb_build_object('status','unknown','clientId',p_client);
+ END IF;
+ IF v_barrier.phase='cancelled' THEN
+   IF EXISTS(SELECT 1 FROM app_private.feedback_requests WHERE user_id=p_user AND client_id=p_client) THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='55000'; END IF;
+   RETURN pg_catalog.jsonb_build_object('status','cancelled','clientId',p_client);
+  END IF;
+ IF NOT EXISTS(SELECT 1 FROM app_private.feedback_requests WHERE id=v_barrier.feedback_id AND user_id=p_user AND client_id=p_client) THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='55000'; END IF;
+ RETURN pg_catalog.jsonb_build_object('status','submitted','clientId',p_client,'feedbackId',v_barrier.feedback_id);
+END $$;
+
+REVOKE ALL ON FUNCTION app_private.draft_feedback_submit(uuid,uuid,uuid,text,text),app_private.draft_feedback_cancel(uuid,uuid,uuid),app_private.draft_feedback_status(uuid,uuid,uuid) FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION app_private.draft_feedback_submit(uuid,uuid,uuid,text,text),app_private.draft_feedback_cancel(uuid,uuid,uuid),app_private.draft_feedback_status(uuid,uuid,uuid) TO service_role;
+-- Guarded candidate: public wrappers delegate only to the barrier.
+CREATE FUNCTION public.feedback_barrier_submit(p_user uuid,p_session uuid,p_client uuid,p_category text,p_message text) RETURNS jsonb
+LANGUAGE sql SECURITY INVOKER SET search_path='' AS $$
+ SELECT app_private.draft_feedback_submit(p_user,p_session,p_client,p_category,p_message)
+$$;
+CREATE FUNCTION public.feedback_barrier_status(p_user uuid,p_session uuid,p_client uuid) RETURNS jsonb
+LANGUAGE sql SECURITY INVOKER SET search_path='' AS $$
+ SELECT app_private.draft_feedback_status(p_user,p_session,p_client)
+$$;
+CREATE FUNCTION public.feedback_barrier_cancel(p_user uuid,p_session uuid,p_client uuid) RETURNS jsonb
+LANGUAGE sql SECURITY INVOKER SET search_path='' AS $$
+ SELECT app_private.draft_feedback_cancel(p_user,p_session,p_client)
+$$;
+REVOKE ALL ON FUNCTION public.feedback_barrier_submit(uuid,uuid,uuid,text,text),public.feedback_barrier_status(uuid,uuid,uuid),public.feedback_barrier_cancel(uuid,uuid,uuid) FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION public.feedback_barrier_submit(uuid,uuid,uuid,text,text),public.feedback_barrier_status(uuid,uuid,uuid),public.feedback_barrier_cancel(uuid,uuid,uuid) TO service_role;
+-- Fresh installation deliberately does not create an unbarriered writer.
+DO $sc_acl$
+DECLARE signature text; actor_role text; table_name text; action_name text;
+BEGIN
+ IF pg_catalog.has_schema_privilege('service_role','app_private','USAGE') IS DISTINCT FROM true THEN RAISE EXCEPTION 'FEEDBACK_SCHEMA_ACL_REFUSED'; END IF;
+ FOREACH signature IN ARRAY ARRAY['app_private.draft_feedback_submit(uuid,uuid,uuid,text,text)','app_private.draft_feedback_status(uuid,uuid,uuid)','app_private.draft_feedback_cancel(uuid,uuid,uuid)'] LOOP
+  IF pg_catalog.has_function_privilege('anon',signature,'EXECUTE') IS DISTINCT FROM false
+   OR pg_catalog.has_function_privilege('authenticated',signature,'EXECUTE') IS DISTINCT FROM false
+   OR pg_catalog.has_function_privilege('service_role',signature,'EXECUTE') IS DISTINCT FROM true THEN RAISE EXCEPTION 'FEEDBACK_DELEGATE_ACL_REFUSED'; END IF;
+ END LOOP;
+ FOREACH signature IN ARRAY ARRAY['public.feedback_barrier_submit(uuid,uuid,uuid,text,text)','public.feedback_barrier_status(uuid,uuid,uuid)','public.feedback_barrier_cancel(uuid,uuid,uuid)'] LOOP
+  IF pg_catalog.has_function_privilege('anon',signature,'EXECUTE') IS DISTINCT FROM false
+    OR pg_catalog.has_function_privilege('authenticated',signature,'EXECUTE') IS DISTINCT FROM false
+    OR pg_catalog.has_function_privilege('service_role',signature,'EXECUTE') IS DISTINCT FROM true THEN
+   RAISE EXCEPTION 'FEEDBACK_ACL_REFUSED';
+  END IF;
+ END LOOP;
+ IF pg_catalog.to_regprocedure('public.feedback_submit(uuid,uuid,uuid,text,text)') IS NOT NULL
+  OR pg_catalog.to_regprocedure('app_private.feedback_submit(uuid,uuid,uuid,text,text)') IS NOT NULL THEN
+  RAISE EXCEPTION 'FEEDBACK_LEGACY_WRITER_REFUSED';
+ END IF;
+ FOREACH actor_role IN ARRAY ARRAY['anon','authenticated','service_role'] LOOP
+  FOREACH table_name IN ARRAY ARRAY['app_private.feedback_barriers_draft','app_private.feedback_requests'] LOOP
+   FOREACH action_name IN ARRAY ARRAY['SELECT','INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES','TRIGGER'] LOOP
+    IF pg_catalog.has_table_privilege(actor_role,table_name,action_name) IS DISTINCT FROM false THEN RAISE EXCEPTION 'FEEDBACK_TABLE_ACL_REFUSED'; END IF;
+   END LOOP;
+  END LOOP;
+ END LOOP;
+END $sc_acl$;
+
+
+-- Qualify effective standard roles and all explicit function grants.
+-- Other roles inheriting these privileges require separate deployment review.
+DO $admission_feedback_acl$
+DECLARE expected record; fn oid;
+BEGIN
+ FOR expected IN SELECT * FROM (VALUES
+  ('app_private.valid_signup_origin(jsonb)',false,false),
+  ('app_private.signup_intent_create(text,text,text,text,timestamptz,jsonb,text)',true,true),
+  ('public.signup_intent_create(text,text,text,text,timestamptz,jsonb,text)',true,false),
+  ('app_private.signup_pending_identity(uuid,uuid)',false,true),
+  ('app_private.signup_find_bound_intent(uuid,uuid,text)',true,true),
+  ('public.signup_find_bound_intent(uuid,uuid,text)',true,false),
+  ('app_private.signup_recover_verified_intent(uuid,uuid,text,text,text)',true,true),
+  ('public.signup_recover_verified_intent(uuid,uuid,text,text,text)',true,false),
+  ('app_private.signup_discard_pending_origin(uuid,uuid,uuid,text)',false,true),
+  ('public.signup_discard_pending_origin(uuid,uuid,uuid,text)',false,false),
+  ('app_private.signup_attest_password_reset(uuid,uuid,uuid,text)',false,true),
+  ('public.signup_attest_password_reset(uuid,uuid,uuid,text)',false,false),
+  ('app_private.signup_complete(uuid,uuid,uuid,text,text,text,boolean,text)',false,true),
+  ('public.signup_complete(uuid,uuid,uuid,text,text,text,boolean,text)',false,false),
+  ('app_private.signup_origin_status(uuid,uuid)',true,true),
+  ('app_private.signup_origin_withdraw(uuid,uuid)',true,true),
+  ('public.signup_origin_status(uuid,uuid)',true,false),
+  ('public.signup_origin_withdraw(uuid,uuid)',true,false),
+  ('app_private.signup_prune()',true,true),
+  ('public.signup_prune()',true,false),
+  ('app_private.admission_new_identity()',false,true),
+  ('app_private.admission_admin_completed()',false,true),
+  ('app_private.session_active(uuid,uuid)',false,true),
+  ('app_private.draft_completion_context(uuid,uuid,uuid,text,boolean,boolean)',false,true),
+  ('app_private.draft_reserve_completion(uuid,uuid,uuid,text,uuid,text,text,boolean,text)',true,true),
+  ('app_private.draft_start_completion(uuid,uuid,uuid,text,uuid,uuid)',true,true),
+  ('app_private.draft_mark_uncertain(uuid,uuid,uuid,text,uuid,uuid)',true,true),
+  ('app_private.draft_ack_completion(uuid,uuid,uuid,text,uuid,uuid)',false,true),
+  ('app_private.draft_withdraw_pending_origin(uuid,uuid,uuid,text)',true,true),
+  ('app_private.draft_ack_with_proof(uuid,uuid,uuid,text,uuid,uuid)',true,true),
+  ('app_private.draft_confirm_complete(uuid,uuid,uuid)',true,true),
+  ('app_private.draft_finish_fenced(uuid,uuid,uuid,text,uuid,uuid,text,text,text)',true,true),
+  ('app_private.draft_withdraw_identity(uuid,uuid)',false,true),
+  ('app_private.draft_withdraw_origin(uuid,uuid,uuid,text)',true,true),
+  ('app_private.draft_withdraw_current(uuid,uuid)',true,true),
+  ('public.signup_fence_reserve(uuid,uuid,uuid,text,uuid,text,text,boolean,text)',true,true),
+  ('public.signup_fence_start(uuid,uuid,uuid,text,uuid,uuid)',true,true),
+  ('public.signup_fence_uncertain(uuid,uuid,uuid,text,uuid,uuid)',true,true),
+  ('public.signup_fence_ack(uuid,uuid,uuid,text,uuid,uuid)',true,true),
+  ('public.signup_fence_finish(uuid,uuid,uuid,text,uuid,uuid,text,text,text)',true,true),
+  ('public.signup_fence_confirm(uuid,uuid,uuid)',true,true),
+  ('public.signup_fence_withdraw(uuid,uuid)',true,true),
+  ('app_private.feedback_list(uuid,uuid,timestamptz,uuid)',true,true),
+  ('public.feedback_list(uuid,uuid,timestamptz,uuid)',true,false),
+  ('app_private.draft_feedback_lock(uuid,uuid)',false,true),
+  ('app_private.draft_feedback_actor(uuid,uuid)',false,true),
+  ('app_private.draft_feedback_submit(uuid,uuid,uuid,text,text)',true,true),
+  ('app_private.draft_feedback_cancel(uuid,uuid,uuid)',true,true),
+  ('app_private.draft_feedback_status(uuid,uuid,uuid)',true,true),
+  ('public.feedback_barrier_submit(uuid,uuid,uuid,text,text)',true,false),
+  ('public.feedback_barrier_status(uuid,uuid,uuid)',true,false),
+  ('public.feedback_barrier_cancel(uuid,uuid,uuid)',true,false)
+ ) AS f(signature,service_execute,definer) LOOP
+  fn := pg_catalog.to_regprocedure(expected.signature);
+  IF fn IS NULL
+   OR pg_catalog.has_function_privilege('anon',fn,'EXECUTE') IS DISTINCT FROM false
+   OR pg_catalog.has_function_privilege('authenticated',fn,'EXECUTE') IS DISTINCT FROM false
+   OR pg_catalog.has_function_privilege('service_role',fn,'EXECUTE') IS DISTINCT FROM expected.service_execute
+   OR NOT EXISTS(SELECT 1 FROM pg_catalog.pg_proc p WHERE p.oid=fn AND pg_catalog.pg_get_userbyid(p.proowner)='postgres'
+     AND p.prosecdef IS NOT DISTINCT FROM expected.definer AND p.proconfig=ARRAY['search_path=""']::text[])
+   OR EXISTS(SELECT 1 FROM pg_catalog.pg_proc p CROSS JOIN LATERAL pg_catalog.aclexplode(COALESCE(p.proacl,pg_catalog.acldefault('f',p.proowner))) a
+     WHERE p.oid=fn AND (a.privilege_type<>'EXECUTE' OR a.is_grantable OR a.grantor<>p.proowner
+       OR (a.grantee<>p.proowner AND (NOT expected.service_execute OR a.grantee<>(SELECT oid FROM pg_catalog.pg_roles WHERE rolname='service_role')))))
+  THEN RAISE EXCEPTION 'ADMISSION_FEEDBACK_FUNCTION_ACL_REFUSED'; END IF;
+ END LOOP;
+END $admission_feedback_acl$;
+
+-- METRICS SOURCE SHA256 0aedd039e38e03ce61469ee97268f5ced3419cfb8bc6bfa32f9d3054e7009f67
+DO $metrics_preflight$ BEGIN
+ IF pg_catalog.to_regprocedure('app_private.admin_require_master(uuid,uuid)') IS NULL
+ OR pg_catalog.to_regprocedure('public.signup_metrics(uuid,uuid,date,date,text,text)') IS NOT NULL
+ THEN RAISE EXCEPTION 'METRICS_FOUNDATION_REFUSED'; END IF;
+END $metrics_preflight$;
+create function public.signup_metrics(p_actor uuid,p_session uuid,p_start date,p_end date,p_zone text,p_bucket text)
+returns jsonb language plpgsql security definer set search_path='' as $$
+declare result jsonb;
+begin
+ perform app_private.admin_require_master(p_actor,p_session);
+ if p_start is null or p_end is null or p_end<p_start or p_end-p_start>365
+   or p_zone not in ('America/Fortaleza','UTC') or p_zone is null
+   or p_bucket not in ('day','week','month') or p_bucket is null then
+  raise exception 'Invalid reporting period.' using errcode='22023';
+ end if;
+ with population as materialized (
+  select a.admitted_at, case when o.expires_at>now() then o.origin else null end as origin
+  from app_private.user_admission a
+  left join app_private.signup_origins o on o.user_id=a.user_id
+  where a.state='admitted' and a.origin='public'
+   and a.admitted_at >= (p_start::timestamp at time zone p_zone)
+   and a.admitted_at < ((p_end+1)::timestamp at time zone p_zone)
+ ), totals as (select count(*)::int as n from population),
+ counts as (
+  select date_trunc(p_bucket, admitted_at at time zone p_zone)::date as period, count(*)::int as n
+  from population group by 1
+ ), periods as (
+  select generate_series(date_trunc(p_bucket,p_start::timestamp),date_trunc(p_bucket,p_end::timestamp),
+   case p_bucket when 'day' then interval '1 day' when 'week' then interval '1 week' else interval '1 month' end)::date as period
+ ), dimensions(name) as (values ('utm_source'),('utm_medium'),('utm_campaign'),('utm_term'),('utm_content')),
+ classified as materialized (
+  select d.name,case when p.origin->>d.name is null then null
+   when d.name='utm_source' and lower(btrim(p.origin->>d.name) collate "C")='google' then 'google'
+   when d.name='utm_source' and lower(btrim(p.origin->>d.name) collate "C")='instagram' then 'instagram'
+   when d.name='utm_medium' and lower(btrim(p.origin->>d.name) collate "C")='organic' then 'organic'
+   when d.name='utm_medium' and lower(btrim(p.origin->>d.name) collate "C")='email' then 'email'
+   else '__other__' end as value
+  from dimensions d cross join population p
+ ), grouped as (
+  select name,value,count(*)::int as n from classified group by name,value
+ ), normalized as (
+  select name,case when value is null then 'not-informed' when value='__other__' or n<5 then 'other' else 'value' end as kind,
+   case when value is null or value='__other__' or n<5 then null else value end as value,n from grouped
+ ), merged as (select name,kind,value,sum(n)::int as n from normalized group by name,kind,value),
+ distributions as (
+  select d.name,coalesce(jsonb_agg(jsonb_build_object('kind',m.kind,'value',m.value,'count',m.n)
+   order by m.n desc,m.kind,m.value) filter(where m.kind is not null),'[]'::jsonb) as entries
+  from dimensions d left join merged m on m.name=d.name group by d.name
+ )
+ select jsonb_build_object('dictionaryVersion','sha256:b27588bd3279e952f29b3da900351e662a06bca55a565c2c9118c70c9946e6ec','totalPublic',t.n,'start',p_start,'end',p_end,'zone',p_zone,'bucket',p_bucket,
+  'series',(select coalesce(jsonb_agg(jsonb_build_object('period',p.period,'count',coalesce(c.n,0)) order by p.period),'[]'::jsonb) from periods p left join counts c using(period)),
+  'distributions',(select jsonb_object_agg(name,entries) from distributions),
+  'stock',(select jsonb_build_object('total',count(*)::int,'legacy',count(*) filter(where a.origin='legacy')::int,
+   'admin',count(*) filter(where a.origin='admin')::int,'public',count(*) filter(where a.origin='public')::int,
+   'unclassified',count(*) filter(where a.origin is null or a.origin='unclassified')::int)
+   from public.profiles p join auth.users u on u.id=p.user_id and u.deleted_at is null and not u.is_anonymous
+   left join app_private.user_admission a on a.user_id=p.user_id and a.state='admitted'))
+ into result from totals t;
+ return result;
+end $$;
+revoke all on function public.signup_metrics(uuid,uuid,date,date,text,text) from public,anon,authenticated,service_role;
+grant execute on function public.signup_metrics(uuid,uuid,date,date,text,text) to service_role;
+DO $metrics_acl$
+DECLARE fn oid := pg_catalog.to_regprocedure('public.signup_metrics(uuid,uuid,date,date,text,text)');
+BEGIN
+ IF fn IS NULL OR pg_catalog.has_function_privilege('anon',fn,'EXECUTE') IS DISTINCT FROM false
+  OR pg_catalog.has_function_privilege('authenticated',fn,'EXECUTE') IS DISTINCT FROM false
+  OR pg_catalog.has_function_privilege('service_role',fn,'EXECUTE') IS DISTINCT FROM true
+  OR NOT EXISTS(SELECT 1 FROM pg_catalog.pg_proc p WHERE p.oid=fn AND p.prosecdef AND pg_catalog.pg_get_userbyid(p.proowner)='postgres' AND p.proconfig=ARRAY['search_path=""']::text[])
+  OR EXISTS(SELECT 1 FROM pg_catalog.pg_proc p CROSS JOIN LATERAL pg_catalog.aclexplode(COALESCE(p.proacl,pg_catalog.acldefault('f',p.proowner))) a
+   WHERE p.oid=fn AND (a.privilege_type<>'EXECUTE' OR a.is_grantable OR a.grantor<>p.proowner
+    OR (a.grantee<>p.proowner AND a.grantee<>(SELECT oid FROM pg_catalog.pg_roles WHERE rolname='service_role'))))
+ THEN RAISE EXCEPTION 'METRICS_ACL_REFUSED'; END IF;
+END $metrics_acl$;
+
+COMMIT;
