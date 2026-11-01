@@ -117,7 +117,7 @@ async function exerciseHistoricalSequenceDefaults(reviewRoot) {
  } finally { await db.close(); }
 }
 
-test("016 closes the legacy public sequence default with reviewed 27 sources", async () => {
+test("016 closes the legacy public sequence default with reviewed repository sources", async () => {
  await exerciseHistoricalSequenceDefaults(fileURLToPath(new URL("../../", import.meta.url)));
 });
 
