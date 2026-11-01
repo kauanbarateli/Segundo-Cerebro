@@ -42,6 +42,7 @@
       "codex/front-b-feedback-confirmacao": false,
       "codex/front-b-feedback-sessao": false,
       "codex/front-b-feedback-reconciliacao": false,
+      "codex/front-b-feedback-sql-diagnostico": false,
       "codex/reconciliacao-banco-20261031": false,
       "codex/fix-auditoria-173": false,
       "codex/frente-b-migrations-locais": false
