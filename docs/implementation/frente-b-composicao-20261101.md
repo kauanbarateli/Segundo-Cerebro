@@ -2,6 +2,10 @@
 
 Esta branch reúne as candidatas de reconciliação, cadastro, origem, métricas, feedback e atualizações para verificar compatibilidade. Não é aprovação da #140: a Frente A, a promoção do esquema e os percursos reais ainda precisam ser integrados.
 
+**Atualização na branch de integração:** os retratos da Frente A foram incorporados conforme [composição das frentes](composicao-frentes-20261101.md), sem substituir a necessidade de revalidar seus SHAs. O responsável dispensou a configuração de SMTP no QA e solicitou o teste de e-mail em produção; consultar a [inspeção e decisão](auth-qa-inspecao-20261101.md). Os ensaios de schema no QA, os gates das alterações remotas e os testes reais dos fluxos continuam necessários.
+
+A política de privacidade candidata passou à versão 0.3: descreve somente os cinco campos UTM, a opção de recusa/retirada e a ausência de domínio ou histórico na função de origem. Também reflete a informação do responsável sobre uso do Resend para autenticação, mantendo explícita a conferência pendente de retenção e transferência internacional. A verificação de logs dos provedores continua separada dessa descrição, e a revisão operacional e de privacidade permanece necessária antes da liberação.
+
 ## Evidências
 
 - A main remota estava em `bd35288404c493d1b03f7a1a0208f808cc2079a2` em 2026-11-01 UTC. O teste `tests/scripts/front-b-composition.test.mjs` aplica as 27 fontes com hashes conferidos e as três candidatas em PGlite descartável; confirma que feedback de outra pessoa não aparece, que uma pessoa bloqueada é recusada e que a consulta Master contém somente agregados.

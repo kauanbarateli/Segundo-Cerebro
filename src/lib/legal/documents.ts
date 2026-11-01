@@ -9,8 +9,8 @@ export const LEGAL_DOCUMENTS = {
     "slug": "privacidade",
     "title": "Política de privacidade",
     "summary": "Como usamos e protegemos suas informações, quais escolhas você tem e como exercer seus direitos.",
-    "version": "0.2 · revisão do uso atual",
-    "updatedAt": "2026-10-18",
+    "version": "0.3 · origem de cadastro",
+    "updatedAt": "2026-11-01",
     "notice": "Esta versão incorpora o inventário técnico do uso atual. A conferência de contratos, destinos internacionais e procedimentos operacionais permanece em revisão. A contratação por assinatura não está aberta.",
     "sections": [
       {
@@ -81,7 +81,7 @@ export const LEGAL_DOCUMENTS = {
           "Cookies de login seguem a configuração do provedor de autenticação, com limite técnico de persistência de até 400 dias, sujeito a expiração antecipada e verificação de sessão no servidor. Esse limite não garante acesso por esse período. Os controles próprios de recuperação têm prazos de uma hora, dez ou quinze minutos conforme a etapa; o retorno de autorização Google usa dez minutos. São removidos ou substituídos nos respectivos fluxos.",
           "Tema e estado da navegação podem permanecer no dispositivo até alteração ou limpeza. Rascunhos de Capturar e envios pendentes também podem guardar conteúdo pessoal localmente, sem prazo automático e sem cifragem própria desse armazenamento. Já os rascunhos do editor de Conhecimento ficam em memória e não sobrevivem à recarga. A confirmação do envio e a saída da conta acionam as limpezas previstas, sujeitas ao funcionamento do navegador. Use cuidado em dispositivos compartilhados; limpar dados do site pode apagar trabalho ainda não sincronizado e não apaga, por si só, o que já está na conta.",
           "O modo de demonstração usa dados e preferências locais de exemplo. A instalação guarda recursos públicos para a tela offline e a interface; o cache previsto não inclui páginas pessoais ou respostas de API. As chaves de sessão abertas do Cofre ficam em memória, com as proteções de bloqueio próprias do módulo.",
-          "A atribuição comercial de origem ainda não está ativa por esta entrega. Quando disponibilizada, os cinco parâmetros de campanha e o domínio de origem dependerão de escolha facultativa, com opção de recusar e retirar o consentimento sem impedir a compra. Não usaremos outro armazenamento para contornar essa escolha."
+          "Quando a origem de cadastro estiver disponível, você poderá autorizar o registro dos parâmetros utm_source, utm_medium, utm_campaign, utm_term e utm_content informados no acesso. A escolha é facultativa e pode ser recusada ou retirada sem impedir o cadastro. Essa função não registra domínio de origem, endereço completo nem histórico de navegação. Não usaremos outro armazenamento para contornar essa escolha."
         ]
       },
       {
@@ -90,7 +90,7 @@ export const LEGAL_DOCUMENTS = {
         "paragraphs": [
           "A operação atual utiliza Vercel para hospedagem e Supabase para autenticação, banco de dados e armazenamento. Google participa quando você conecta Calendar. A caixa de suporte usa Hostinger. O aplicativo dispõe de monitoramento de falhas por Sentry, condicionado à configuração do serviço; sua ativação e retenção efetivas ainda precisam de conferência. Os filtros do aplicativo não substituem os logs próprios dos fornecedores de infraestrutura.",
           "O acesso de prestadores deve ficar limitado às finalidades informadas, aos contratos e às obrigações aplicáveis. Informações podem ser fornecidas a autoridades diante de uma exigência legítima, nos limites da lei. Não há licença para venda de suas notas ou de dados de agenda.",
-          "Resend foi escolhido para os futuros e-mails automáticos, mas essa escolha não comprova ativação ou envio pelo aplicativo. Antes de usar o remetente, será necessário qualificar sua transferência internacional e retenção. Uma futura contratação pelo Asaas também terá informação específica antes de enviar dados de pagador; o checkout não está disponível nesta entrega."
+          "O serviço utiliza Resend para e-mails de autenticação. A transferência internacional e a retenção desse envio ainda precisam de conferência. Uma futura contratação pelo Asaas também terá informação específica antes de enviar dados de pagador; o checkout não está disponível nesta entrega."
         ]
       },
       {
