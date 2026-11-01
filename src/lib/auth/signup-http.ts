@@ -1,4 +1,5 @@
 import "server-only";
+import type { SignupOrigin } from "../../core/acquisition/signup-origin";
 import type { SupabaseAuthConfig } from "./config";
 import { isTrustedHostedDatabaseOrigin } from "./database-origin-server";
 
@@ -24,8 +25,23 @@ async function boundedJson(response: Response): Promise<unknown> {
   } finally { reader.releaseLock(); }
 }
 
+/**
+ * Candidate RPC wire contract, pending generation from the installed schema.
+ * PostgreSQL function metadata cannot express nullable scalar arguments, so
+ * the generated RPC types must not be used to infer these nullabilities.
+ */
+type Actor = { p_user: string; p_session: string };
+type BoundIntent = Actor & { p_intent: string; p_subject_hash: string };
+type SignupRpcArguments = {
+  signup_intent_create: { p_binding_hash: string; p_subject_hash: string; p_terms: string; p_privacy: string; p_expires: string; p_origin: SignupOrigin | null; p_origin_version: string | null };
+  signup_find_bound_intent: Actor & { p_subject_hash: string };
+  signup_recover_verified_intent: Actor & { p_subject_hash: string; p_terms: string; p_privacy: string };
+  signup_discard_pending_origin: BoundIntent;
+  signup_attest_password_reset: BoundIntent;
+  signup_complete: BoundIntent & { p_terms: string; p_privacy: string; p_accept_origin: boolean; p_origin_version: string | null };
+};
+type SignupRpcName = keyof SignupRpcArguments;
 /** Narrow server-only candidate transport; never log body, credentials or errors. */
-type SignupRpcName = "signup_intent_create" | "signup_find_bound_intent" | "signup_recover_verified_intent" | "signup_discard_pending_origin" | "signup_attest_password_reset" | "signup_complete";
 async function postRpc(config: SupabaseAuthConfig, name: string, body: object): Promise<unknown> {
   const response = await fetch(new URL(`/rest/v1/rpc/${name}`, config.supabaseUrl), {
     method: "POST", cache: "no-store", redirect: "error", signal: AbortSignal.timeout(10_000),
@@ -37,13 +53,13 @@ async function postRpc(config: SupabaseAuthConfig, name: string, body: object): 
   return boundedJson(response);
 }
 
-export async function signupRpc(config: SupabaseAuthConfig, name: SignupRpcName, body: object): Promise<unknown> {
+export async function signupRpc<Name extends SignupRpcName>(config: SupabaseAuthConfig, name: Name, body: SignupRpcArguments[Name]): Promise<unknown> {
   if (!["signup_intent_create", "signup_find_bound_intent", "signup_recover_verified_intent", "signup_discard_pending_origin", "signup_attest_password_reset", "signup_complete"].includes(name) || !signupEnabled(config)) return signupUnavailable();
   return postRpc(config, name, body);
 }
 
 /** Withdrawal must remain available even when new signups are disabled. */
-export async function signupOriginRpc(config: SupabaseAuthConfig, name: "signup_origin_status" | "signup_origin_withdraw", body: object): Promise<unknown> {
+export async function signupOriginRpc(config: SupabaseAuthConfig, name: "signup_origin_status" | "signup_origin_withdraw", body: Actor): Promise<unknown> {
   if (!["signup_origin_status", "signup_origin_withdraw"].includes(name) || !isTrustedHostedDatabaseOrigin(config)) return signupUnavailable();
   return postRpc(config, name, body);
 }
