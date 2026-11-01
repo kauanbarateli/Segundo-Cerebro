@@ -41,6 +41,8 @@
       "codex/b08-integracao-frentes": false,
       "codex/frente-b-migrations-locais": false,
       "codex/front-b-main-migrations": false,
+      "codex/front-b-contratos-transporte": false,
+      "codex/front-b-integracao-consolidada": false,
       "codex/reconciliacao-banco-20261031": false,
       "codex/fix-auditoria-173": false
     }
