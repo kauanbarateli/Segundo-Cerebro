@@ -74,6 +74,7 @@
       "codex/front-b-cadastro-reserva": false,
       "codex/front-b-feedback-sql-diagnostico": false,
       "codex/reconciliacao-banco-20261031": false,
+      "codex/front-b-atualizacoes-main": false,
       "codex/fix-auditoria-173": false
     }
   }

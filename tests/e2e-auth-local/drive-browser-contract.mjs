@@ -22,9 +22,9 @@ export const DRIVE_INFRA_KEYS = Object.freeze(["pg17","instanceBound","container
 // Shared AuthFrame now imports AuthThemeSwitcher; only this Git path is added.
 // D-032/doc18 route closure after removing the offered Drive UI. HIST026 stays
 // historical; this inventory never qualifies execution or CURRENT27 coverage.
-// Frentes A/B added eleven reviewed transitive sources; no Drive route was enabled.
+// Frentes A/B and signup fence added sixteen reviewed transitive sources; no Drive route was enabled.
 // The historical canonical reader adds one reviewed transitive helper only.
-export const DRIVE_SOURCE_COUNTS = Object.freeze({git:304,dependencies:50});
+export const DRIVE_SOURCE_COUNTS = Object.freeze({git:309,dependencies:50});
 export const DRIVE_HISTORICAL_READER_SOURCE = Object.freeze({path:"tests/helpers/canonical-front-b-source.mjs",bytes:6638,sha256:"fcdbeb291832d3025d3551d42e47fb8b20ecbf1b7fe294990b6be25d41202040"});
 // Public c781efe Git sources reached from uploads/route.ts:8, then helper:3.
 // Closed provenance metadata; it neither enables Drive nor proves hosted use.
@@ -42,9 +42,14 @@ export const DRIVE_FRONT_AB_SOURCES = Object.freeze([
   Object.freeze({path:"src/components/features/capturar/quick-capture.tsx",bytes:12567,sha256:"b1efb3e310455fc21bb0744a448aaa0e6c20420bd498a104aea84bdfc396edc9"}),
   Object.freeze({path:"src/components/features/capturar/requests.ts",bytes:1457,sha256:"1a62a6ebe5880086da36a52f2216164f5cfc981c0f2f41860e92db57466d0e18"}),
   Object.freeze({path:"src/components/features/capturar/use-image-attachments.ts",bytes:2924,sha256:"351fe757215ed69ef2000e765e313a5c80ef1ff5b0352d4f816da860c6ecbcea"}),
-  Object.freeze({path:"src/lib/access/front-b-capabilities-server.ts",bytes:593,sha256:"58f3a4affe0a27414295259e6f0b8dd60f103de52e9d0ef001b4c71150f44d5c"}),
-  Object.freeze({path:"src/lib/auth/signup-http.ts",bytes:3975,sha256:"6230f9b22678db82bf43acac9a699261c43c1c69ff4ae6b9bf7fabf8374f02f3"}),
+  Object.freeze({path:"src/lib/access/front-b-capabilities-server.ts",bytes:752,sha256:"5525cafb6a68b6bf2861155eed795f50a93a84cc10139a29d7bc519262d07a9b"}),
+  Object.freeze({path:"src/lib/auth/signup-http.ts",bytes:4878,sha256:"3629ba06c25ec2a709de5c0df3051f308cf3300678f601fbc48d6c946d6ad2d4"}),
   Object.freeze({path:"src/lib/navigation/optional-destinations.ts",bytes:1975,sha256:"8b1fa3518080d1a0f663f674eb9ec30769b0a10db2d7536276e16e4cb16b4cd3"}),
+  Object.freeze({path:"src/core/acquisition/signup-origin.ts",bytes:1446,sha256:"1a58e683e03290ce6616891301c5e82f3a5eff21eba2ef56c2835c3a054b2483"}),
+  Object.freeze({path:"src/lib/auth/signup-checkpoint.ts",bytes:2699,sha256:"3628fb20ffbbdc50c89969f7043fe02887255c7ffdb5ee1c90710638af1318bc"}),
+  Object.freeze({path:"src/lib/auth/signup-completion-service.ts",bytes:7835,sha256:"0a5cf8a203d4d4176f99c4a088a04c17b9a5996dfc2257c778f19ab80248e4f3"}),
+  Object.freeze({path:"src/lib/auth/signup-fence-wire.ts",bytes:2273,sha256:"e5ae60b5d33344c608b26ab1cb371bf06b99c0d313aa11b972a8aa4d4f3e2abd"}),
+  Object.freeze({path:"src/lib/feedback/reconciliation-gate.ts",bytes:181,sha256:"becf5b085c6a07f7512c9a01f92c3ab79346a4588ecd7e63c95d54d96c26e51c"}),
 ]);
 export function driveRefuse(code){const e=new Error(DRIVE_CODES.includes(code)?code:"BROWSER_REFUSED");e.name="DriveBrowserFailure";e.stack=e.name+": "+e.message;throw e;}
 export function isDriveAuthActionRequest(value,method){
