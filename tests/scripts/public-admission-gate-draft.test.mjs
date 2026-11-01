@@ -37,6 +37,30 @@ test("candidata local protege novas identidades e preserva os caminhos observado
     await db.exec("reset role");
     const grants = await db.query("select has_table_privilege('anon','app_private.user_admission','select') as anon, has_table_privilege('authenticated','app_private.user_admission','select') as browser");
     assert.deepEqual(grants.rows[0], { anon: false, browser: false });
+    const pointer = "a".repeat(43), binding = createHash("sha256").update(pointer).digest("hex"), subject = "b".repeat(64);
+    const rpc = "public.signup_intent_create(text,text,text,text,timestamp with time zone)";
+    const privilege = await db.query("select has_function_privilege('anon',$1,'execute') as anon,has_function_privilege('authenticated',$1,'execute') as browser,has_function_privilege('service_role',$1,'execute') as service", [rpc]);
+    assert.deepEqual(privilege.rows[0], { anon: false, browser: false, service: true });
+    await assert.rejects(db.query("select public.signup_intent_create($1,$2,'v1','v1',now()-interval '1 second')", [binding, subject]), error => error.code === "22023");
+    await db.exec("set role service_role");
+    const intent = (await db.query("select public.signup_intent_create($1,$2,'v1','v1',now()+interval '20 minutes') as id", [binding, subject])).rows[0].id;
+    await db.exec("reset role");
+    // Updating metadata on an existing identity cannot manufacture a binding.
+    await db.query("update auth.users set raw_user_meta_data=jsonb_build_object('sc_signup_pointer',$1::text) where id=$2", [pointer, pending]);
+    assert.equal((await db.query("select state from app_private.signup_intents where id=$1", [intent])).rows[0].state, "pending");
+    const newcomer = "10000000-0000-4000-8000-000000000005", replay = "10000000-0000-4000-8000-000000000006";
+    await db.query("insert into auth.users(id,email,raw_user_meta_data) values($1,'new@example.invalid',jsonb_build_object('sc_signup_pointer',$2::text))", [newcomer, pointer]);
+    const bindingRow = (await db.query("select state,user_id from app_private.signup_intents where id=$1", [intent])).rows[0];
+    assert.deepEqual(bindingRow, { state: "bound", user_id: newcomer });
+    assert.equal((await db.query("select raw_user_meta_data ? 'sc_signup_pointer' as present from auth.users where id=$1", [newcomer])).rows[0].present, false);
+    await db.query("insert into auth.users(id,email,raw_user_meta_data) values($1,'replay@example.invalid',jsonb_build_object('sc_signup_pointer',$2::text))", [replay, pointer]);
+    assert.equal((await db.query("select user_id from app_private.signup_intents where id=$1", [intent])).rows[0].user_id, newcomer);
+    assert.equal((await db.query("select state from app_private.user_admission where user_id=$1", [newcomer])).rows[0].state, "pending");
+    const expiredPointer = "z".repeat(43), expiredHash = createHash("sha256").update(expiredPointer).digest("hex");
+    const expired = (await db.query("select public.signup_intent_create($1,$2,'v1','v1',now()+interval '20 minutes') as id", [expiredHash, subject])).rows[0].id;
+    await db.query("update app_private.signup_intents set expires_at=now()-interval '1 second' where id=$1", [expired]);
+    await db.query("insert into auth.users(id,email,raw_user_meta_data) values('10000000-0000-4000-8000-000000000007','expired@example.invalid',jsonb_build_object('sc_signup_pointer',$1::text))", [expiredPointer]);
+    assert.equal((await db.query("select state from app_private.signup_intents where id=$1", [expired])).rows[0].state, "pending");
     // Synthetic operator fixture exercises the completion trigger; it does not prove the real Admin saga.
     await db.query("insert into auth.users(id,email) values($1,'admin-created@example.invalid')", [admin]);
     await db.query("insert into auth.sessions(id,user_id) values($1,$2)", [adminSession, admin]);

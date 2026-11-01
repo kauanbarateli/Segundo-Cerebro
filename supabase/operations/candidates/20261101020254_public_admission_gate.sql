@@ -17,6 +17,39 @@ create table app_private.user_admission (
 alter table app_private.user_admission enable row level security;
 revoke all on app_private.user_admission from public,anon,authenticated,service_role;
 
+-- The binding pointer is an opaque random secret, stored here only as SHA-256.
+-- The subject is a server-created HMAC, never an email or a client authority.
+create table app_private.signup_intents (
+ id uuid primary key default gen_random_uuid(),
+ binding_hash text not null unique check(binding_hash ~ '^[a-f0-9]{64}$'),
+ subject_hash text not null check(subject_hash ~ '^[a-f0-9]{64}$'),
+ terms_version text not null check(char_length(terms_version) between 1 and 100),
+ privacy_version text not null check(char_length(privacy_version) between 1 and 100),
+ expires_at timestamptz not null,
+ state text not null default 'pending' check(state in ('pending','bound','consumed')),
+ user_id uuid unique references auth.users(id) on delete cascade,
+ created_at timestamptz not null default now(),
+ check((state='pending')=(user_id is null))
+);
+alter table app_private.signup_intents enable row level security;
+revoke all on app_private.signup_intents from public,anon,authenticated,service_role;
+
+create function app_private.signup_intent_create(p_binding_hash text,p_subject_hash text,p_terms text,p_privacy text,p_expires timestamptz) returns uuid
+language plpgsql security definer set search_path='' as $$ declare v_id uuid; begin
+ if p_binding_hash is null or p_binding_hash !~ '^[a-f0-9]{64}$' or p_subject_hash is null or p_subject_hash !~ '^[a-f0-9]{64}$'
+  or p_terms is null or char_length(p_terms) not between 1 and 100 or p_privacy is null or char_length(p_privacy) not between 1 and 100
+  or p_expires is null or p_expires<=now() or p_expires>now()+interval '1 hour' then
+  raise exception 'Invalid signup intent.' using errcode='22023';
+ end if;
+ insert into app_private.signup_intents(binding_hash,subject_hash,terms_version,privacy_version,expires_at)
+ values(p_binding_hash,p_subject_hash,p_terms,p_privacy,p_expires) returning id into v_id;
+ return v_id;
+end $$;
+create function public.signup_intent_create(p_binding_hash text,p_subject_hash text,p_terms text,p_privacy text,p_expires timestamptz) returns uuid
+language sql security invoker set search_path='' as $$ select app_private.signup_intent_create(p_binding_hash,p_subject_hash,p_terms,p_privacy,p_expires) $$;
+revoke all on function app_private.signup_intent_create(text,text,text,text,timestamptz),public.signup_intent_create(text,text,text,text,timestamptz) from public,anon,authenticated,service_role;
+grant execute on function app_private.signup_intent_create(text,text,text,text,timestamptz),public.signup_intent_create(text,text,text,text,timestamptz) to service_role;
+
 -- Historical confirmed identities retain access; unconfirmed, non-Admin users
 -- remain pending until a separately reviewed proof-of-possession flow exists.
 insert into app_private.user_admission(user_id,origin,state,admitted_at)
@@ -28,8 +61,20 @@ select u.id,
 from auth.users u;
 
 create function app_private.admission_new_identity() returns trigger
-language plpgsql security definer set search_path='' as $$ begin
+language plpgsql security definer set search_path='' as $$ declare pointer text; begin
  insert into app_private.user_admission(user_id,origin,state) values(new.id,'unclassified','pending');
+ -- Binding is possible only during the INSERT of a newly created Auth identity;
+ -- subsequent metadata updates or a duplicate signup cannot bind an old account.
+ pointer:=new.raw_user_meta_data->>'sc_signup_pointer';
+ if pointer is not null and pointer ~ '^[A-Za-z0-9_-]{43,128}$' then
+  update app_private.signup_intents set state='bound',user_id=new.id
+   where binding_hash=encode(sha256(convert_to(pointer,'UTF8')),'hex') and state='pending' and expires_at>now();
+ end if;
+ -- Remove the transient pointer from this INSERT snapshot; Auth integration must
+ -- verify GoTrue does not subsequently restore it before using this candidate.
+ if new.raw_user_meta_data ? 'sc_signup_pointer' then
+  update auth.users set raw_user_meta_data=raw_user_meta_data-'sc_signup_pointer' where id=new.id;
+ end if;
  return new;
 end $$;
 revoke all on function app_private.admission_new_identity() from public,anon,authenticated,service_role;
