@@ -8,7 +8,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { pgcrypto } from "@electric-sql/pglite/contrib/pgcrypto";
 import { pg_trgm } from "@electric-sql/pglite/contrib/pg_trgm";
 import { readCurrent27CanonicalMigrations, type CanonicalMigrationSource } from "./canonical-release-source.mjs";
-import { readHistorical026FromReviewedFrontB } from "./canonical-front-b-source.mjs";
+import { readHistorical026FromReviewedFrontB, readHistorical027FromReviewedFrontB } from "./canonical-front-b-source.mjs";
 
 const root = fileURLToPath(new URL("../../", import.meta.url));
 async function createCanonicalSql(migrations: readonly CanonicalMigrationSource[]) {
@@ -35,4 +35,13 @@ export async function createLocalCanonicalSql() {
 /** Explicit historical fixture, after the entire reviewed 27/30 chain passed its byte gate. */
 export async function createHistorical026CanonicalSql(reviewRoot = root) {
   return createCanonicalSql(await readHistorical026FromReviewedFrontB(reviewRoot));
+}
+
+/** Explicit names: qualify the complete reviewed 27 or draft 30 chain first.
+ * These historical fixtures do not prove or install the current hosted schema. */
+export async function createHistorical026FromReviewedCanonicalSql(reviewRoot = root) {
+  return createHistorical026CanonicalSql(reviewRoot);
+}
+export async function createHistorical027FromReviewedCanonicalSql(reviewRoot = root) {
+  return createCanonicalSql(await readHistorical027FromReviewedFrontB(reviewRoot));
 }
