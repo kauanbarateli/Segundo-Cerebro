@@ -48,4 +48,10 @@ describe("atualizações autenticadas", () => {
     expect(updateEvidenceHref("https://example.org/entrega")).toBe("https://example.org/entrega");
     for (const unsafe of ["javascript:alert(1)", "//example.org/", "https://user:secret@example.org/", "/\\example.org", "not-a-url"]) expect(updateEvidenceHref(unsafe)).toBeNull();
   });
+
+  it("recusa conteúdo lançado sem uma referência segura", () => {
+    for (const evidence of ["", "javascript:alert(1)", "//example.org/"]) {
+      expect(() => renderToStaticMarkup(<UpdatesBoard entries={[{ id: "u1", title: "Entrega", summary: "Conteúdo", state: "released", updatedAt: "2026-10-31", order: 1, evidence }]} />)).toThrow("Atualização lançada exige um link de entrega válido.");
+    }
+  });
 });
