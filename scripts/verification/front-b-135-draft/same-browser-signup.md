@@ -16,11 +16,21 @@ new attempt ends its usable life; deleting/rotating it earlier breaks recovery.
 The unique hash refuses reuse. The draft includes an unscheduled, bounded
 `signup_browser_prune` for expired rows; it requires a separately reviewed
 retention/monitoring process and coordination with intent and origin cleanup.
+**Open usability blocker:** the single cookie is preserved for recovery and a
+second attempt cannot reuse its unique hash while the first row is live. This
+includes a neutral duplicate-email result or an ambiguous preparation. There
+is no implemented rotation that preserves access to every pending attempt, and
+cookie expiry can precede intent expiry. The existing password-after-OTP
+fallback is used when a confirmation has no matching live browser attempt, but
+it does not make a new signup attempt immediately available. Do not rotate or
+delete a possibly live attempt automatically; implement and qualify a bounded
+multi-attempt or other safe reconciliation design before opening signup.
 
-The confirmation channel must check that the original browser cookie matches a
-live bound intent **before** verifying the token. Therefore another device must
-be shown instructions to open the original browser, without consuming or
-forwarding the token. Immediately after OTP verification, getUser/getClaims
+The confirmation channel checks that the original browser cookie matches a
+live bound intent **before** verifying the token. Another device without that
+cookie uses the existing fenced workflow: verify OTP and require a fresh
+password chosen by the email holder. Its uncertain Auth outcomes remain blocked.
+Immediately after OTP verification, getUser/getClaims
 must establish identity and session; only the trusted server can invoke the
 admission function. It checks the subject, intent, browser hash, current legal
 versions, pending state, active moderation/session, consent and any competing
@@ -36,9 +46,9 @@ update atomic: a reviewed publishing protocol must pause signup, synchronize
 the actual displayed documents, server constants and row, validate them, then
 reopen. No such provisioner, release protocol or production integration exists.
 
-**Not ready to enable:** these files are isolated and do not wire the actual
-cookie, routes, template, browser interaction or database migration. The current
-release gate must stay closed. The OTP may be consumed even when the Auth
+**Not ready to enable:** the branch wires the cookie, routes and browser flow,
+but the guarded SQL is not an installed migration and hosted Auth behavior is
+not qualified. The current release gate must stay closed. The OTP may be consumed even when the Auth
 response is lost; an admission transaction may commit when its response is lost.
 Clearing a provisional session is fail-closed, not a proven recovery flow.
 Define and test a fresh, purpose-bound recovery OTP with the same live browser
@@ -49,26 +59,21 @@ Loss/expiry of the original cookie, an expired or missing intent, an existing
 account, and moving devices require a separately designed recovery process; do
 not adopt an old password or silently create a replacement intent.
 
-`signup-resend-runtime.ts` already requests a fixed continuation link through
-`resetPasswordForEmail`. A possible recovery is to verify a *new* recovery OTP
-on the original browser, then check identity, intent, secret, moderation and
-current legal/consent snapshot before the same idempotent SQL command. The
-existing continuation channel currently invokes a different recovery service
-and redirects to password setup; it cannot be reused unchanged. It also refuses
-an existing browser session. Test the hosted Auth behavior, recovery token
+`signup-resend-runtime.ts` requests a fixed continuation link through
+`resetPasswordForEmail`. The candidate verifies a *new* recovery OTP on the
+original browser, then checks identity, intent, secret, moderation and current
+legal/consent snapshot before the same idempotent SQL command. Another browser
+uses the password-reset fence; an existing browser session is not overwritten.
+Test the hosted Auth behavior, recovery token
 expiry, overlapping calls, already admitted account, changed legal versions,
 cookie expiry and new lost response; no recovery is claimed before that work.
 
-Likely integration points, after separate review and only with the release gate
-closed: `src/lib/auth/signup-runtime.ts`, `signup-service.ts`, `signup-http.ts`,
-`signup-confirmation-runtime.ts`, `signup-confirmation-service.ts`,
-`signup-confirmation-channel.ts`, `signup-resend-runtime.ts`, `signup-channel.ts`,
-the existing `/cadastro` and `/auth/confirmar-cadastro` / `/auth/continuar-cadastro`
-handlers and pages, legal publication/version configuration, retention operator
-scripts, Supabase generated types and focused browser/SQL tests. The cookie must
-be provisioned before the signup POST, and each adapter must implement the
-`canBegin` contract without clearing or replacing an existing session. These are
-integration candidates, not claims that those files have been changed.
+The branch provisions the cookie before the signup POST and expires it only
+after confirmed admission; an ambiguous result preserves it for recovery.
+Disabled JavaScript prevents new signup and is explained on the form; email
+confirmation and the cross-device password path remain server-rendered. The
+legal publishing protocol, operator retention, generated types, reviewed SQL,
+provider/SMTP QA, release and independent security validation remain pending.
 
 Before any rollout, validate the exact hosted GoTrue behavior under duplicate
 and concurrent signup, token replay and reissue, direct Auth calls, third-party

@@ -7,9 +7,9 @@ import { startSameBrowserSignup, type SameBrowserStartPorts } from "../../src/li
 const userId="10000000-0000-4000-8000-000000000001",sessionId="20000000-0000-4000-8000-000000000001",intentId="30000000-0000-4000-8000-000000000001";
 const secret="a".repeat(43), token="b".repeat(48), hash="c".repeat(64);
 const current={terms:"terms-v1",privacy:"privacy-v1",originVersion:"utm-v1"};
-const input={browserSecret:secret,token,terms:current.terms,privacy:current.privacy,acceptOrigin:true};
+const input={browserSecret:secret,token,terms:current.terms,privacy:current.privacy};
 function setup() {
- const ports={canBegin:vi.fn(()=>true),browserHash:vi.fn(()=>hash),findAttempt:vi.fn(async()=>({intentId})),limitToken:vi.fn(async()=>({allowed:true})),verifyEmailProof:vi.fn(async()=>({userId,sessionId,email:"person@example.invalid"})),subjectHash:vi.fn(()=>hash),admit:vi.fn(async()=>true),clearProvisionalSession:vi.fn(async()=>{})};
+ const ports={canBegin:vi.fn(()=>true),browserHash:vi.fn(()=>hash),findAttempt:vi.fn(async()=>({intentId,originPending:true})),limitToken:vi.fn(async()=>({allowed:true})),verifyEmailProof:vi.fn(async()=>({userId,sessionId,email:"person@example.invalid"})),subjectHash:vi.fn(()=>hash),admit:vi.fn(async()=>true),clearProvisionalSession:vi.fn(async()=>{})};
  return ports satisfies SameBrowserSignupPorts;
 }
 describe("same-browser signup candidate",()=>{
@@ -66,5 +66,11 @@ describe("same-browser signup start",()=>{
  it("does not start signup while another user is signed in",async()=>{
   const ports=startPorts();ports.canBegin.mockReturnValue(false);
   expect(await startSameBrowserSignup(ports,form,secret,current)).toEqual({status:"unavailable"});expect(ports.prepare).not.toHaveBeenCalled();expect(ports.signup).not.toHaveBeenCalled();
+ });
+ it("distinguishes a known pre-intent refusal from a potentially committed preparation",async()=>{
+  const before=startPorts();before.limit.mockRejectedValueOnce(Error("unavailable"));
+  expect(await startSameBrowserSignup(before,form,secret,current)).toEqual({status:"unavailable"});expect(before.prepare).not.toHaveBeenCalled();
+  const after=startPorts();after.prepare.mockRejectedValueOnce(Error("timeout"));
+  expect(await startSameBrowserSignup(after,form,secret,current)).toEqual({status:"uncertain"});expect(after.signup).not.toHaveBeenCalled();
  });
 });

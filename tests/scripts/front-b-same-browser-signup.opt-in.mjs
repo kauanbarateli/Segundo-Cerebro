@@ -42,7 +42,7 @@ try {
  await pg.query('INSERT INTO auth.users VALUES($1,now(),false,null,null,$2)',[user,JSON.stringify({sc_signup_pointer:pointer})]);
  await pg.query('INSERT INTO auth.sessions VALUES($1,$2,null)',[session,user]);
  await pg.query("INSERT INTO public.user_moderation VALUES($1,'active',false)",[user]);
- assert.equal(await find(browser),intent);
+ assert.deepEqual(await find(browser),{intentId:intent,originPending:true});
  const admit=(u=user,s=session,br=browser,terms='terms-v1',accept=true)=>pg.query("SELECT app_private.signup_browser_admit($1,$2,$3,$4,$5,$6,'privacy-v1',$7,'utm-v1') AS result",[u,s,intent,subject,br,terms,accept]);
  await assert.rejects(()=>admit(user,session,'d'.repeat(64)),{code:'42501'});
  await assert.rejects(()=>admit(user,session,browser,'old'),{code:'42501'});
@@ -75,6 +75,7 @@ try {
  assert.deepEqual((await pg.query('SELECT app_private.draft_withdraw_current($1,$2) result',[user4,session4])).rows[0].result,{status:'withdrawn'});
  assert.equal((await pg.query("SELECT app_private.signup_browser_admit($1,$2,$3,$4,$5,'terms-v1','privacy-v1',true,'utm-v1') AS result",[user4,session4,intent4,subject,browser4])).rows[0].result,true);
  assert.equal((await pg.query('SELECT count(*)::int n FROM app_private.signup_origins WHERE user_id=$1',[user4])).rows[0].n,0);
+ assert.deepEqual(await find(browser4),{intentId:intent4,originPending:false});
  await pg.query("UPDATE app_private.signup_browser_attempts SET expires_at=now()-interval '1 second' WHERE intent_id=$1",[intent3]);
  assert.equal(await find(browser3),null);
  assert.equal((await pg.query('SELECT app_private.signup_browser_prune(1) result')).rows[0].result,1);

@@ -55,8 +55,8 @@ END $$;
 
 -- Only the server can look up a high-entropy cookie hash. A pending intent
 -- does not qualify: the Auth INSERT must already have bound it to a new user.
-CREATE FUNCTION app_private.signup_browser_find(p_browser text) RETURNS uuid LANGUAGE sql SECURITY DEFINER SET search_path='' AS $$
- SELECT a.intent_id FROM app_private.signup_browser_attempts a
+CREATE FUNCTION app_private.signup_browser_find(p_browser text) RETURNS jsonb LANGUAGE sql SECURITY DEFINER SET search_path='' AS $$
+ SELECT pg_catalog.jsonb_build_object('intentId',a.intent_id,'originPending',CASE WHEN i.state='consumed' THEN a.accept_origin ELSE i.origin IS NOT NULL END) FROM app_private.signup_browser_attempts a
  JOIN app_private.signup_intents i ON i.id=a.intent_id
  WHERE a.browser_hash=p_browser AND a.expires_at>pg_catalog.clock_timestamp()
   AND i.state IN ('bound','consumed') AND i.user_id IS NOT NULL
@@ -66,7 +66,7 @@ $$;
 -- after verifying the OTP, and p_browser from the original HttpOnly cookie.
 CREATE FUNCTION app_private.signup_browser_admit(p_user uuid,p_session uuid,p_intent uuid,p_subject text,p_browser text,p_terms text,p_privacy text,p_accept_origin boolean,p_origin_version text)
 RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
-DECLARE i app_private.signup_intents; a app_private.signup_browser_attempts; adm app_private.user_admission;
+DECLARE i app_private.signup_intents; a app_private.signup_browser_attempts; adm app_private.user_admission; v_origin_effective boolean;
 BEGIN
  IF p_user IS NULL OR p_session IS NULL OR p_intent IS NULL OR p_subject IS NULL OR p_subject !~ '^[a-f0-9]{64}$'
   OR p_browser IS NULL OR p_browser !~ '^[a-f0-9]{64}$' OR p_terms IS NULL OR p_privacy IS NULL
@@ -97,6 +97,7 @@ BEGIN
   OR adm.origin IS DISTINCT FROM 'unclassified' OR adm.state IS DISTINCT FROM 'pending' OR a.consumed_at IS NOT NULL
   OR EXISTS(SELECT 1 FROM app_private.signup_completion_fences_draft WHERE user_id=p_user)
   THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ v_origin_effective:=p_accept_origin AND i.origin IS NOT NULL;
  IF p_accept_origin AND i.origin IS NOT NULL THEN
   IF i.origin_consent_version IS DISTINCT FROM p_origin_version THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
   INSERT INTO app_private.signup_origins(user_id,origin,consent_version,consented_at,expires_at)
@@ -108,7 +109,7 @@ BEGIN
  INSERT INTO app_private.onboarding_entries(user_id,source_operation,source_kind,source_intent) VALUES(p_user,NULL,'public',p_intent);
  PERFORM app_private.append_event(p_user,'signup_admission',p_user,'created','web',NULL,pg_catalog.jsonb_build_object('user_id',p_user,'origin','public'));
  PERFORM app_private.append_event(p_user,'onboarding_entry',p_user,'created','web',NULL,pg_catalog.jsonb_build_object('user_id',p_user,'eligibility','new_explicit','schema_version',1));
- UPDATE app_private.signup_browser_attempts SET consumed_at=pg_catalog.now(),accept_origin=p_accept_origin,origin_version=p_origin_version WHERE intent_id=p_intent AND consumed_at IS NULL;
+ UPDATE app_private.signup_browser_attempts SET consumed_at=pg_catalog.now(),accept_origin=v_origin_effective,origin_version=p_origin_version WHERE intent_id=p_intent AND consumed_at IS NULL;
  IF NOT FOUND THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
  RETURN true;
 END $$;
@@ -116,7 +117,7 @@ END $$;
 REVOKE ALL ON FUNCTION app_private.signup_browser_prepare(text,text,text,text,text,timestamptz,jsonb,text),app_private.signup_browser_find(text),app_private.signup_browser_admit(uuid,uuid,uuid,text,text,text,text,boolean,text),app_private.signup_browser_prune(integer) FROM PUBLIC,anon,authenticated,service_role;
 GRANT EXECUTE ON FUNCTION app_private.signup_browser_prepare(text,text,text,text,text,timestamptz,jsonb,text),app_private.signup_browser_find(text),app_private.signup_browser_admit(uuid,uuid,uuid,text,text,text,text,boolean,text),app_private.signup_browser_prune(integer) TO service_role;
 CREATE FUNCTION public.signup_browser_prepare(p_binding text,p_browser text,p_subject text,p_terms text,p_privacy text,p_expires timestamptz,p_origin jsonb,p_origin_version text) RETURNS uuid LANGUAGE sql SECURITY INVOKER SET search_path='' AS $$ SELECT app_private.signup_browser_prepare(p_binding,p_browser,p_subject,p_terms,p_privacy,p_expires,p_origin,p_origin_version) $$;
-CREATE FUNCTION public.signup_browser_find(p_browser text) RETURNS uuid LANGUAGE sql SECURITY INVOKER SET search_path='' AS $$ SELECT app_private.signup_browser_find(p_browser) $$;
+CREATE FUNCTION public.signup_browser_find(p_browser text) RETURNS jsonb LANGUAGE sql SECURITY INVOKER SET search_path='' AS $$ SELECT app_private.signup_browser_find(p_browser) $$;
 CREATE FUNCTION public.signup_browser_admit(p_user uuid,p_session uuid,p_intent uuid,p_subject text,p_browser text,p_terms text,p_privacy text,p_accept_origin boolean,p_origin_version text) RETURNS boolean LANGUAGE sql SECURITY INVOKER SET search_path='' AS $$ SELECT app_private.signup_browser_admit(p_user,p_session,p_intent,p_subject,p_browser,p_terms,p_privacy,p_accept_origin,p_origin_version) $$;
 CREATE FUNCTION public.signup_browser_prune(p_limit integer) RETURNS integer LANGUAGE sql SECURITY INVOKER SET search_path='' AS $$ SELECT app_private.signup_browser_prune(p_limit) $$;
 REVOKE ALL ON FUNCTION public.signup_browser_prepare(text,text,text,text,text,timestamptz,jsonb,text),public.signup_browser_find(text),public.signup_browser_admit(uuid,uuid,uuid,text,text,text,text,boolean,text),public.signup_browser_prune(integer) FROM PUBLIC,anon,authenticated,service_role;

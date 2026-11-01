@@ -18,10 +18,11 @@ export interface SameBrowserStartPorts {
 const HASH=/^[a-f0-9]{64}$/;
 
 /** No secrets, password, OTP or provider response may be logged or persisted here. */
-export async function startSameBrowserSignup(ports:SameBrowserStartPorts,input:unknown,browserSecret:unknown,current:{terms:string;privacy:string},originChoice?:{consented:unknown;candidate:unknown}):Promise<{status:"accepted"|"invalid"|"rate-limited"|"unavailable"}> {
+export async function startSameBrowserSignup(ports:SameBrowserStartPorts,input:unknown,browserSecret:unknown,current:{terms:string;privacy:string},originChoice?:{consented:unknown;candidate:unknown}):Promise<{status:"accepted"|"invalid"|"rate-limited"|"unavailable"|"uncertain"}> {
  const parsed=validateSignupRequest(input,current);
  if(!parsed.ok) return {status:"invalid"};
  if(typeof browserSecret!=="string" || !/^[A-Za-z0-9_-]{43}$/.test(browserSecret)) return {status:"unavailable"};
+ let preparationStarted=false;
  try {
   if(!ports.canBegin()) return {status:"unavailable"};
   const now=ports.now(),pointer=ports.randomPointer();
@@ -30,8 +31,9 @@ export async function startSameBrowserSignup(ports:SameBrowserStartPorts,input:u
   if(!HASH.test(bindingHash) || !HASH.test(browserHash) || !HASH.test(subjectHash) || bindingHash===browserHash) return {status:"unavailable"};
   if(!(await ports.limit(subjectHash)).allowed) return {status:"rate-limited"};
   const origin=originChoice?.consented===true ? parseSignupOrigin(true,originChoice.candidate) : null;
+  preparationStarted=true;
   await ports.prepare({bindingHash,browserHash,subjectHash,termsVersion:current.terms,privacyVersion:current.privacy,expiresAt:now+30*60*1000,origin,originVersion:origin?SIGNUP_ORIGIN_CONSENT_VERSION:null});
   try { await ports.signup({email:parsed.value.email,password:parsed.value.password,pointer}); } catch { /* neutral response, never infer a new account */ }
   return {status:"accepted"};
- } catch {return {status:"unavailable"};}
+ } catch {return {status:preparationStarted?"uncertain":"unavailable"};}
 }

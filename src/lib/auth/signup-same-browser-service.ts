@@ -8,7 +8,7 @@ export interface SameBrowserSignupPorts {
   /** Domain-separated HMAC of a random, server-issued HttpOnly cookie. */
   browserHash(secret: string): string;
   /** Returns a live intent only when its Auth INSERT actually bound it. */
-  findAttempt(hash: string): Promise<{ intentId: string } | null>;
+  findAttempt(hash: string): Promise<{ intentId: string; originPending:boolean } | null>;
   limitToken(token: string): Promise<{ allowed: boolean }>;
   /** One-time email proof followed by verified getUser and getClaims. */
   verifyEmailProof(token: string): Promise<{ userId: string; sessionId: string; email: string } | null>;
@@ -21,9 +21,9 @@ export interface SameBrowserSignupPorts {
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const HASH = /^[a-f0-9]{64}$/;
 /** Same-browser channel only. No provider password update occurs in this flow. */
-export async function confirmSameBrowserSignup(ports: SameBrowserSignupPorts, input: { browserSecret: unknown; token: unknown; terms: unknown; privacy: unknown; acceptOrigin: unknown }, current: { terms: string; privacy: string; originVersion: string }): Promise<{ status: "completed" | "other-browser" | "unavailable" }> {
+export async function confirmSameBrowserSignup(ports: SameBrowserSignupPorts, input: { browserSecret: unknown; token: unknown; terms: unknown; privacy: unknown }, current: { terms: string; privacy: string; originVersion: string }): Promise<{ status: "completed" | "other-browser" | "unavailable" }> {
   if (typeof input.browserSecret !== "string" || !/^[A-Za-z0-9_-]{43,128}$/.test(input.browserSecret)) return { status: "other-browser" };
-  if (typeof input.token !== "string" || !/^[A-Za-z0-9_-]{32,256}$/.test(input.token) || typeof input.terms !== "string" || !input.terms || typeof input.privacy !== "string" || !input.privacy || typeof input.acceptOrigin !== "boolean" || !current.terms || !current.privacy || !current.originVersion || input.terms !== current.terms || input.privacy !== current.privacy) return { status: "unavailable" };
+  if (typeof input.token !== "string" || !/^[A-Za-z0-9_-]{32,256}$/.test(input.token) || typeof input.terms !== "string" || !input.terms || typeof input.privacy !== "string" || !input.privacy || !current.terms || !current.privacy || !current.originVersion || input.terms !== current.terms || input.privacy !== current.privacy) return { status: "unavailable" };
   let started = false;
   try {
     if (!ports.canBegin()) return { status: "unavailable" };
@@ -31,7 +31,7 @@ export async function confirmSameBrowserSignup(ports: SameBrowserSignupPorts, in
     if (!HASH.test(browserHash)) return { status: "unavailable" };
     // Check before OTP so opening a link on another device never consumes it.
     const attempt = await ports.findAttempt(browserHash);
-    if (!attempt || !UUID.test(attempt.intentId)) return { status: "other-browser" };
+    if (!attempt || !UUID.test(attempt.intentId) || typeof attempt.originPending!=="boolean") return { status: "other-browser" };
     if (!(await ports.limitToken(input.token)).allowed) return { status: "unavailable" };
     started = true;
     const identity = await ports.verifyEmailProof(input.token);
@@ -40,7 +40,7 @@ export async function confirmSameBrowserSignup(ports: SameBrowserSignupPorts, in
     if (!validEmail(email)) throw Error("unavailable");
     const subjectHash = ports.subjectHash(email);
     if (!HASH.test(subjectHash)) throw Error("unavailable");
-    const result = await ports.admit({ userId: identity.userId, sessionId: identity.sessionId, intentId: attempt.intentId, subjectHash, browserHash, terms: current.terms, privacy: current.privacy, acceptOrigin: input.acceptOrigin, originVersion: current.originVersion });
+    const result = await ports.admit({ userId: identity.userId, sessionId: identity.sessionId, intentId: attempt.intentId, subjectHash, browserHash, terms: current.terms, privacy: current.privacy, acceptOrigin: attempt.originPending, originVersion: current.originVersion });
     if (result !== true) throw Error("unavailable");
     return { status: "completed" };
   } catch {

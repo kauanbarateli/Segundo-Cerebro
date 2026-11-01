@@ -5,11 +5,11 @@ const config={mode:"supabase" as const,appOrigin:"https://app.example.invalid"};
 vi.mock("server-only",()=>({}));
 vi.mock("@/lib/auth/config",()=>({readAuthConfiguration:()=>config}));
 vi.mock("@/lib/auth/signup-http",()=>({signupEnabled:fake.enabled}));
-vi.mock("@/lib/auth/signup-runtime",()=>({createSignupRequestPorts:()=>({})}));
-vi.mock("@/lib/auth/signup-service",()=>({requestPublicSignup:fake.request}));
+vi.mock("@/lib/auth/signup-same-browser-runtime",()=>({createSameBrowserStartPorts:()=>({})}));
+vi.mock("@/lib/auth/signup-same-browser-start",()=>({startSameBrowserSignup:fake.request}));
 import {POST} from "../../src/app/auth/iniciar-cadastro/route";
 const form={email:"pessoa@example.invalid",password:"senha-sintetica-123",acceptedLegal:"yes",termsVersion:"v1",privacyVersion:"v2",consentedOrigin:"yes",utm_source:"busca"};
-const request=(accept?:string,body=new URLSearchParams(form).toString())=>new NextRequest("https://app.example.invalid/auth/iniciar-cadastro",{method:"POST",headers:{origin:config.appOrigin,"content-type":"application/x-www-form-urlencoded",...(accept?{accept}:{})},body});
+const request=(accept?:string,body=new URLSearchParams(form).toString())=>new NextRequest("https://app.example.invalid/auth/iniciar-cadastro",{method:"POST",headers:{origin:config.appOrigin,cookie:`sc-signup-browser=${"x".repeat(43)}`,"content-type":"application/x-www-form-urlencoded",...(accept?{accept}:{})},body});
 describe("cadastro interativo sem transporte de origem na resposta",()=>{
  beforeEach(()=>{vi.clearAllMocks();fake.enabled.mockReturnValue(true);fake.request.mockResolvedValue({status:"invalid"});});
  it("devolve status fechado sem refletir email, senha ou UTM",async()=>{
