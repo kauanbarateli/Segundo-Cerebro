@@ -12,7 +12,7 @@ import { updateEvidenceHref, validateUpdateEntries, type UpdateItem } from "../.
 import { readFileSync } from "node:fs";
 
 describe("atualizações autenticadas", () => {
-  beforeEach(() => { guards.requireUser.mockReset(); capabilities.frontB.mockReturnValue({ schema: false }); });
+  beforeEach(() => { guards.requireUser.mockReset(); capabilities.frontB.mockReturnValue({ schema: false, feedback: false }); });
 
   it("recusa a página quando a sessão é recusada", async () => {
     guards.requireUser.mockRejectedValue(new Error("redirect:/entrar"));
@@ -45,7 +45,7 @@ describe("atualizações autenticadas", () => {
 
   it("oferece sugestões apenas quando o feedback está disponível", async () => {
     guards.requireUser.mockResolvedValue({ userId: "test-user" });
-    capabilities.frontB.mockReturnValue({ schema: true });
+    capabilities.frontB.mockReturnValue({ schema: true, feedback: true });
     const html = renderToStaticMarkup(await UpdatesPage());
     expect(html).toContain('href="/feedback"');
     expect(html).toContain("Enviar sugestão");

@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 export default async function UpdatesPage() {
   await requireUser();
-  const feedbackAvailable = readAuthConfiguration().mode === "supabase" ? frontBCapabilities().schema : readOptionalDestinations().feedback;
+  const feedbackAvailable = readAuthConfiguration().mode === "supabase" ? frontBCapabilities().feedback : readOptionalDestinations().feedback;
   return (
     <>
       <div className="shell-page-heading">
