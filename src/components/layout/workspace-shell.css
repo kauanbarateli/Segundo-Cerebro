@@ -263,6 +263,12 @@ html[data-input="keyboard"] .shell-sidebar-toggle svg { transition: none; }
 .shell-top-avatar .account-avatar { inline-size: 32px; block-size: 32px; }
 .shell-top-avatar:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; box-shadow: 0 0 0 2px var(--canvas); }
 @media (max-width: 639px) { .shell-top-actions { gap: 0; } }
+/* Keep the complete connected header reachable on narrow phones. */
+@media (max-width: 420px) {
+  .shell-topbar--updates { flex-wrap: wrap; row-gap: 0; padding-block-end: var(--space-2); }
+  .shell-topbar--updates .shell-breadcrumb { flex: 1 0 100%; }
+  .shell-topbar--updates .shell-top-actions { width: 100%; justify-content: space-between; }
+}
 .shell-mode { display: flex; align-items: center; gap: 7px; margin-right: var(--space-3); color: var(--ink-muted); font-size: var(--type-legenda); white-space: nowrap; }
 .shell-mode-dot { width: 5px; height: 5px; border-radius: var(--radius-full); background: var(--success-ink); }
 .shell-icon-link {

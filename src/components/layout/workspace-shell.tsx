@@ -106,7 +106,7 @@ export function WorkspaceShell({ children, avatarId = null, displayName = null, 
   const current = getRouteByPath(pathname);
   const activityAllowed = connected && resolveAccess("inicio", policy).allowed;
   const captureAllowed = resolveAccess("capturar", policy).allowed;
-  const context = current?.label ?? (pathname === "/atividade" ? "Atividade" : pathname === "/ajuda" ? "Ajuda" : "Demonstração");
+  const context = current?.label ?? (pathname === "/atualizacoes" ? "Atualizações" : pathname === "/atividade" ? "Atividade" : pathname === "/ajuda" ? "Ajuda" : "Demonstração");
   const overlay = mobile && mobileOpen;
   const profileName = connected ? displayName?.trim() || "Sua conta" : "Perfil de demonstração";
   const profileDetail = connected ? "Meu espaço pessoal" : "Perfil de demonstração";
@@ -347,7 +347,7 @@ export function WorkspaceShell({ children, avatarId = null, displayName = null, 
         onPointerLeave={() => { tipTimer.current = setTimeout(hideTip, 160); }}>{tip.text}</div>}
 
       <div className="shell-workspace" inert={overlay}>
-        <header className="shell-topbar">
+        <header className={`shell-topbar${optional.updates ? " shell-topbar--updates" : ""}`}>
           <div className="shell-breadcrumb">
             <Button variant="ghost" className="shell-sidebar-toggle" onClick={toggleSidebar} aria-controls="shell-sidebar"
               aria-expanded={!collapsed} aria-label={collapsed ? "Expandir navegação" : "Recolher navegação"} title={collapsed ? "Expandir navegação" : "Recolher navegação"}>
