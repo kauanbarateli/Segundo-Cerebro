@@ -1,0 +1,11 @@
+# Inspeção de Auth no QA — 2026-11-01
+
+Inspeção visual somente de leitura no projeto de homologação `twrydxsdemaykgvdlpyd`, após o responsável autenticar o painel. Nenhum campo foi alterado, mensagem enviada ou credencial copiada. As observações são um retrato deste ambiente, não evidência sobre produção.
+
+- O provedor de e-mail está habilitado e a confirmação de e-mail está ligada. A opção global de permitir novos cadastros está desligada; logins anônimos também estão desligados. O prazo de OTP mostrado é 3.600 segundos.
+- SMTP próprio está desligado. A tela informa que os modelos padrão são utilizados e que SMTP próprio é necessário para editar assunto e corpo. A inspeção não comprovou entregabilidade, remetente ou capacidade para o teste com endereços externos.
+- Os modelos atuais de confirmação de cadastro e de recuperação usam `ConfirmationURL`. A candidata de cadastro espera `token_hash` na rota de confirmação e um POST explícito; o modelo padrão, portanto, não comprova esse fluxo nem sua proteção contra scanners. A recuperação existente usa o mesmo modelo de recuperação: substituí-lo sem uma estratégia compatível pode quebrar o fluxo legado.
+- A configuração de URLs tem somente uma URL de redirecionamento, a da rota legada `/auth/callback` no preview de QA. As rotas candidatas `/auth/confirmar-cadastro` e `/auth/continuar-cadastro` ainda não foram homologadas nessa configuração. A lista do painel não comprova que um template customizado seja seguro.
+- O painel mostra limites por IP para inscrições/entradas e verificação de tokens, ambos em 30 solicitações por cinco minutos. Encaminhamento de IP está desligado. Como a candidata usa Auth no servidor, é necessário avaliar os limites efetivos e proteção contra abuso com a arquitetura de implantação; não habilitar encaminhamento por inferência.
+
+Antes de abrir o cadastro: selecionar e configurar um provedor SMTP e remetente de teste, revisar os templates e os redirecionamentos com foco em preservação da recuperação existente, e validar recebimento, expiração, scanners, reenvio e confirmação em outro dispositivo em ambiente aprovado. Essas mudanças de serviço e sua ativação têm gates próprios; o estado observado **não habilita** a abertura nem atesta um fluxo real.
