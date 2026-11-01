@@ -47,4 +47,4 @@ jobs:
       - name: Conferir pacote cliente
         run: npm run check:client-auth
       - name: Documentos legais e navegação pública
-        run: npm run test:e2e -- --workers=1 tests/e2e/legal-pages.spec.ts
+        run: npm run test:e2e -- --workers=1 tests/e2e/legal-pages.spec.ts tests/e2e/pwa.spec.ts
