@@ -22,6 +22,11 @@ export function withLegacyAdoption(bytes){
  const oldCancelled="IF v_barrier.phase='cancelled' THEN RETURN pg_catalog.jsonb_build_object('status','cancelled','clientId',p_client); END IF;";
  const guardedCancelled="IF v_barrier.phase='cancelled' THEN\n   IF EXISTS(SELECT 1 FROM app_private.feedback_requests WHERE user_id=p_user AND client_id=p_client) THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='55000'; END IF;\n   RETURN pg_catalog.jsonb_build_object('status','cancelled','clientId',p_client);\n  END IF;";
  if(sql.split(oldCancelled).length!==4)fail();sql=sql.replaceAll(oldCancelled,guardedCancelled);
+ // A submitted barrier pointing at a missing row is persisted-state inconsistency, not failed authorization.
+ const orphanSubmit="IF NOT FOUND THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='42501'; END IF;";
+ sql=change(sql,orphanSubmit,orphanSubmit.replace("'42501'","'55000'"));
+ const orphanRead="IF NOT EXISTS(SELECT 1 FROM app_private.feedback_requests WHERE id=v_barrier.feedback_id AND user_id=p_user AND client_id=p_client) THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='42501'; END IF;";
+ if(sql.split(orphanRead).length!==3)fail();sql=sql.replaceAll(orphanRead,orphanRead.replace("'42501'","'55000'"));
  if(sql.split("UNREVIEWED SCRATCH SQL: DO NOT APPLY").length!==2||!sql.endsWith('COMMIT;\n'))fail();
  return Buffer.from(sql);
 }

@@ -51,7 +51,7 @@ BEGIN
    RETURN pg_catalog.jsonb_build_object('status','cancelled','clientId',p_client);
   END IF;
   SELECT * INTO v_row FROM app_private.feedback_requests WHERE id=v_barrier.feedback_id AND user_id=p_user AND client_id=p_client;
-  IF NOT FOUND THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='42501'; END IF;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='55000'; END IF;
   IF v_row.category IS DISTINCT FROM p_category OR v_row.message IS DISTINCT FROM pg_catalog.btrim(p_message) THEN RAISE EXCEPTION 'Conflicting request.' USING ERRCODE='23505'; END IF;
  ELSE
   -- A committed legacy row may be adopted only under the same keyed lock.
@@ -90,7 +90,7 @@ BEGIN
    IF EXISTS(SELECT 1 FROM app_private.feedback_requests WHERE user_id=p_user AND client_id=p_client) THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='55000'; END IF;
    RETURN pg_catalog.jsonb_build_object('status','cancelled','clientId',p_client);
   END IF;
- IF NOT EXISTS(SELECT 1 FROM app_private.feedback_requests WHERE id=v_barrier.feedback_id AND user_id=p_user AND client_id=p_client) THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='42501'; END IF;
+ IF NOT EXISTS(SELECT 1 FROM app_private.feedback_requests WHERE id=v_barrier.feedback_id AND user_id=p_user AND client_id=p_client) THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='55000'; END IF;
  RETURN pg_catalog.jsonb_build_object('status','submitted','clientId',p_client,'feedbackId',v_barrier.feedback_id);
 END $$;
 
@@ -115,7 +115,7 @@ BEGIN
    IF EXISTS(SELECT 1 FROM app_private.feedback_requests WHERE user_id=p_user AND client_id=p_client) THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='55000'; END IF;
    RETURN pg_catalog.jsonb_build_object('status','cancelled','clientId',p_client);
   END IF;
- IF NOT EXISTS(SELECT 1 FROM app_private.feedback_requests WHERE id=v_barrier.feedback_id AND user_id=p_user AND client_id=p_client) THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='42501'; END IF;
+ IF NOT EXISTS(SELECT 1 FROM app_private.feedback_requests WHERE id=v_barrier.feedback_id AND user_id=p_user AND client_id=p_client) THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='55000'; END IF;
  RETURN pg_catalog.jsonb_build_object('status','submitted','clientId',p_client,'feedbackId',v_barrier.feedback_id);
 END $$;
 

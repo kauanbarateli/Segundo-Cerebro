@@ -17,7 +17,7 @@ const pins={
  wrappers:'ca2ea88972af7450dc9bc31d0fe427dc6540b1a7b494050c7118279c0d69d8bd',
  legacy:'4a1a5cd135130de0d9e0beb5aef0e4688503c471d2d55440ff58f45e41d3f69d',
  combined:'77ee4ababfe9ef8259c3a6cdbb1adb59aa2bdd52f617b842fa6be46512d63d43',
- legacyCombined:'3d3c03ae9af33c3691767371c8b93f76c9d57caec01e2118d8838027bec29599',
+ legacyCombined:'f22de2bf553485a4786aa211ba6991dd8388a1d1270e0800d0df2c972b74c234',
  nodeMajor:'24',pglite:'0.5.8'
 };
 const sha=buffer=>createHash('sha256').update(buffer).digest('hex');
@@ -186,5 +186,15 @@ test('feedback barrier: synthetic disposable PGlite diagnostic', {timeout:120000
   assert.deepEqual(await effects(),beforeInconsistent);
   await assert.rejects(()=>one(status,[user,sessionB,client]),{code:'42501'});
   assert.deepEqual(await effects(),beforeInconsistent);
+  // A corrupt orphaned submitted barrier is inconclusive, not an auth failure.
+  const orphan='30000000-0000-4000-8000-000000000009',missing='30000000-0000-4000-8000-000000000010';
+  await pg.query("INSERT INTO app_private.feedback_barriers_draft(user_id,client_id,phase,feedback_id) VALUES($1,$2,'submitted',$3)",[user,orphan,missing]);
+  const beforeOrphan=await effects();await pg.exec('SET ROLE service_role');
+  try {
+   await assert.rejects(()=>one(pubStatus,[user,session,orphan]),{code:'55000'});
+   await assert.rejects(()=>one(pubCancel,[user,session,orphan]),{code:'55000'});
+   await assert.rejects(()=>one(pubSubmit,[user,session,orphan,'other','mensagem válida para teste']),{code:'55000'});
+  } finally {await pg.exec('RESET ROLE');}
+  assert.deepEqual(await effects(),beforeOrphan);
  }finally{await pg.close();}
 });

@@ -60,7 +60,7 @@ export async function feedbackRpc(config: SupabaseAuthConfig, actor: Authenticat
   } finally { reader.releaseLock(); }
 }
 
-/** RPC names are a proposed contract only: guarded SQL has no exposed wrappers. */
+/** The guarded SQL candidate defines these wrappers; the release gate remains closed. */
 export async function feedbackBarrierRpc(config:SupabaseAuthConfig,actor:AuthenticatedIdentity,command:{action:'status'|'cancel';clientId:string}|{action:'submit';input:FeedbackSubmission}):Promise<BarrierResult> {
   if(!feedbackReconciliationReady()||!isTrustedHostedDatabaseOrigin(config)||!authDeploymentAllowed(process.env,config))throw new FeedbackGatewayError('UNAVAILABLE');
   const clientId=command.action==='submit'?command.input.clientId:command.clientId;
@@ -79,6 +79,8 @@ export async function feedbackBarrierRpc(config:SupabaseAuthConfig,actor:Authent
     if(!response.ok){
       const code=result&&typeof result==='object'&&'code' in result?result.code:null;
       if(code==='42501')throw new FeedbackGatewayError('FORBIDDEN');
+      // Inconsistent persisted state is not an authentication failure.
+      if(code==='55000')throw new FeedbackGatewayError(command.action==='status'?'UNAVAILABLE':'COMMIT_UNKNOWN');
       if(code==='23505'||code==='22023'||code==='23514')throw new FeedbackGatewayError('CONFLICT');
       throw new Error('remote');
     }
