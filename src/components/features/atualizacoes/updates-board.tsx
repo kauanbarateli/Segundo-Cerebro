@@ -1,19 +1,22 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Field } from "@/components/ui/field";
 import { updates, updateEvidenceHref, updateStates, validateUpdateEntries, type UpdateItem } from "./content";
 
 export function UpdatesBoard({ entries = updates }: { entries?: readonly UpdateItem[] }) {
   const validatedEntries = validateUpdateEntries(entries);
-  const [selected, setSelected] = useState<(typeof updateStates)[number]["id"]>("planned");
+  const [selected, setSelected] = useState<(typeof updateStates)[number]["id"] | "all">("all");
+  const [enhanced, setEnhanced] = useState(false);
+  useEffect(() => { setEnhanced(true); }, []);
   return <>
-    <Field as="select" wrapperClassName="updates-filter" label="Etapa" id="updates-stage" value={selected} onChange={(event) => setSelected(event.target.value as typeof selected)}>
+    <Field as="select" wrapperClassName={enhanced ? "updates-filter updates-filter--ready" : "updates-filter"} label="Etapa" id="updates-stage" value={selected} onChange={(event) => setSelected(event.target.value as typeof selected)}>
+        <option value="all">Todas as etapas</option>
         {updateStates.map((state) => <option key={state.id} value={state.id}>{state.label}</option>)}
     </Field>
-    <div className="updates-board" aria-label="Etapas das atualizações">
+    <div className="updates-board" aria-label="Etapas das atualizações" data-enhanced={enhanced || undefined}>
       {updateStates.map((state) => {
         const items = validatedEntries.filter((item) => item.state === state.id).sort((a, b) => a.order - b.order);
-        return <section className="updates-column" data-active={selected === state.id} key={state.id} aria-labelledby={`updates-${state.id}`}>
+        return <section className="updates-column" data-active={selected === "all" || selected === state.id} key={state.id} aria-labelledby={`updates-${state.id}`}>
           <div className="updates-column__heading">
             <h2 id={`updates-${state.id}`}>{state.label}</h2>
             <span aria-label={`${items.length} atualizações`}>{items.length}</span>

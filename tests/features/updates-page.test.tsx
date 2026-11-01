@@ -9,6 +9,7 @@ vi.mock("@/lib/access/front-b-capabilities-server", () => ({ frontBCapabilities:
 import UpdatesPage from "../../src/app/(workspace)/atualizacoes/page";
 import { UpdatesBoard } from "../../src/components/features/atualizacoes/updates-board";
 import { updateEvidenceHref, validateUpdateEntries, type UpdateItem } from "../../src/components/features/atualizacoes/content";
+import { readFileSync } from "node:fs";
 
 describe("atualizações autenticadas", () => {
   beforeEach(() => { guards.requireUser.mockReset(); capabilities.frontB.mockReturnValue({ schema: false }); });
@@ -28,9 +29,18 @@ describe("atualizações autenticadas", () => {
     expect(html.match(/Nenhuma atualização nesta etapa\./g)).toHaveLength(5);
     expect(html).toContain('for="updates-stage"');
     expect(html).toContain('id="updates-stage"');
-    expect(html.match(/data-active="true"/g)).toHaveLength(1);
-    expect(html.match(/data-active="false"/g)).toHaveLength(4);
+    expect(html.match(/data-active="true"/g)).toHaveLength(5);
+    expect(html).not.toContain("data-enhanced=");
+    expect(html).toContain("Todas as etapas");
     expect(html).not.toContain("Enviar sugestão");
+  });
+
+  it("não oculta etapas em dispositivos estreitos antes de o filtro estar pronto", () => {
+    const css = readFileSync("src/components/features/atualizacoes/updates.css", "utf8");
+    expect(css).toContain('.updates-board[data-enhanced="true"] .updates-column[data-active="false"]');
+    expect(css).toContain(".field.updates-filter--ready");
+    expect(css).toContain(".field.updates-filter--ready:focus-within");
+    expect(css).not.toMatch(/(?:^|})\s*\.updates-column\[data-active="false"\]\s*\{\s*display:\s*none/m);
   });
 
   it("oferece sugestões apenas quando o feedback está disponível", async () => {
