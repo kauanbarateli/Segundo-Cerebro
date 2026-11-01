@@ -12,9 +12,15 @@ A [auditoria de leitura da Frente B](https://github.com/kauanbarateli/Segundo-Ce
 
 Não reaplicar as 22 migrations não registradas, não reparar ledger em lote e não reverter o PT409 para satisfazer o catálogo antigo. Preservar assinatura, grants e erro HTTP 409 do patch.
 
+## Comparação atual em QA
+
+Após autenticação da conexão dedicada, a URL retornada identificou `twrydxsdemaykgvdlpyd`. O ledger de QA contém 27 entradas com nomes `m001` a `m027` e versões atribuídas no momento da instalação; os mapeamentos históricos estão em [homologacao-twry-20261022.md](homologacao-twry-20261022.md). Não confundir esses números de versão com os nomes de arquivo canônicos.
+
+Em leitura, o mesmo catálogo canônico retornou 2.512 verificações e a mesma divergência única do wrapper. O classificador independente do PT409 retornou `ok=true` também em QA. Assim, os resultados atuais dos checks de catálogo coincidem nos dois ambientes, com a exceção operacional reconhecida; isso **não demonstra proveniência das 22 migrations ausentes no ledger de produção**, equivalência de dados, backup nem comportamento HTTP. Nenhuma migration ou fixture foi aplicada a QA nesta verificação.
+
 ## Restante para conclusão
 
-1. Reconfirmar projeto, ledger, catálogo e backup/recuperação por leitura autorizada, sem consultar dados pessoais.
+1. Projeto, ledger e catálogo foram reconfirmados nos dois ambientes por leitura; ainda falta confirmar backup/recuperação sem consultar dados pessoais.
 2. Comparar por objeto a cadeia reproduzida e as substituições posteriores com o catálogo atual e os registros operacionais; produzir procedimento revisado por migration, sem presumir proveniência.
 3. A classificação separada do patch está disponível e foi conferida em leitura. Em PGlite, `node --test tests/scripts/onboarding-conflict-verifier.test.mjs` confirmou o patch e recusou o wrapper canônico, corpo alterado e grant indevido. Integrar formalmente os dois resultados ao protocolo de release, sem alterar silenciosamente os consumidores que fixam o catálogo canônico; validar também os consumidores derivados e o comportamento em QA.
 4. Ensaiar caminho aditivo em QA autorizado e provar o conflito HTTP 409, os fluxos Admin/onboarding e isolamento, com recuperação e reversão documentadas.
