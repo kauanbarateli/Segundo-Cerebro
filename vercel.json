@@ -54,6 +54,7 @@
       "codex/front-b-feedback-sessao": false,
       "codex/front-b-feedback-browser": false,
       "codex/front-b-feedback-reconciliacao": false,
+      "codex/front-b-cadastro-reserva": false,
       "codex/reconciliacao-banco-20261031": false,
       "codex/fix-auditoria-173": false
     }
