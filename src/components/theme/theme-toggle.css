@@ -1,5 +1,5 @@
-/* RECOMENDADO: native select stretched over a 44×44 icon target; the visible
-   focus ring belongs to the wrapper because the select itself is transparent. */
+/* A 44×44 icon target. The button variant owns its focus ring; the select variant (onboarding)
+   stretches a transparent native select over the icon, so its ring belongs to the wrapper. */
 .theme-toggle {
   position: relative;
   display: inline-grid;
@@ -35,3 +35,17 @@
 @media (hover: hover) and (pointer: fine) {
   .theme-toggle:hover { background: var(--surface-hover); color: var(--ink); }
 }
+
+.theme-toggle--button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+.theme-toggle--button:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--surface);
+}
+.theme-toggle--button:active { background: var(--surface-hover); }

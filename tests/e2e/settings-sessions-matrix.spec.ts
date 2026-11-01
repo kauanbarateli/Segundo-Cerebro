@@ -172,10 +172,10 @@ for (const width of [320, 390, 768, 1440]) for (const theme of ["light", "dark"]
     await page.keyboard.press("Enter");
     await expect(panel).toHaveAttribute("aria-expanded", "true"); await expect(list.getByRole("listitem")).toHaveCount(2);
     if (width <= 600) {
-      // Layout Codex: the header theme control is a named 44×44 icon over the native select.
+      // The header theme control is a named 44×44 icon button that swaps light and dark in one click.
       const theme = await page.locator(".shell-topbar .theme-toggle").boundingBox();
       expect(theme?.width).toBeGreaterThanOrEqual(44); expect(theme?.height).toBeGreaterThanOrEqual(44);
-      await expect(page.locator(".shell-topbar").getByRole("combobox", { name: "Tema", exact: true })).toHaveValue(/light|dark|system/);
+      await expect(page.locator(".shell-topbar").getByRole("button", { name: /^Ativar tema (claro|escuro)$/ })).toBeVisible();
       // Bottom labels stay on one line and end with an ellipsis instead of breaking letters.
       await expect(page.getByRole("navigation", { name: "Navegação no celular", exact: true }).locator(".shell-bottom-link > span").first()).toHaveCSS("text-overflow", "ellipsis");
     }
