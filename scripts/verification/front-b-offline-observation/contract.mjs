@@ -47,11 +47,29 @@ export function requireCleanupProof(value){
  const fields=['processesQuiescent','namespaceAbsent','directoriesAbsent','groupConfirmed'];
  if(!plain(value,fields)||fields.some(key=>value[key]!==true))fail();
 }
+/** Diagnostic only: sorted [check, object] pairs serialized as UTF-8 JSON.
+ * Sorting compares each field's UTF-8 bytes; no names are emitted. */
+export function diagnosticDeviationDigest(deviations){
+ if(!Array.isArray(deviations)||Object.getPrototypeOf(deviations)!==Array.prototype||deviations.length>1024)fail();
+ const descriptors=Object.getOwnPropertyDescriptors(deviations);
+ if(Reflect.ownKeys(descriptors).length!==deviations.length+1)fail();
+ const pairs=[];
+ for(let i=0;i<deviations.length;i++){
+  const descriptor=descriptors[i];if(!descriptor?.enumerable||!Object.hasOwn(descriptor,'value'))fail();
+  const item=descriptor.value;if(!plain(item,['check','object']))fail();
+  const pair=[item.check,item.object];
+  if(pair.some(v=>typeof v!=='string'||!v.length||v.length>4096||!v.isWellFormed()||/[\u0000-\u001f\u007f]/.test(v)))fail();
+  pairs.push(pair);
+ }
+ pairs.sort((a,b)=>Buffer.compare(Buffer.from(a[0]),Buffer.from(b[0]))||Buffer.compare(Buffer.from(a[1]),Buffer.from(b[1])));
+ for(let i=1;i<pairs.length;i++)if(pairs[i][0]===pairs[i-1][0]&&pairs[i][1]===pairs[i-1][1])fail();
+ return hash(Buffer.from(JSON.stringify(pairs),'utf8'));
+}
 /** Keep the PG17 result observational; no PG18 snapshot is an acceptance gate. */
 export function observeCatalogue(value,serverVersion){
  if(!Number.isSafeInteger(serverVersion)||serverVersion<170000||serverVersion>=180000||!plain(value,['version','ok','checks','deviations'])||value.version!==1||typeof value.ok!=='boolean'||!Number.isSafeInteger(value.checks)||value.checks<1||!Array.isArray(value.deviations)||value.deviations.length>1024||value.ok!==(value.deviations.length===0))fail();
- for(const item of value.deviations)if(!plain(item,['check','object'])||typeof item.check!=='string'||typeof item.object!=='string'||!item.check.length||!item.object.length)fail();
- return Object.freeze({serverVersion,checks:value.checks,ok:value.ok,deviations:value.deviations.length,accepted:false});
+ const deviationsSha256=diagnosticDeviationDigest(value.deviations);
+ return Object.freeze({serverVersion,checks:value.checks,ok:value.ok,deviations:value.deviations.length,deviationsSha256,accepted:false});
 }
 
 /** The scratch copy cannot run; integration must place both files under Git. */
