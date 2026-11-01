@@ -1,0 +1,25 @@
+-- GUARDED REVIEW ONLY. Owner/worker drain, QA identity and authorization are external.
+begin;
+do $freeze_guard$ begin raise exception 'FREEZE_DRAIN_AND_QA_AUTHORIZATION_NOT_PROVEN'; end $freeze_guard$;
+set local lock_timeout='5s';set local statement_timeout='60s';
+lock table app_private.signup_settings,app_private.signup_intents,app_private.signup_origins,app_private.signup_completion_fences_draft in share row exclusive mode;
+do $thaw_preflight$ begin if not exists(select 1 from app_private.signup_settings where singleton and enabled is false) or exists(select 1 from app_private.signup_intents) or exists(select 1 from app_private.signup_origins) or exists(select 1 from app_private.signup_completion_fences_draft) then raise exception 'THAW_BASELINE_REFUSED'; end if; end $thaw_preflight$;
+
+do $freeze_check$ declare fn oid; begin
+ fn:=pg_catalog.to_regprocedure('app_private.sc_cutover_freeze_038f()');
+ if fn is null or not exists(select 1 from pg_catalog.pg_proc p join pg_catalog.pg_language l on l.oid=p.prolang
+  where p.oid=fn and pg_catalog.pg_get_userbyid(p.proowner)='postgres' and p.prokind='f' and not p.prosecdef and not p.proisstrict and p.proconfig=ARRAY['search_path=""']::text[] and l.lanname='plpgsql' and pg_catalog.pg_get_function_result(p.oid)='trigger'
+   and pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(pg_catalog.replace(p.prosrc,E'\r\n',E'\n'),'UTF8')),'hex')='85efc797c669b1550ffebf9402a28c84a9b48c5a0c0ea46f26981f6beea9269d'
+   and not pg_catalog.has_function_privilege(pg_catalog.to_regrole('anon'),p.oid,'EXECUTE')
+   and not pg_catalog.has_function_privilege(pg_catalog.to_regrole('authenticated'),p.oid,'EXECUTE')
+   and not pg_catalog.has_function_privilege(pg_catalog.to_regrole('service_role'),p.oid,'EXECUTE')
+   and not exists(select 1 from pg_catalog.aclexplode(coalesce(p.proacl,pg_catalog.acldefault('f',p.proowner))) a where a.privilege_type<>'EXECUTE' or a.is_grantable or a.grantor<>p.proowner or a.grantee<>p.proowner))
+  or (select count(*) from pg_catalog.pg_trigger t where t.tgfoid=fn and not t.tgisinternal)<>2
+  or not exists(select 1 from pg_catalog.pg_trigger t where t.tgname='sc_cutover_freeze_038f' and t.tgrelid='app_private.signup_intents'::regclass and t.tgfoid=fn and t.tgtype=62 and t.tgenabled='A' and t.tgqual is null and t.tgnargs=0 and t.tgattr=''::pg_catalog.int2vector and t.tgconstraint=0 and not t.tgisinternal)
+  or not exists(select 1 from pg_catalog.pg_trigger t where t.tgname='sc_cutover_freeze_038f' and t.tgrelid='app_private.signup_origins'::regclass and t.tgfoid=fn and t.tgtype=62 and t.tgenabled='A' and t.tgqual is null and t.tgnargs=0 and t.tgattr=''::pg_catalog.int2vector and t.tgconstraint=0 and not t.tgisinternal)
+ then raise exception 'PERSISTENT_FREEZE_NOT_PROVEN'; end if;
+end $freeze_check$;
+DROP TRIGGER sc_cutover_freeze_038f ON app_private.signup_intents;
+DROP TRIGGER sc_cutover_freeze_038f ON app_private.signup_origins;
+DROP FUNCTION app_private.sc_cutover_freeze_038f();
+rollback;

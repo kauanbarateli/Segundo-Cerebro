@@ -1,0 +1,26 @@
+-- Read-only evidence only. Independently establish QA endpoint and connection binding.
+-- Failure, missing access or a missing column means UNKNOWN. The baseline digest is
+-- the exact SQL reported as authorized and observed in the QA ledger on 2026-11-01.
+begin transaction read only;
+set local statement_timeout = '15s';
+set local search_path = pg_catalog;
+select pg_catalog.jsonb_build_object(
+ 'checked_at', pg_catalog.now(),
+ 'role_and_db_only', current_user = 'postgres' and current_database() = 'postgres',
+ 'ledger_028_count', (select count(*) from supabase_migrations.schema_migrations where version = '20261101172256'),
+ 'ledger_028_statement_arrays', coalesce((select pg_catalog.jsonb_agg(
+   pg_catalog.jsonb_build_object('name', name,
+      'statement_count', pg_catalog.cardinality(statements),
+      'statements_json_sha256', pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(pg_catalog.to_jsonb(statements)::text, 'UTF8')), 'hex'))
+   order by pg_catalog.to_jsonb(statements)::text, name)
+   from supabase_migrations.schema_migrations where version = '20261101172256'), '[]'::jsonb),
+ 'ledger_028_matches_authorized_statement', coalesce((select
+    count(*) = 1 and pg_catalog.bool_and(
+      name = 'm028_front_b_signup_feedback_metrics_qa'
+      and pg_catalog.cardinality(statements) = 1
+      and pg_catalog.array_lower(statements, 1) = 1
+      and pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(statements[1], 'UTF8')), 'hex') =
+        'bbb652684f1c526f4601c33b575c8d1cf6338feba34ab9a2d58166646faba4d7')
+   from supabase_migrations.schema_migrations where version = '20261101172256'), false)
+) as ledger_observation;
+rollback;

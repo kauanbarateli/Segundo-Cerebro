@@ -1,0 +1,453 @@
+-- GUARDED QA proposal. Source 038f remains unchanged. No remote authorization is implied.
+begin;
+do $cutover_guard$ begin raise exception 'REVIEW_AND_QA_AUTHORIZATION_REQUIRED'; end $cutover_guard$;
+do $drain_guard$ begin raise exception 'EXTERNAL_DRAIN_NOT_PROVEN'; end $drain_guard$;
+set local lock_timeout='5s';set local statement_timeout='60s';
+lock table cron.job,auth.users,app_private.signup_settings,app_private.user_admission,app_private.signup_intents,app_private.signup_completion_fences_draft in share row exclusive mode;
+do $environment$ begin
+ if current_user<>'postgres' or current_database()<>'postgres'
+  or (select count(*) from supabase_migrations.schema_migrations where version='20261101172256')<>1
+  or not exists(select 1 from app_private.signup_settings where singleton and enabled is false)
+  or exists(select 1 from app_private.signup_intents)
+  or exists(select 1 from app_private.signup_completion_fences_draft)
+  or exists(select 1 from cron.job where lower(jobname) like 'sc-signup-%' or lower(command) like '%signup_prune%' or lower(command) like '%signup_browser_prune%')
+  then raise exception 'QA_BASELINE_REFUSED'; end if;
+end $environment$;
+do $acl_check$ declare e record;ok boolean;begin
+ for e in select * from (values ('app_private.signup_prune()','cbd79d7ec1fbb93605616e7aa742c8b20ec741e098b7058b244f559add32d726','plpgsql',true),
+  ('public.signup_prune()','83a63ed59363fc48cf51dc9265cac25106f0df60eec2a262963cdec1d1843f92','sql',false),
+  ('app_private.signup_recover_verified_intent(uuid,uuid,text,text,text)','a26121c44a358eeacbeb768b1516f759fd04d14f3772f55925306ea9207da12f','plpgsql',true),
+  ('public.signup_recover_verified_intent(uuid,uuid,text,text,text)','1c44bc50a684573383162d126641c9afac6e1abf3b5e3507d7400b16ddd8895e','sql',false)) as v(signature,body_hash,language_name,security_definer) loop
+  select coalesce(bool_and(pg_catalog.pg_get_userbyid(p.proowner)='postgres' and p.prokind='f'
+   and pg_catalog.pg_get_function_result(p.oid)='jsonb' and p.prosecdef=e.security_definer and not p.proisstrict
+   and p.proconfig=ARRAY['search_path=""']::text[] and l.lanname=e.language_name
+   and pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(pg_catalog.replace(p.prosrc,E'\r\n',E'\n'),'UTF8')),'hex')=e.body_hash
+   and pg_catalog.has_function_privilege(pg_catalog.to_regrole('anon'),p.oid,'EXECUTE') is false
+   and pg_catalog.has_function_privilege(pg_catalog.to_regrole('authenticated'),p.oid,'EXECUTE') is false
+   and pg_catalog.has_function_privilege(pg_catalog.to_regrole('service_role'),p.oid,'EXECUTE') is false
+   and (select count(*) from pg_catalog.aclexplode(coalesce(p.proacl,pg_catalog.acldefault('f',p.proowner))) a
+    where a.privilege_type='EXECUTE' and not a.is_grantable and a.grantor=p.proowner and (a.grantee=p.proowner))=1
+   and not exists(select 1 from pg_catalog.aclexplode(coalesce(p.proacl,pg_catalog.acldefault('f',p.proowner))) a
+    where a.privilege_type<>'EXECUTE' or a.is_grantable or a.grantor<>p.proowner or (a.grantee<>p.proowner))),false)
+   into ok from pg_catalog.pg_proc p join pg_catalog.pg_language l on l.oid=p.prolang where p.oid=pg_catalog.to_regprocedure(e.signature);
+  if ok is distinct from true then raise exception 'QA_ACL_OR_BODY_REFUSED'; end if;
+ end loop;end $acl_check$;
+grant execute on function app_private.signup_prune(),public.signup_prune(),app_private.signup_recover_verified_intent(uuid,uuid,text,text,text),public.signup_recover_verified_intent(uuid,uuid,text,text,text) to service_role;
+do $acl_check$ declare e record;ok boolean;begin
+ for e in select * from (values ('app_private.signup_prune()','cbd79d7ec1fbb93605616e7aa742c8b20ec741e098b7058b244f559add32d726','plpgsql',true),
+  ('public.signup_prune()','83a63ed59363fc48cf51dc9265cac25106f0df60eec2a262963cdec1d1843f92','sql',false),
+  ('app_private.signup_recover_verified_intent(uuid,uuid,text,text,text)','a26121c44a358eeacbeb768b1516f759fd04d14f3772f55925306ea9207da12f','plpgsql',true),
+  ('public.signup_recover_verified_intent(uuid,uuid,text,text,text)','1c44bc50a684573383162d126641c9afac6e1abf3b5e3507d7400b16ddd8895e','sql',false)) as v(signature,body_hash,language_name,security_definer) loop
+  select coalesce(bool_and(pg_catalog.pg_get_userbyid(p.proowner)='postgres' and p.prokind='f'
+   and pg_catalog.pg_get_function_result(p.oid)='jsonb' and p.prosecdef=e.security_definer and not p.proisstrict
+   and p.proconfig=ARRAY['search_path=""']::text[] and l.lanname=e.language_name
+   and pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(pg_catalog.replace(p.prosrc,E'\r\n',E'\n'),'UTF8')),'hex')=e.body_hash
+   and pg_catalog.has_function_privilege(pg_catalog.to_regrole('anon'),p.oid,'EXECUTE') is false
+   and pg_catalog.has_function_privilege(pg_catalog.to_regrole('authenticated'),p.oid,'EXECUTE') is false
+   and pg_catalog.has_function_privilege(pg_catalog.to_regrole('service_role'),p.oid,'EXECUTE') is true
+   and (select count(*) from pg_catalog.aclexplode(coalesce(p.proacl,pg_catalog.acldefault('f',p.proowner))) a
+    where a.privilege_type='EXECUTE' and not a.is_grantable and a.grantor=p.proowner and (a.grantee=p.proowner or a.grantee=pg_catalog.to_regrole('service_role')::oid))=2
+   and not exists(select 1 from pg_catalog.aclexplode(coalesce(p.proacl,pg_catalog.acldefault('f',p.proowner))) a
+    where a.privilege_type<>'EXECUTE' or a.is_grantable or a.grantor<>p.proowner or (a.grantee<>p.proowner and a.grantee<>pg_catalog.to_regrole('service_role')::oid))),false)
+   into ok from pg_catalog.pg_proc p join pg_catalog.pg_language l on l.oid=p.prolang where p.oid=pg_catalog.to_regprocedure(e.signature);
+  if ok is distinct from true then raise exception 'QA_ACL_OR_BODY_REFUSED'; end if;
+ end loop;end $acl_check$;
+DO $scratch_guard$ BEGIN RAISE EXCEPTION 'UNREVIEWED SCRATCH SQL: DO NOT APPLY'; END $scratch_guard$;
+DO $rollout_block$ BEGIN RAISE EXCEPTION 'CLEANUP_WRITERS_NOT_PROVEN_PAUSED_AND_DRAINED'; END $rollout_block$;
+
+-- GUARDED CANDIDATE: NOT A MIGRATION; requires a separately reviewed rollout.
+
+SET LOCAL lock_timeout='5s';
+SET LOCAL statement_timeout='60s';
+-- Keep the installed 028 and its ledger untouched. Pause signup and drain old
+-- writers before coordinating this new candidate with the server channel.
+-- No initial row: signup stays closed until a separately reviewed legal release
+-- procedure provisions this row and synchronizes it with published documents.
+CREATE TABLE app_private.signup_browser_legal_versions (
+ singleton boolean PRIMARY KEY DEFAULT true CHECK(singleton),
+ terms_version text NOT NULL CHECK(pg_catalog.char_length(terms_version) BETWEEN 1 AND 100),
+ privacy_version text NOT NULL CHECK(pg_catalog.char_length(privacy_version) BETWEEN 1 AND 100),
+ origin_version text NOT NULL CHECK(pg_catalog.char_length(origin_version) BETWEEN 1 AND 100)
+);
+ALTER TABLE app_private.signup_browser_legal_versions ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON app_private.signup_browser_legal_versions FROM PUBLIC,anon,authenticated,service_role;
+CREATE TABLE app_private.signup_browser_attempts (
+ intent_id uuid PRIMARY KEY REFERENCES app_private.signup_intents(id) ON DELETE CASCADE,
+ browser_hash text NOT NULL UNIQUE CHECK (browser_hash ~ '^[a-f0-9]{64}$'),
+ expires_at timestamptz NOT NULL,
+ consumed_at timestamptz,
+ accept_origin boolean,
+ origin_version text,
+ requires_password boolean NOT NULL DEFAULT false,
+ CHECK ((consumed_at IS NULL AND accept_origin IS NULL AND origin_version IS NULL)
+     OR (consumed_at IS NOT NULL AND accept_origin IS NOT NULL AND origin_version IS NOT NULL))
+);
+ALTER TABLE app_private.signup_browser_attempts ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON app_private.signup_browser_attempts FROM PUBLIC,anon,authenticated,service_role;
+CREATE INDEX signup_browser_attempts_expiry ON app_private.signup_browser_attempts(expires_at,intent_id);
+
+CREATE FUNCTION app_private.signup_browser_prepare(p_binding text,p_browser text,p_subject text,p_terms text,p_privacy text,p_expires timestamptz,p_origin jsonb,p_origin_version text)
+RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE v_intent uuid;
+BEGIN
+ IF p_browser IS NULL OR p_browser !~ '^[a-f0-9]{64}$' OR p_browser=p_binding THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ PERFORM 1 FROM app_private.signup_browser_legal_versions WHERE singleton AND terms_version=p_terms AND privacy_version=p_privacy
+  AND (p_origin_version IS NULL OR origin_version=p_origin_version) FOR SHARE;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ v_intent:=app_private.signup_intent_create(p_binding,p_subject,p_terms,p_privacy,p_expires,p_origin,p_origin_version);
+ INSERT INTO app_private.signup_browser_attempts(intent_id,browser_hash,expires_at) VALUES(v_intent,p_browser,p_expires);
+ RETURN v_intent;
+END $$;
+
+-- After a freshly verified OTP, identify only an existing stale bound intent.
+-- A previously pruned intent cannot be reconstructed from email ownership.
+CREATE FUNCTION app_private.signup_browser_reconsent_probe(p_user uuid,p_session uuid,p_subject text,p_terms text,p_privacy text) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE i app_private.signup_intents; v_intent uuid;
+BEGIN
+ SELECT id INTO v_intent FROM app_private.signup_intents WHERE user_id=p_user AND subject_hash=p_subject AND state='bound';
+ IF NOT FOUND THEN RETURN NULL; END IF;
+ PERFORM app_private.draft_completion_context(p_user,p_session,v_intent,p_subject,true,false);
+ PERFORM 1 FROM app_private.signup_browser_legal_versions WHERE singleton AND terms_version=p_terms AND privacy_version=p_privacy FOR SHARE;
+ IF NOT FOUND OR EXISTS(SELECT 1 FROM app_private.signup_completion_fences_draft WHERE user_id=p_user) THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ SELECT * INTO STRICT i FROM app_private.signup_intents WHERE id=v_intent FOR UPDATE;
+ IF NOT EXISTS(SELECT 1 FROM app_private.signup_browser_attempts WHERE intent_id=v_intent AND expires_at>pg_catalog.clock_timestamp()-interval '24 hours') THEN RETURN NULL; END IF;
+ IF i.expires_at>pg_catalog.clock_timestamp() AND i.terms_version IS NOT DISTINCT FROM p_terms AND i.privacy_version IS NOT DISTINCT FROM p_privacy THEN RETURN NULL; END IF;
+ RETURN pg_catalog.jsonb_build_object('intentId',i.id,'originPending',i.origin IS NOT NULL AND i.expires_at>pg_catalog.clock_timestamp());
+END $$;
+
+-- Caller must present explicit current legal consent and origin decision from
+-- the OTP-bound session. Only an existing stale intent may be renewed.
+CREATE FUNCTION app_private.signup_browser_renew(p_user uuid,p_session uuid,p_intent uuid,p_subject text,p_terms text,p_privacy text,p_keep_origin boolean,p_origin_version text,p_proof_expires_at timestamptz) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE i app_private.signup_intents; keep_origin boolean;
+BEGIN
+ IF p_keep_origin IS NULL OR p_origin_version IS NULL THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ PERFORM app_private.draft_completion_context(p_user,p_session,p_intent,p_subject,true,false);
+ PERFORM 1 FROM app_private.signup_browser_legal_versions WHERE singleton AND terms_version=p_terms AND privacy_version=p_privacy AND origin_version=p_origin_version FOR SHARE;
+ IF NOT FOUND OR EXISTS(SELECT 1 FROM app_private.signup_completion_fences_draft WHERE user_id=p_user) THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ SELECT * INTO STRICT i FROM app_private.signup_intents WHERE id=p_intent FOR UPDATE;
+ PERFORM 1 FROM app_private.signup_browser_attempts WHERE intent_id=p_intent AND expires_at>pg_catalog.clock_timestamp()-interval '24 hours' FOR UPDATE;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ -- Trusted server derives this deadline only from the OTP-signed checkpoint.
+ IF p_proof_expires_at IS NULL OR NOT pg_catalog.isfinite(p_proof_expires_at) OR p_proof_expires_at<=pg_catalog.clock_timestamp() THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ IF i.expires_at>pg_catalog.clock_timestamp() AND i.terms_version IS NOT DISTINCT FROM p_terms AND i.privacy_version IS NOT DISTINCT FROM p_privacy THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ keep_origin:=p_keep_origin AND i.origin IS NOT NULL AND i.expires_at>pg_catalog.clock_timestamp();
+ -- keep_origin is a new explicit choice under the current version; it can
+ -- retain existing values but can never recreate values already withdrawn.
+ IF keep_origin AND (i.origin_consented_at IS NULL OR i.origin_consented_at<=pg_catalog.clock_timestamp()-interval '12 months') THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ IF i.origin IS NOT NULL AND NOT keep_origin THEN
+  PERFORM app_private.append_event(p_user,'signup_origin',p_user,'deleted','web',NULL,pg_catalog.jsonb_build_object('consent','withdrawn'));
+ END IF;
+ UPDATE app_private.signup_intents SET terms_version=p_terms,privacy_version=p_privacy,expires_at=pg_catalog.clock_timestamp()+interval '30 minutes',
+  origin=CASE WHEN keep_origin THEN i.origin ELSE NULL END,origin_consent_version=CASE WHEN keep_origin THEN p_origin_version ELSE NULL END,
+  origin_consented_at=CASE WHEN keep_origin THEN pg_catalog.now() ELSE NULL END WHERE id=p_intent AND state='bound';
+ IF NOT FOUND THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ -- Fence out delayed direct-admission calls until the password-after-OTP path.
+ UPDATE app_private.signup_browser_attempts SET requires_password=true WHERE intent_id=p_intent;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ -- Any wait or trigger work after the first deadline check also rolls back.
+ IF p_proof_expires_at<=pg_catalog.clock_timestamp() THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ RETURN pg_catalog.jsonb_build_object('status','renewed','originPending',keep_origin);
+END $$;
+
+-- Explicitly invoked by a reviewed retention process; never scheduled here.
+CREATE FUNCTION app_private.signup_browser_prune(p_limit integer) RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE removed integer;
+BEGIN
+ IF p_limit IS NULL OR p_limit<1 OR p_limit>1000 THEN RAISE EXCEPTION 'Invalid cleanup limit.' USING ERRCODE='22023'; END IF;
+ WITH victims AS (SELECT intent_id FROM app_private.signup_browser_attempts WHERE expires_at<=pg_catalog.clock_timestamp() ORDER BY expires_at,intent_id FOR UPDATE SKIP LOCKED LIMIT p_limit)
+ DELETE FROM app_private.signup_browser_attempts a USING victims v WHERE a.intent_id=v.intent_id AND a.expires_at<=pg_catalog.clock_timestamp();
+ GET DIAGNOSTICS removed=ROW_COUNT;
+ RETURN removed;
+END $$;
+
+-- Only the server can look up a high-entropy cookie hash. A pending intent
+-- does not qualify: the Auth INSERT must already have bound it to a new user.
+CREATE FUNCTION app_private.signup_browser_find(p_browser text) RETURNS jsonb LANGUAGE sql SECURITY DEFINER SET search_path='' AS $$
+ SELECT pg_catalog.jsonb_build_object('intentId',a.intent_id,'userId',i.user_id,'originPending',CASE WHEN i.state='consumed' THEN a.accept_origin ELSE i.origin IS NOT NULL END) FROM app_private.signup_browser_attempts a
+ JOIN app_private.signup_intents i ON i.id=a.intent_id
+ WHERE a.browser_hash=p_browser AND a.expires_at>pg_catalog.clock_timestamp()
+  AND i.state IN ('bound','consumed') AND i.user_id IS NOT NULL
+$$;
+
+-- After a fresh OTP, fallback may only use the already bound, live intent.
+-- It must not replace legal versions, discard UTM, or create another intent.
+CREATE FUNCTION app_private.signup_browser_recover_bound(p_user uuid,p_session uuid,p_subject text,p_terms text,p_privacy text) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE i app_private.signup_intents; v_intent uuid;
+BEGIN
+ SELECT id INTO v_intent FROM app_private.signup_intents WHERE user_id=p_user AND subject_hash=p_subject AND state='bound';
+ IF NOT FOUND THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ PERFORM app_private.draft_completion_context(p_user,p_session,v_intent,p_subject,true,true);
+ PERFORM 1 FROM app_private.signup_browser_legal_versions WHERE singleton AND terms_version=p_terms AND privacy_version=p_privacy FOR SHARE;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ SELECT * INTO i FROM app_private.signup_intents WHERE id=v_intent FOR UPDATE;
+ IF NOT FOUND OR i.expires_at IS NULL OR i.expires_at<=pg_catalog.clock_timestamp() OR i.terms_version IS DISTINCT FROM p_terms OR i.privacy_version IS DISTINCT FROM p_privacy
+  OR EXISTS(SELECT 1 FROM app_private.signup_completion_fences_draft WHERE user_id=p_user)
+  THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ RETURN pg_catalog.jsonb_build_object('intentId',i.id,'termsVersion',i.terms_version,'privacyVersion',i.privacy_version,'state',i.state,'originPending',i.origin IS NOT NULL);
+END $$;
+
+-- Server only: p_user/p_session MUST come from getUser/getClaims immediately
+-- after verifying the OTP, and p_browser from the original HttpOnly cookie.
+CREATE FUNCTION app_private.signup_browser_admit(p_user uuid,p_session uuid,p_intent uuid,p_subject text,p_browser text,p_terms text,p_privacy text,p_accept_origin boolean,p_origin_version text)
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE i app_private.signup_intents; a app_private.signup_browser_attempts; adm app_private.user_admission; v_origin_effective boolean;
+BEGIN
+ IF p_user IS NULL OR p_session IS NULL OR p_intent IS NULL OR p_subject IS NULL OR p_subject !~ '^[a-f0-9]{64}$'
+  OR p_browser IS NULL OR p_browser !~ '^[a-f0-9]{64}$' OR p_terms IS NULL OR p_privacy IS NULL
+  OR p_accept_origin IS NULL OR p_origin_version IS NULL THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ PERFORM 1 FROM auth.users WHERE id=p_user FOR SHARE;
+ PERFORM 1 FROM auth.sessions WHERE id=p_session AND user_id=p_user FOR SHARE;
+ PERFORM 1 FROM public.user_moderation WHERE user_id=p_user FOR SHARE;
+ IF app_private.signup_pending_identity(p_user,p_session) IS NOT TRUE THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ PERFORM pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(p_user::text || ':signup',0));
+ PERFORM 1 FROM app_private.signup_settings WHERE singleton AND enabled FOR SHARE;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ -- The legal publication process must update this authority under the same
+ -- row lock before making a new document version current. No row means closed.
+ PERFORM 1 FROM app_private.signup_browser_legal_versions WHERE singleton AND terms_version=p_terms AND privacy_version=p_privacy AND origin_version=p_origin_version FOR SHARE;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ SELECT * INTO i FROM app_private.signup_intents WHERE id=p_intent FOR UPDATE;
+ IF NOT FOUND OR i.user_id IS DISTINCT FROM p_user OR i.subject_hash IS DISTINCT FROM p_subject
+  OR i.terms_version IS DISTINCT FROM p_terms OR i.privacy_version IS DISTINCT FROM p_privacy THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ SELECT * INTO adm FROM app_private.user_admission WHERE user_id=p_user FOR UPDATE;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ SELECT * INTO a FROM app_private.signup_browser_attempts WHERE intent_id=p_intent FOR UPDATE;
+ IF NOT FOUND OR a.browser_hash IS DISTINCT FROM p_browser OR a.expires_at<=pg_catalog.clock_timestamp() THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ IF i.state='consumed' THEN
+  RETURN adm.origin='public' AND adm.state='admitted' AND a.consumed_at IS NOT NULL
+   AND a.accept_origin IS NOT DISTINCT FROM p_accept_origin AND a.origin_version IS NOT DISTINCT FROM p_origin_version;
+ END IF;
+ IF i.state IS DISTINCT FROM 'bound' OR i.expires_at<=pg_catalog.clock_timestamp() OR a.requires_password
+  OR adm.origin IS DISTINCT FROM 'unclassified' OR adm.state IS DISTINCT FROM 'pending' OR a.consumed_at IS NOT NULL
+  OR EXISTS(SELECT 1 FROM app_private.signup_completion_fences_draft WHERE user_id=p_user)
+  THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ v_origin_effective:=p_accept_origin AND i.origin IS NOT NULL;
+ IF p_accept_origin AND i.origin IS NOT NULL THEN
+  IF i.origin_consent_version IS DISTINCT FROM p_origin_version THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+  INSERT INTO app_private.signup_origins(user_id,origin,consent_version,consented_at,expires_at)
+   VALUES(p_user,i.origin,i.origin_consent_version,pg_catalog.now(),pg_catalog.now()+interval '12 months');
+  PERFORM app_private.append_event(p_user,'signup_origin',p_user,'created','web',NULL,pg_catalog.jsonb_build_object('consent','granted'));
+ END IF;
+ UPDATE app_private.signup_intents SET state='consumed',consumed_at=pg_catalog.now(),origin=NULL,origin_consent_version=NULL,origin_consented_at=NULL WHERE id=p_intent AND state='bound';
+ UPDATE app_private.user_admission SET origin='public',state='admitted',admitted_at=pg_catalog.now() WHERE user_id=p_user AND origin='unclassified' AND state='pending';
+ INSERT INTO app_private.onboarding_entries(user_id,source_operation,source_kind,source_intent) VALUES(p_user,NULL,'public',p_intent);
+ PERFORM app_private.append_event(p_user,'signup_admission',p_user,'created','web',NULL,pg_catalog.jsonb_build_object('user_id',p_user,'origin','public'));
+ PERFORM app_private.append_event(p_user,'onboarding_entry',p_user,'created','web',NULL,pg_catalog.jsonb_build_object('user_id',p_user,'eligibility','new_explicit','schema_version',1));
+ UPDATE app_private.signup_browser_attempts SET consumed_at=pg_catalog.now(),accept_origin=v_origin_effective,origin_version=p_origin_version WHERE intent_id=p_intent AND consumed_at IS NULL;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ RETURN true;
+END $$;
+
+REVOKE ALL ON FUNCTION app_private.signup_browser_prepare(text,text,text,text,text,timestamptz,jsonb,text),app_private.signup_browser_find(text),app_private.signup_browser_recover_bound(uuid,uuid,text,text,text),app_private.signup_browser_admit(uuid,uuid,uuid,text,text,text,text,boolean,text),app_private.signup_browser_prune(integer) FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION app_private.signup_browser_prepare(text,text,text,text,text,timestamptz,jsonb,text),app_private.signup_browser_find(text),app_private.signup_browser_recover_bound(uuid,uuid,text,text,text),app_private.signup_browser_admit(uuid,uuid,uuid,text,text,text,text,boolean,text),app_private.signup_browser_prune(integer) TO service_role;
+REVOKE ALL ON FUNCTION app_private.signup_browser_reconsent_probe(uuid,uuid,text,text,text),app_private.signup_browser_renew(uuid,uuid,uuid,text,text,text,boolean,text,timestamptz) FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION app_private.signup_browser_reconsent_probe(uuid,uuid,text,text,text),app_private.signup_browser_renew(uuid,uuid,uuid,text,text,text,boolean,text,timestamptz) TO service_role;
+CREATE FUNCTION public.signup_browser_prepare(p_binding text,p_browser text,p_subject text,p_terms text,p_privacy text,p_expires timestamptz,p_origin jsonb,p_origin_version text) RETURNS uuid LANGUAGE sql SECURITY INVOKER SET search_path='' AS $$ SELECT app_private.signup_browser_prepare(p_binding,p_browser,p_subject,p_terms,p_privacy,p_expires,p_origin,p_origin_version) $$;
+CREATE FUNCTION public.signup_browser_find(p_browser text) RETURNS jsonb LANGUAGE sql SECURITY INVOKER SET search_path='' AS $$ SELECT app_private.signup_browser_find(p_browser) $$;
+CREATE FUNCTION public.signup_browser_recover_bound(p_user uuid,p_session uuid,p_subject text,p_terms text,p_privacy text) RETURNS jsonb LANGUAGE sql SECURITY INVOKER SET search_path='' AS $$ SELECT app_private.signup_browser_recover_bound(p_user,p_session,p_subject,p_terms,p_privacy) $$;
+CREATE FUNCTION public.signup_browser_reconsent_probe(p_user uuid,p_session uuid,p_subject text,p_terms text,p_privacy text) RETURNS jsonb LANGUAGE sql SECURITY INVOKER SET search_path='' AS $$ SELECT app_private.signup_browser_reconsent_probe(p_user,p_session,p_subject,p_terms,p_privacy) $$;
+CREATE FUNCTION public.signup_browser_renew(p_user uuid,p_session uuid,p_intent uuid,p_subject text,p_terms text,p_privacy text,p_keep_origin boolean,p_origin_version text,p_proof_expires_at timestamptz) RETURNS jsonb LANGUAGE sql SECURITY INVOKER SET search_path='' AS $$ SELECT app_private.signup_browser_renew(p_user,p_session,p_intent,p_subject,p_terms,p_privacy,p_keep_origin,p_origin_version,p_proof_expires_at) $$;
+CREATE FUNCTION public.signup_browser_admit(p_user uuid,p_session uuid,p_intent uuid,p_subject text,p_browser text,p_terms text,p_privacy text,p_accept_origin boolean,p_origin_version text) RETURNS boolean LANGUAGE sql SECURITY INVOKER SET search_path='' AS $$ SELECT app_private.signup_browser_admit(p_user,p_session,p_intent,p_subject,p_browser,p_terms,p_privacy,p_accept_origin,p_origin_version) $$;
+CREATE FUNCTION public.signup_browser_prune(p_limit integer) RETURNS integer LANGUAGE sql SECURITY INVOKER SET search_path='' AS $$ SELECT app_private.signup_browser_prune(p_limit) $$;
+REVOKE ALL ON FUNCTION public.signup_browser_prepare(text,text,text,text,text,timestamptz,jsonb,text),public.signup_browser_find(text),public.signup_browser_recover_bound(uuid,uuid,text,text,text),public.signup_browser_admit(uuid,uuid,uuid,text,text,text,text,boolean,text),public.signup_browser_prune(integer) FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION public.signup_browser_prepare(text,text,text,text,text,timestamptz,jsonb,text),public.signup_browser_find(text),public.signup_browser_recover_bound(uuid,uuid,text,text,text),public.signup_browser_admit(uuid,uuid,uuid,text,text,text,text,boolean,text),public.signup_browser_prune(integer) TO service_role;
+REVOKE ALL ON FUNCTION public.signup_browser_reconsent_probe(uuid,uuid,text,text,text),public.signup_browser_renew(uuid,uuid,uuid,text,text,text,boolean,text,timestamptz) FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION public.signup_browser_reconsent_probe(uuid,uuid,text,text,text),public.signup_browser_renew(uuid,uuid,uuid,text,text,text,boolean,text,timestamptz) TO service_role;
+
+-- GUARDED CANDIDATE, NOT A MIGRATION. Do not apply to any remote database.
+-- Requires coordinated reviewed rollout with same-browser-signup candidate,
+-- paused old writers and a separately authorized retention/cron change.
+
+-- Formal independent blocker: do not remove until an enforceable rollout protocol
+-- proves all cron invocations, cleanup callers and legacy intent writers
+-- (including signup_recover_verified_intent) paused and drained.
+
+SET LOCAL lock_timeout='5s';
+SET LOCAL statement_timeout='60s';
+LOCK TABLE auth.users,app_private.signup_settings,app_private.user_admission,app_private.signup_intents,app_private.signup_browser_attempts,app_private.signup_completion_fences_draft IN SHARE ROW EXCLUSIVE MODE;
+DO $preflight$
+BEGIN
+ IF NOT EXISTS(SELECT 1 FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_language l ON l.oid=p.prolang
+  WHERE p.oid=pg_catalog.to_regprocedure('app_private.signup_prune()') AND pg_catalog.pg_get_userbyid(p.proowner)='postgres' AND p.prokind='f' AND p.prosecdef AND NOT p.proisstrict AND p.proconfig=ARRAY['search_path=""']::text[] AND l.lanname='plpgsql'
+   AND NOT pg_catalog.has_function_privilege('anon',p.oid,'EXECUTE') AND NOT pg_catalog.has_function_privilege('authenticated',p.oid,'EXECUTE') AND pg_catalog.has_function_privilege('service_role',p.oid,'EXECUTE')
+   AND (SELECT count(*) FROM pg_catalog.aclexplode(coalesce(p.proacl,pg_catalog.acldefault('f',p.proowner))) x WHERE x.privilege_type='EXECUTE' AND NOT x.is_grantable AND x.grantor=p.proowner AND x.grantee IN (p.proowner,pg_catalog.to_regrole('service_role')::oid))=2
+   AND NOT EXISTS(SELECT 1 FROM pg_catalog.aclexplode(coalesce(p.proacl,pg_catalog.acldefault('f',p.proowner))) x WHERE x.privilege_type<>'EXECUTE' OR x.is_grantable OR x.grantor<>p.proowner OR x.grantee NOT IN (p.proowner,pg_catalog.to_regrole('service_role')::oid))
+   AND pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(pg_catalog.replace(p.prosrc,E'\r\n',E'\n'),'UTF8')),'hex')='cbd79d7ec1fbb93605616e7aa742c8b20ec741e098b7058b244f559add32d726')
+  OR NOT EXISTS(SELECT 1 FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_language l ON l.oid=p.prolang
+   WHERE p.oid=pg_catalog.to_regprocedure('app_private.signup_browser_prune(integer)') AND pg_catalog.pg_get_userbyid(p.proowner)='postgres' AND p.prokind='f' AND p.prosecdef AND NOT p.proisstrict AND p.proconfig=ARRAY['search_path=""']::text[] AND l.lanname='plpgsql'
+    AND NOT pg_catalog.has_function_privilege('anon',p.oid,'EXECUTE') AND NOT pg_catalog.has_function_privilege('authenticated',p.oid,'EXECUTE') AND pg_catalog.has_function_privilege('service_role',p.oid,'EXECUTE')
+    AND (SELECT count(*) FROM pg_catalog.aclexplode(coalesce(p.proacl,pg_catalog.acldefault('f',p.proowner))) x WHERE x.privilege_type='EXECUTE' AND NOT x.is_grantable AND x.grantor=p.proowner AND x.grantee IN (p.proowner,pg_catalog.to_regrole('service_role')::oid))=2
+    AND NOT EXISTS(SELECT 1 FROM pg_catalog.aclexplode(coalesce(p.proacl,pg_catalog.acldefault('f',p.proowner))) x WHERE x.privilege_type<>'EXECUTE' OR x.is_grantable OR x.grantor<>p.proowner OR x.grantee NOT IN (p.proowner,pg_catalog.to_regrole('service_role')::oid))
+    AND pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(pg_catalog.replace(p.prosrc,E'\r\n',E'\n'),'UTF8')),'hex')='41fd83722d5ea9d877a08162edc8ffcba1133470b1de4d6ba73245fe06bd97d3')
+ OR NOT EXISTS(SELECT 1 FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_language l ON l.oid=p.prolang
+   WHERE p.oid=pg_catalog.to_regprocedure('app_private.signup_recover_verified_intent(uuid,uuid,text,text,text)') AND pg_catalog.pg_get_userbyid(p.proowner)='postgres' AND p.prokind='f' AND p.prosecdef AND NOT p.proisstrict AND p.proconfig=ARRAY['search_path=""']::text[] AND l.lanname='plpgsql'
+    AND NOT pg_catalog.has_function_privilege('anon',p.oid,'EXECUTE') AND NOT pg_catalog.has_function_privilege('authenticated',p.oid,'EXECUTE') AND pg_catalog.has_function_privilege('service_role',p.oid,'EXECUTE')
+    AND (SELECT count(*) FROM pg_catalog.aclexplode(coalesce(p.proacl,pg_catalog.acldefault('f',p.proowner))) x WHERE x.privilege_type='EXECUTE' AND NOT x.is_grantable AND x.grantor=p.proowner AND x.grantee IN (p.proowner,pg_catalog.to_regrole('service_role')::oid))=2
+    AND NOT EXISTS(SELECT 1 FROM pg_catalog.aclexplode(coalesce(p.proacl,pg_catalog.acldefault('f',p.proowner))) x WHERE x.privilege_type<>'EXECUTE' OR x.is_grantable OR x.grantor<>p.proowner OR x.grantee NOT IN (p.proowner,pg_catalog.to_regrole('service_role')::oid))
+    AND pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(pg_catalog.replace(p.prosrc,E'\r\n',E'\n'),'UTF8')),'hex')='a26121c44a358eeacbeb768b1516f759fd04d14f3772f55925306ea9207da12f')
+ OR NOT EXISTS(SELECT 1 FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_language l ON l.oid=p.prolang
+   WHERE p.oid=pg_catalog.to_regprocedure('public.signup_recover_verified_intent(uuid,uuid,text,text,text)') AND pg_catalog.pg_get_userbyid(p.proowner)='postgres' AND p.prokind='f' AND NOT p.prosecdef AND NOT p.proisstrict AND p.proconfig=ARRAY['search_path=""']::text[] AND l.lanname='sql'
+    AND NOT pg_catalog.has_function_privilege('anon',p.oid,'EXECUTE') AND NOT pg_catalog.has_function_privilege('authenticated',p.oid,'EXECUTE') AND pg_catalog.has_function_privilege('service_role',p.oid,'EXECUTE')
+    AND (SELECT count(*) FROM pg_catalog.aclexplode(coalesce(p.proacl,pg_catalog.acldefault('f',p.proowner))) x WHERE x.privilege_type='EXECUTE' AND NOT x.is_grantable AND x.grantor=p.proowner AND x.grantee IN (p.proowner,pg_catalog.to_regrole('service_role')::oid))=2
+    AND NOT EXISTS(SELECT 1 FROM pg_catalog.aclexplode(coalesce(p.proacl,pg_catalog.acldefault('f',p.proowner))) x WHERE x.privilege_type<>'EXECUTE' OR x.is_grantable OR x.grantor<>p.proowner OR x.grantee NOT IN (p.proowner,pg_catalog.to_regrole('service_role')::oid))
+    AND pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(pg_catalog.replace(p.prosrc,E'\r\n',E'\n'),'UTF8')),'hex')='1c44bc50a684573383162d126641c9afac6e1abf3b5e3507d7400b16ddd8895e')
+ OR NOT EXISTS(SELECT 1 FROM app_private.signup_settings WHERE singleton AND enabled=false)
+ OR NOT EXISTS(SELECT 1 FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_language l ON l.oid=p.prolang
+   WHERE p.oid=pg_catalog.to_regprocedure('app_private.admission_new_identity()') AND pg_catalog.pg_get_userbyid(p.proowner)='postgres' AND p.prokind='f' AND p.prosecdef AND NOT p.proisstrict AND p.proconfig=ARRAY['search_path=""']::text[] AND l.lanname='plpgsql'
+    AND NOT pg_catalog.has_function_privilege('anon',p.oid,'EXECUTE') AND NOT pg_catalog.has_function_privilege('authenticated',p.oid,'EXECUTE') AND NOT pg_catalog.has_function_privilege('service_role',p.oid,'EXECUTE')
+    AND (SELECT count(*) FROM pg_catalog.aclexplode(coalesce(p.proacl,pg_catalog.acldefault('f',p.proowner))) x WHERE x.privilege_type='EXECUTE' AND NOT x.is_grantable AND x.grantor=p.proowner AND x.grantee=p.proowner)=1
+    AND NOT EXISTS(SELECT 1 FROM pg_catalog.aclexplode(coalesce(p.proacl,pg_catalog.acldefault('f',p.proowner))) x WHERE x.privilege_type<>'EXECUTE' OR x.is_grantable OR x.grantor<>p.proowner OR x.grantee<>p.proowner)
+    AND pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(pg_catalog.replace(p.prosrc,E'\r\n',E'\n'),'UTF8')),'hex')='8f8dad6cf3e16f242c83ed2ad05e7df7974ea47b9155fa97e8b77c356c7b1bcd')
+ OR (SELECT count(*) FROM pg_catalog.pg_trigger t WHERE t.tgfoid=pg_catalog.to_regprocedure('app_private.admission_new_identity()') AND NOT t.tgisinternal)<>1
+ OR NOT EXISTS(SELECT 1 FROM pg_catalog.pg_trigger t WHERE t.tgname='second_brain_admission_created' AND t.tgrelid='auth.users'::regclass AND t.tgfoid=pg_catalog.to_regprocedure('app_private.admission_new_identity()') AND t.tgtype=5 AND t.tgenabled='O' AND NOT t.tgisinternal)
+ THEN RAISE EXCEPTION 'RETENTION_FOUNDATION_REFUSED'; END IF;
+END $preflight$;
+
+-- The marker follows the account, not the expiring intent, and inherits the
+-- existing user_admission FK ON DELETE CASCADE. The empty attempts table is
+-- created in the same blocked transaction; no speculative backfill is made.
+ALTER TABLE app_private.user_admission ADD COLUMN signup_created_after_cutover boolean NOT NULL DEFAULT false;
+-- A consumed attempt keeps its provenance but can discard its browser hash.
+ALTER TABLE app_private.signup_browser_attempts ALTER COLUMN browser_hash DROP NOT NULL;
+CREATE OR REPLACE FUNCTION app_private.admission_new_identity() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE pointer text;
+BEGIN
+ INSERT INTO app_private.user_admission(user_id,origin,state,signup_created_after_cutover) VALUES(new.id,'unclassified','pending',true);
+ pointer:=new.raw_user_meta_data->>'sc_signup_pointer';
+ IF pointer IS NOT NULL AND pointer ~ '^[A-Za-z0-9_-]{43,128}$' THEN
+  UPDATE app_private.signup_intents SET state='bound',user_id=new.id,binding_hash=NULL
+   WHERE binding_hash=encode(sha256(convert_to(pointer,'UTF8')),'hex') AND state='pending' AND expires_at>now();
+ END IF;
+ IF new.raw_user_meta_data ? 'sc_signup_pointer' THEN
+  UPDATE auth.users SET raw_user_meta_data=raw_user_meta_data-'sc_signup_pointer' WHERE id=new.id;
+ END IF;
+ RETURN new;
+END $$;
+
+-- Legacy continuation stays available for unmarked intents; new-browser
+-- intent provenance is protected from deletion and silent legal changes.
+CREATE OR REPLACE FUNCTION app_private.signup_recover_verified_intent(p_user uuid,p_session uuid,p_subject_hash text,p_terms text,p_privacy text) returns jsonb
+language plpgsql security definer set search_path='' as $$ declare i app_private.signup_intents; a app_private.user_admission; begin
+ perform 1 from auth.users where id=p_user for share;
+ perform 1 from auth.sessions where id=p_session and user_id=p_user for share;
+ perform 1 from public.user_moderation where user_id=p_user for share;
+ if not app_private.signup_pending_identity(p_user,p_session) then raise exception 'Signup unavailable.' using errcode='42501'; end if;
+ perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(p_user::text || ':signup',0));
+ perform 1 from app_private.signup_settings where singleton and enabled for share;
+ if not found or p_subject_hash is null or p_subject_hash !~ '^[a-f0-9]{64}$' or p_terms is null or char_length(p_terms) not between 1 and 100 or p_privacy is null or char_length(p_privacy) not between 1 and 100
+  then raise exception 'Signup unavailable.' using errcode='42501'; end if;
+ -- Under the same advisory lock, never replace an intent with an extant fence.
+ if pg_catalog.to_regclass('app_private.signup_completion_fences_draft') is null then raise exception 'Signup unavailable.' using errcode='42501'; end if;
+ if exists(select 1 from app_private.signup_completion_fences_draft f where f.user_id=p_user) then raise exception 'Signup unavailable.' using errcode='42501'; end if;
+ select * into a from app_private.user_admission where user_id=p_user for update;
+ if not found or a.origin<>'unclassified' or a.state<>'pending' or a.signup_created_after_cutover then raise exception 'Signup unavailable.' using errcode='42501'; end if;
+ select * into i from app_private.signup_intents where user_id=p_user for update;
+ if found then
+  -- New-browser intents must use the bound recovery/reconsent path, never this legacy writer.
+  if exists(select 1 from app_private.signup_browser_attempts b where b.intent_id=i.id) then raise exception 'Signup unavailable.' using errcode='42501'; end if;
+  if exists(select 1 from app_private.signup_completion_fences_draft f where f.intent_id=i.id) then raise exception 'Signup unavailable.' using errcode='42501'; end if;
+  if i.state<>'bound' or i.subject_hash is distinct from p_subject_hash then raise exception 'Signup unavailable.' using errcode='42501'; end if;
+  if i.expires_at<=pg_catalog.clock_timestamp() then delete from app_private.signup_intents where id=i.id; i:=null;
+  else update app_private.signup_intents set terms_version=p_terms,privacy_version=p_privacy where id=i.id returning * into i; end if;
+ end if;
+ if i.id is null then
+  insert into app_private.signup_intents(binding_hash,subject_hash,terms_version,privacy_version,expires_at,state,user_id)
+   values(null,p_subject_hash,p_terms,p_privacy,pg_catalog.clock_timestamp()+interval '30 minutes','bound',p_user) returning * into i;
+ end if;
+ return jsonb_build_object('intentId',i.id,'termsVersion',i.terms_version,'privacyVersion',i.privacy_version,'state',i.state,'originPending',i.origin is not null);
+end $$;
+
+-- 028 logic retained, with one extra branch protecting an expired bound intent
+-- for 24 hours after the original browser deadline. Attribution is scrubbed
+-- at expiry, independent of that recovery window. Existing fences retain their
+-- original protection and are never deleted by this function.
+CREATE OR REPLACE FUNCTION app_private.signup_prune() RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE r record; locked_id uuid; cutoff timestamptz;
+ removed integer:=0; scrubbed integer:=0; origins_removed integer:=0; protected integer:=0; expired_origins integer:=0; n integer;
+BEGIN
+ IF pg_catalog.current_setting('transaction_isolation') IS DISTINCT FROM 'read committed' THEN RAISE EXCEPTION 'signup_prune requires read committed'; END IF;
+ cutoff:=pg_catalog.clock_timestamp();
+ FOR r IN SELECT i.id,i.user_id,i.state FROM app_private.signup_intents i
+  WHERE i.state IN ('pending','bound') AND i.expires_at<=cutoff
+   AND (i.origin IS NOT NULL OR (NOT EXISTS(SELECT 1 FROM app_private.signup_completion_fences_draft f WHERE f.intent_id=i.id OR (i.user_id IS NOT NULL AND f.user_id=i.user_id))
+    AND NOT EXISTS(SELECT 1 FROM app_private.signup_browser_attempts a WHERE a.intent_id=i.id AND i.state='bound' AND a.expires_at>cutoff-interval '24 hours')))
+  ORDER BY i.expires_at,i.id LIMIT 500 LOOP
+  IF r.state='bound' THEN
+   IF r.user_id IS NULL OR NOT pg_catalog.pg_try_advisory_xact_lock(pg_catalog.hashtextextended(r.user_id::text || ':signup',0)) THEN CONTINUE; END IF;
+   SELECT i.id INTO locked_id FROM app_private.signup_intents i WHERE i.id=r.id AND i.user_id=r.user_id AND i.state='bound' AND i.expires_at<=pg_catalog.clock_timestamp() FOR UPDATE SKIP LOCKED;
+   IF NOT FOUND THEN CONTINUE; END IF;
+   IF EXISTS(SELECT 1 FROM app_private.signup_completion_fences_draft WHERE user_id=r.user_id OR intent_id=r.id) THEN
+    protected:=protected+1;
+    UPDATE app_private.signup_intents SET origin=NULL,origin_consent_version=NULL,origin_consented_at=NULL WHERE id=r.id AND origin IS NOT NULL;
+    GET DIAGNOSTICS n=ROW_COUNT; expired_origins:=expired_origins+n;
+    UPDATE app_private.signup_completion_fences_draft SET origin_expired=true,updated_at=pg_catalog.now() WHERE user_id=r.user_id AND intent_id=r.id AND NOT origin_expired;
+    CONTINUE;
+   END IF;
+   IF EXISTS(SELECT 1 FROM app_private.signup_browser_attempts a WHERE a.intent_id=r.id AND a.expires_at>pg_catalog.clock_timestamp()-interval '24 hours') THEN
+    UPDATE app_private.signup_intents SET origin=NULL,origin_consent_version=NULL,origin_consented_at=NULL WHERE id=r.id AND origin IS NOT NULL;
+    GET DIAGNOSTICS n=ROW_COUNT; expired_origins:=expired_origins+n;
+    CONTINUE;
+   END IF;
+   DELETE FROM app_private.signup_intents WHERE id=r.id AND user_id=r.user_id AND state='bound' AND expires_at<=pg_catalog.clock_timestamp()
+    AND NOT EXISTS(SELECT 1 FROM app_private.signup_completion_fences_draft WHERE user_id=r.user_id OR intent_id=r.id);
+  ELSE
+   SELECT i.id INTO locked_id FROM app_private.signup_intents i WHERE i.id=r.id AND i.user_id IS NULL AND i.state='pending' AND i.expires_at<=pg_catalog.clock_timestamp() FOR UPDATE SKIP LOCKED;
+   IF NOT FOUND THEN CONTINUE; END IF;
+   DELETE FROM app_private.signup_intents WHERE id=r.id AND user_id IS NULL AND state='pending' AND expires_at<=pg_catalog.clock_timestamp()
+    AND NOT EXISTS(SELECT 1 FROM app_private.signup_completion_fences_draft WHERE intent_id=r.id);
+  END IF;
+  GET DIAGNOSTICS n=ROW_COUNT; removed:=removed+n;
+ END LOOP;
+ UPDATE app_private.signup_intents SET subject_hash=NULL WHERE id IN (
+  SELECT id FROM app_private.signup_intents WHERE state='consumed' AND subject_hash IS NOT NULL AND consumed_at<=cutoff-interval '24 hours'
+  ORDER BY consumed_at,id FOR UPDATE SKIP LOCKED LIMIT 500
+ );
+ GET DIAGNOSTICS scrubbed=ROW_COUNT;
+ DELETE FROM app_private.signup_origins WHERE user_id IN (
+  SELECT user_id FROM app_private.signup_origins WHERE expires_at<=cutoff ORDER BY expires_at,user_id FOR UPDATE SKIP LOCKED LIMIT 500
+ );
+ GET DIAGNOSTICS origins_removed=ROW_COUNT;
+ RETURN pg_catalog.jsonb_build_object('expiredRemoved',removed,'consumedScrubbed',scrubbed,'originsRemoved',origins_removed,'fencedExamined',protected,'expiredOriginsCleared',expired_origins);
+END $$;
+
+-- Preserve attempt rows for their intent lifetime, including requires_password.
+-- Scrub the browser hash after the original attempt passes its grace period,
+-- including bound intents with an uncertainty fence. Keep all other columns.
+-- Intent lock precedes attempt lock, as in the completion path.
+CREATE OR REPLACE FUNCTION app_private.signup_browser_prune(p_limit integer) RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE scrubbed integer:=0; n integer; r record;
+BEGIN
+ IF p_limit IS NULL OR p_limit<1 OR p_limit>1000 THEN RAISE EXCEPTION 'Invalid cleanup limit.' USING ERRCODE='22023'; END IF;
+ FOR r IN SELECT a.intent_id FROM app_private.signup_browser_attempts a JOIN app_private.signup_intents i ON i.id=a.intent_id
+  WHERE a.browser_hash IS NOT NULL AND a.expires_at<=pg_catalog.clock_timestamp()-interval '24 hours'
+  ORDER BY a.expires_at,a.intent_id LIMIT p_limit LOOP
+  PERFORM 1 FROM app_private.signup_intents WHERE id=r.intent_id FOR UPDATE SKIP LOCKED;
+  IF NOT FOUND THEN CONTINUE; END IF;
+  UPDATE app_private.signup_browser_attempts SET browser_hash=NULL WHERE intent_id=r.intent_id AND browser_hash IS NOT NULL AND expires_at<=pg_catalog.clock_timestamp()-interval '24 hours';
+  GET DIAGNOSTICS n=ROW_COUNT; scrubbed:=scrubbed+n;
+ END LOOP;
+ RETURN scrubbed;
+END $$;
+
+do $acl_check$ declare e record;ok boolean;begin
+ for e in select * from (values ('app_private.signup_prune()','3d9f5a4a6279fcf97d6e5f3dba8e88932ab2f9f05f35d7e52e0e09afccc99ebe','plpgsql',true),
+  ('public.signup_prune()','83a63ed59363fc48cf51dc9265cac25106f0df60eec2a262963cdec1d1843f92','sql',false),
+  ('app_private.signup_recover_verified_intent(uuid,uuid,text,text,text)','1a43a95c1b473d2b33ca9605553535d4d155d5d33faea851872be89c4fbf6411','plpgsql',true),
+  ('public.signup_recover_verified_intent(uuid,uuid,text,text,text)','1c44bc50a684573383162d126641c9afac6e1abf3b5e3507d7400b16ddd8895e','sql',false)) as v(signature,body_hash,language_name,security_definer) loop
+  select coalesce(bool_and(pg_catalog.pg_get_userbyid(p.proowner)='postgres' and p.prokind='f'
+   and pg_catalog.pg_get_function_result(p.oid)='jsonb' and p.prosecdef=e.security_definer and not p.proisstrict
+   and p.proconfig=ARRAY['search_path=""']::text[] and l.lanname=e.language_name
+   and pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(pg_catalog.replace(p.prosrc,E'\r\n',E'\n'),'UTF8')),'hex')=e.body_hash
+   and pg_catalog.has_function_privilege(pg_catalog.to_regrole('anon'),p.oid,'EXECUTE') is false
+   and pg_catalog.has_function_privilege(pg_catalog.to_regrole('authenticated'),p.oid,'EXECUTE') is false
+   and pg_catalog.has_function_privilege(pg_catalog.to_regrole('service_role'),p.oid,'EXECUTE') is true
+   and (select count(*) from pg_catalog.aclexplode(coalesce(p.proacl,pg_catalog.acldefault('f',p.proowner))) a
+    where a.privilege_type='EXECUTE' and not a.is_grantable and a.grantor=p.proowner and (a.grantee=p.proowner or a.grantee=pg_catalog.to_regrole('service_role')::oid))=2
+   and not exists(select 1 from pg_catalog.aclexplode(coalesce(p.proacl,pg_catalog.acldefault('f',p.proowner))) a
+    where a.privilege_type<>'EXECUTE' or a.is_grantable or a.grantor<>p.proowner or (a.grantee<>p.proowner and a.grantee<>pg_catalog.to_regrole('service_role')::oid))),false)
+   into ok from pg_catalog.pg_proc p join pg_catalog.pg_language l on l.oid=p.prolang where p.oid=pg_catalog.to_regprocedure(e.signature);
+  if ok is distinct from true then raise exception 'QA_ACL_OR_BODY_REFUSED'; end if;
+ end loop;end $acl_check$;
+rollback;

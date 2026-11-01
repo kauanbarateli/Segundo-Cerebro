@@ -1,0 +1,49 @@
+-- READ ONLY. Independently verify the QA project ref and connection first.
+-- Counts are observations, not proof of quiescence or permission to migrate.
+-- Requires the 028 QA schema and cron.job. An error is UNKNOWN, not success.
+begin transaction read only;
+set local statement_timeout='15s';
+with expected(signature,body_hash,language_name,security_definer,service_execute) as (
+ values
+ ('app_private.signup_prune()','cbd79d7ec1fbb93605616e7aa742c8b20ec741e098b7058b244f559add32d726','plpgsql',true,true),
+ ('app_private.signup_recover_verified_intent(uuid,uuid,text,text,text)','a26121c44a358eeacbeb768b1516f759fd04d14f3772f55925306ea9207da12f','plpgsql',true,true),
+ ('public.signup_recover_verified_intent(uuid,uuid,text,text,text)','1c44bc50a684573383162d126641c9afac6e1abf3b5e3507d7400b16ddd8895e','sql',false,true),
+ ('app_private.admission_new_identity()','8f8dad6cf3e16f242c83ed2ad05e7df7974ea47b9155fa97e8b77c356c7b1bcd','plpgsql',true,false)
+), checks as (
+ select e.signature,coalesce(
+  pg_catalog.pg_get_userbyid(p.proowner)='postgres' and p.prokind='f' and p.prosecdef=e.security_definer
+  and not p.proisstrict and p.proconfig=ARRAY['search_path=""']::text[] and l.lanname=e.language_name
+  and pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(pg_catalog.replace(p.prosrc,E'\r\n',E'\n'),'UTF8')),'hex')=e.body_hash
+  and pg_catalog.has_function_privilege(pg_catalog.to_regrole('anon'),p.oid,'EXECUTE') is false
+  and pg_catalog.has_function_privilege(pg_catalog.to_regrole('authenticated'),p.oid,'EXECUTE') is false
+  and pg_catalog.has_function_privilege(pg_catalog.to_regrole('service_role'),p.oid,'EXECUTE')=e.service_execute
+  and (select count(*) from pg_catalog.aclexplode(coalesce(p.proacl,pg_catalog.acldefault('f',p.proowner))) a
+   where a.privilege_type='EXECUTE' and not a.is_grantable and a.grantor=p.proowner
+    and (a.grantee=p.proowner or (e.service_execute and a.grantee=pg_catalog.to_regrole('service_role')::oid)))=case when e.service_execute then 2 else 1 end
+  and not exists(select 1 from pg_catalog.aclexplode(coalesce(p.proacl,pg_catalog.acldefault('f',p.proowner))) a
+   where a.privilege_type<>'EXECUTE' or a.is_grantable or a.grantor<>p.proowner
+    or (a.grantee<>p.proowner and (not e.service_execute or a.grantee<>pg_catalog.to_regrole('service_role')::oid))),false) as qualified
+ from expected e left join pg_catalog.pg_proc p on p.oid=pg_catalog.to_regprocedure(e.signature)
+ left join pg_catalog.pg_language l on l.oid=p.prolang
+), jobs as (
+ select active from cron.job where lower(jobname) like 'sc-signup-%'
+  or lower(command) like '%signup_prune%' or lower(command) like '%signup_browser_prune%'
+)
+select pg_catalog.jsonb_build_object(
+ 'checked_at',pg_catalog.now(),
+ 'postgres_role_and_database',current_user='postgres' and current_database()='postgres',
+ 'version_028_occurrences',(select count(*) from supabase_migrations.schema_migrations where version='20261101172256'),
+ 'signup_fail_closed',not exists(select 1 from app_private.signup_settings where singleton and enabled is true),
+ 'signup_explicit_disabled_row',exists(select 1 from app_private.signup_settings where singleton and enabled is false),
+ 'signup_settings_singleton_rows',(select count(*) from app_private.signup_settings where singleton),
+ 'known_functions_match',(select bool_and(qualified) from checks),
+ 'candidate_tables_absent',pg_catalog.to_regclass('app_private.signup_browser_attempts') is null and pg_catalog.to_regclass('app_private.signup_browser_legal_versions') is null,
+ 'candidate_functions_absent',not exists(select 1 from pg_catalog.pg_proc p join pg_catalog.pg_namespace n on n.oid=p.pronamespace where n.nspname in ('app_private','public') and p.proname like 'signup\_browser\_%' escape '\'),
+ 'candidate_column_absent',not exists(select 1 from pg_catalog.pg_attribute where attrelid='app_private.user_admission'::regclass and attname='signup_created_after_cutover' and not attisdropped),
+ 'admission_trigger_exact',(select count(*)=1 from pg_catalog.pg_trigger t where t.tgfoid=pg_catalog.to_regprocedure('app_private.admission_new_identity()') and not t.tgisinternal)
+  and exists(select 1 from pg_catalog.pg_trigger t where t.tgname='second_brain_admission_created' and t.tgrelid='auth.users'::regclass and t.tgfoid=pg_catalog.to_regprocedure('app_private.admission_new_identity()') and t.tgtype=5 and t.tgenabled='O' and not t.tgisinternal),
+ 'matching_cron_jobs',(select count(*) from jobs),
+ 'matching_active_cron_jobs',(select count(*) from jobs where active),
+ 'visible_active_signup_sql',(select count(*) from pg_catalog.pg_stat_activity where pid<>pg_catalog.pg_backend_pid() and state<>'idle' and (lower(query) like '%signup_prune%' or lower(query) like '%signup_browser_%' or lower(query) like '%signup_recover_verified_intent%'))
+) as preflight;
+rollback;
