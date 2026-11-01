@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { CLI_VERSION, requireCiRunner, assertTempDescendant, assertNoEnvironmentFiles, loadHistorical026Migrations, renderLocalConfig, decodeLocalStatus, localPsqlEnvironment, runBoundedProcess, DATABASE_PREFLIGHT, assertDatabasePreflight, LOCAL_INFRASTRUCTURE_FIXTURE } from "./auth-local-ci.mjs";
 import { CURRENT27_CANONICAL_REVIEW, readCurrent27CanonicalMigrations } from "../../tests/helpers/canonical-release-source.mjs";
 import { createAdminOwnedTransport, acceptAdminContainer, verifyAdminTslibScope } from "./admin-native-backend-local-ci.mjs";
-import { ADMIN_LOCAL_DEPENDENCY_PATHS } from "../../tests/e2e-auth-local/admin-native-backend-local-ci-contract.mjs";
+import { ADMIN_LOCAL_DEPENDENCY_PATHS, ADMIN_LOCAL_HISTORICAL_READER_PIN } from "../../tests/e2e-auth-local/admin-native-backend-local-ci-contract.mjs";
 import { CAPTURE_IMAGE_MODULES } from "../../tests/e2e-auth-local/capture-image-storage-support.mjs";
 import { AVATAR_BUCKETS, AVATAR_SQL_QUERIES, createAvatarStorageCase } from "../../tests/e2e-auth-local/avatar-storage-local-case.mjs";
 import { AVATAR_LIMITATIONS, validateAvatarStorageReport } from "../../tests/e2e-auth-local/avatar-storage-contract.mjs";
@@ -39,7 +39,7 @@ const HISTORICAL026_CATALOGUE = "tests/fixtures/schema-release-026/release-catal
 const HISTORICAL026_MANIFEST = "tests/fixtures/schema-release-026/manifest.json";
 const AVATAR_RELEASE_PATHS = Object.freeze([
   ...CURRENT27_CANONICAL_REVIEW.flatMap((row, index) => ["supabase/migrations/" + row.file, "supabase/sql-editor/installation/" + String(index + 1).padStart(3, "0") + "_" + row.file]),
-  "tests/helpers/canonical-release-source.mjs", "tests/helpers/canonical-release-source.d.mts", "scripts/test-local-sql.mjs", HISTORICAL026_CATALOGUE, HISTORICAL026_MANIFEST,
+  "tests/helpers/canonical-release-source.mjs", "tests/helpers/canonical-release-source.d.mts", "tests/helpers/canonical-front-b-source.mjs", "scripts/test-local-sql.mjs", HISTORICAL026_CATALOGUE, HISTORICAL026_MANIFEST,
 ]);
 const PUBLIC_DB_IMAGE_SOURCE_PATHS = Object.freeze(["tests/helpers/public-cli-db-image-metadata.mjs", "tests/helpers/public-cli-db-image-read.mjs", "tests/scripts/public-cli-db-image-metadata.test.mjs", "tests/scripts/public-cli-db-image-read.test.mjs"]);
 export const AVATAR_SOURCE_PATHS = Object.freeze([...new Set([...PUBLIC_DB_IMAGE_SOURCE_PATHS, "tests/e2e-auth-local/qualified-chromium.mjs", "tests/e2e-auth-local/browser-process-environment.mjs", ...AVATAR_NEW_PATHS, ...CAPTURE_IMAGE_MODULES.filter(path => !path.startsWith("node_modules/")), ...AVATAR_RELEASE_PATHS, "scripts/verification/auth-local-ci.mjs", "tests/e2e-auth-local/auth-local-lifecycle-contract.mjs", "scripts/verification/admin-native-backend-local-ci.mjs", ...["admin-native-backend-case.mjs", "admin-native-backend-contract.mjs", "admin-native-backend-local-case.mjs", "admin-native-backend-local-ci-contract.mjs", "capture-image-storage-support.mjs", "capture-task-persistence-support.mjs", "capture-task-persistence-contract.mjs", "identity-data-api-contract.mjs"].map(file => "tests/e2e-auth-local/" + file), "tests/fixtures/supabase-auth-local/config.toml", "supabase/tests/release-catalog.sql", "supabase/sql-editor/manifest.json", "package.json", "package-lock.json", ".nvmrc"])].sort());
@@ -92,7 +92,7 @@ export async function collectAvatarSources(readRun, sourceSha, migrations) {
   const current = await readCurrent27CanonicalMigrations(ROOT);
   if (!Array.isArray(migrations) || migrations.length !== AVATAR_MIGRATIONS || current.length !== 27 || manifest.installation?.length !== 27 || AVATAR_MIGRATION_FILES.some((file, index) => current[index].file !== file || !Buffer.isBuffer(migrations[index]?.source) || !migrations[index].source.equals(current[index].source))) fail("SOURCE_REFUSED");
   if (hash(await canonical(HISTORICAL026_MANIFEST)) !== "88f036a9a41bcc1528fde8c320e43374f3edb25e1083eb485082b01a142839e2" || hash(await canonical(HISTORICAL026_CATALOGUE)) !== "4557741f008d48ea60ad8a3e2d5a41667630543c3bf2ab0682ec2b33ad97e297") fail("SOURCE_REFUSED");
-  const paths = new Set([...PUBLIC_DB_IMAGE_SOURCE_PATHS, ...AVATAR_NEW_PATHS, ...CAPTURE_IMAGE_MODULES.filter(path => !path.startsWith("node_modules/")), ...manifest.installation.flatMap(file => [file.source, "supabase/sql-editor/" + file.file]), "tests/helpers/canonical-release-source.mjs", "tests/helpers/canonical-release-source.d.mts", "scripts/test-local-sql.mjs", HISTORICAL026_CATALOGUE, HISTORICAL026_MANIFEST, "tests/fixtures/supabase-auth-local/config.toml", "supabase/tests/release-catalog.sql", "supabase/sql-editor/manifest.json", "package.json", "package-lock.json", ".nvmrc"]);
+  const paths = new Set([...PUBLIC_DB_IMAGE_SOURCE_PATHS, ...AVATAR_NEW_PATHS, ...CAPTURE_IMAGE_MODULES.filter(path => !path.startsWith("node_modules/")), ...manifest.installation.flatMap(file => [file.source, "supabase/sql-editor/" + file.file]), "tests/helpers/canonical-release-source.mjs", "tests/helpers/canonical-release-source.d.mts", "tests/helpers/canonical-front-b-source.mjs", "scripts/test-local-sql.mjs", HISTORICAL026_CATALOGUE, HISTORICAL026_MANIFEST, "tests/fixtures/supabase-auth-local/config.toml", "supabase/tests/release-catalog.sql", "supabase/sql-editor/manifest.json", "package.json", "package-lock.json", ".nvmrc"]);
   const queue = ["scripts/verification/avatar-storage-local-ci.mjs", "tests/e2e-auth-local/avatar-storage-local-case.mjs"], followed = new Set();
   while (queue.length) {
     const path = queue.shift(); if (followed.has(path)) continue; followed.add(path); paths.add(path);
@@ -103,7 +103,7 @@ export async function collectAvatarSources(readRun, sourceSha, migrations) {
   }
   if (paths.size !== AVATAR_SOURCE_PATHS.length || AVATAR_SOURCE_PATHS.some(path => !paths.has(path))) fail("SOURCE_REFUSED");
   const sourceHashes = [];
-  for (const path of [...paths].sort()) { const bytes = await canonical(path); const git = await readRun("git", ["show", sourceSha + ":" + path], 15000); if (!bytes.equals(Buffer.from(git.stdout))) fail("SOURCE_REFUSED"); sourceHashes.push({ path, bytes: bytes.length, sha256: hash(bytes) }); }
+  for (const path of [...paths].sort()) { const bytes = await canonical(path); const git = await readRun("git", ["show", sourceSha + ":" + path], 15000); if (!bytes.equals(Buffer.from(git.stdout)) || path === ADMIN_LOCAL_HISTORICAL_READER_PIN.path && (bytes.length !== ADMIN_LOCAL_HISTORICAL_READER_PIN.bytes || hash(bytes) !== ADMIN_LOCAL_HISTORICAL_READER_PIN.sha256)) fail("SOURCE_REFUSED"); sourceHashes.push({ path, bytes: bytes.length, sha256: hash(bytes) }); }
   const lock = JSON.parse((await canonical("package-lock.json")).toString("utf8")), dependencyHashes = [];
   for (const path of ADMIN_LOCAL_DEPENDENCY_PATHS) {
     const bytes = await canonical(path); let folder = dirname(resolve(ROOT, path)), verified = false;

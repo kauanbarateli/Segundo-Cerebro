@@ -12,6 +12,7 @@ import { CAPTURE_TASK_PACKET_FILE, validateCaptureTaskPacket } from "../../tests
 import { prepareQualifiedChromium, qualifiedChromiumPaths } from "../../tests/e2e-auth-local/qualified-chromium.mjs";
 import { AUTH_LOCAL_LIFECYCLE_FILE, AUTH_LOCAL_LIFECYCLE_MAX_BYTES, validateAuthLocalLifecycle } from "../../tests/e2e-auth-local/auth-local-lifecycle-contract.mjs";
 import { CanonicalReleaseSourceError, readCurrent27CanonicalMigrations, readHistorical026CanonicalMigrations } from "../../tests/helpers/canonical-release-source.mjs";
+import { readHistorical027FromReviewedFrontB, readHistorical026FromReviewedFrontB } from "../../tests/helpers/canonical-front-b-source.mjs";
 
 export const CLI_VERSION = "2.120.0";
 export const APP_URL = "http://127.0.0.1:3117";
@@ -352,6 +353,15 @@ export async function loadCanonicalMigrations(root = ROOT) {
 /** Qualifies all CURRENT27 bytes before selecting the fixed historical prefix. */
 export async function loadHistorical026Migrations(root = ROOT) {
   return canonicalMigrationPlan(readHistorical026CanonicalMigrations, root);
+}
+/** Historical projections after qualifying the complete reviewed 27 or draft 30 chain.
+ * A draft is source evidence only; it does not approve or apply a schema.
+ * Legacy current27 readers remain strict; callers migrate only after review. */
+export async function loadHistorical027FromReviewedMigrations(root = ROOT) {
+  return canonicalMigrationPlan(readHistorical027FromReviewedFrontB, root);
+}
+export async function loadHistorical026FromReviewedMigrations(root = ROOT) {
+  return canonicalMigrationPlan(readHistorical026FromReviewedFrontB, root);
 }
 
 
