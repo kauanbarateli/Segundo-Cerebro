@@ -10,7 +10,7 @@ export function findDraft(drafts: DraftMap, id: string): CaptureDraft | undefine
   return Object.hasOwn(drafts, id) ? drafts[id] : undefined;
 }
 export type DraftStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
-function isDraft(value: unknown): value is CaptureDraft {
+export function isDraft(value: unknown): value is CaptureDraft {
   if (!value || typeof value !== "object") return false;
   const draft = value as Partial<CaptureDraft>;
   try {
@@ -41,4 +41,20 @@ export function writeDrafts(storage: DraftStorage | null, userId: string, drafts
 }
 export function clearDrafts(storage: DraftStorage | null, userId: string): void {
   try { storage?.removeItem(draftStorageKey(userId)); } catch { /* Mounted drafts are cleared separately even if storage is unavailable. */ }
+}
+
+/** The header's quick capture keeps ONE independent draft per owner; it never touches the page drafts above. */
+export const QUICK_DRAFT_STORAGE_PREFIX = "segundo-cerebro:captures:quick-draft:v1:";
+export const quickDraftStorageKey = (userId: string) => `${QUICK_DRAFT_STORAGE_PREFIX}${encodeURIComponent(userId)}`;
+export function readQuickDraft(storage: DraftStorage | null, userId: string): CaptureDraft | null {
+  if (!storage) return null;
+  try { const parsed: unknown = JSON.parse(storage.getItem(quickDraftStorageKey(userId)) ?? "null"); return isDraft(parsed) && parsed.id === "new" ? parsed : null; }
+  catch { return null; }
+}
+export function writeQuickDraft(storage: DraftStorage | null, userId: string, draft: CaptureDraft): boolean {
+  if (!storage) return false;
+  try { storage.setItem(quickDraftStorageKey(userId), JSON.stringify(draft)); return true; } catch { return false; }
+}
+export function clearQuickDraft(storage: DraftStorage | null, userId: string): void {
+  try { storage?.removeItem(quickDraftStorageKey(userId)); } catch { /* The mounted draft is cleared separately. */ }
 }
