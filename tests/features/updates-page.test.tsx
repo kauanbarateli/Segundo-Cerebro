@@ -21,6 +21,10 @@ describe("atualizações autenticadas", () => {
       expect(html).toContain(label);
     }
     expect(html.match(/Nenhuma atualização nesta etapa\./g)).toHaveLength(5);
+    expect(html).toContain('for="updates-stage"');
+    expect(html).toContain('id="updates-stage"');
+    expect(html.match(/data-active="true"/g)).toHaveLength(1);
+    expect(html.match(/data-active="false"/g)).toHaveLength(4);
     expect(html).not.toContain("Enviar sugestão");
   });
 });
