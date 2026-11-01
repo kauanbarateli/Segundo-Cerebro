@@ -6,16 +6,17 @@ import { fileURLToPath } from "node:url";
 import { createCatalogueFixture } from "./helpers/catalogue-fixture.mjs";
 import { assertReleaseReport } from "../../scripts/operations/release-checks.mjs";
 import { readHistorical027FromReviewedFrontB } from "../helpers/canonical-front-b-source.mjs";
+import { withStagedFrontB30 } from "./helpers/staged-front-b30-sequence.mjs";
 
 const HISTORICAL_027_CHECKS = 2512;
 const exactGate = report => report.version === 1 && report.ok === true && report.checks === HISTORICAL_027_CHECKS && report.deviations.length === 0;
 const MIGRATION = "20261010010955_close_public_sequence_defaults.sql";
 const source = path => readFile(new URL("../../" + path, import.meta.url), "utf8");
 
-test("016 closes the legacy public sequence default without changing existing ACLs, other schemas or owners", async () => {
+async function exerciseHistoricalSequenceDefaults(reviewRoot) {
  // Qualify the entire reviewed tree before using the 027 prefix. This test
  // remains historical and is not a release gate for later migrations.
- const migrations = await readHistorical027FromReviewedFrontB(fileURLToPath(new URL("../../", import.meta.url)));
+ const migrations = await readHistorical027FromReviewedFrontB(reviewRoot);
  const db = await createCatalogueFixture();
  try {
   const files = migrations.map(row => row.file); assert.equal(files.length, 27);
@@ -114,4 +115,12 @@ test("016 closes the legacy public sequence default without changing existing AC
   const { rows: residues } = await db.query("select (select count(*) from auth.users)::integer as users,(select count(*) from app_private.upload_reservations)::integer as reservations,(select count(*) from public.drive_files)::integer as files,(select count(*) from public.domain_events)::integer as events");
   assert.deepEqual(residues, [{ users: 0, reservations: 0, files: 0, events: 0 }]);
  } finally { await db.close(); }
+}
+
+test("016 closes the legacy public sequence default with reviewed 27 sources", async () => {
+ await exerciseHistoricalSequenceDefaults(fileURLToPath(new URL("../../", import.meta.url)));
+});
+
+test("016 closes the legacy public sequence default with reviewed draft 30 sources", async t => {
+ await withStagedFrontB30(t, exerciseHistoricalSequenceDefaults);
 });
