@@ -4,6 +4,7 @@ import {readFile,realpath} from 'node:fs/promises';
 import {isAbsolute,resolve,join} from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import ts from 'typescript';
+import {readDatabaseTypesFile} from './check-database-types.mjs';
 
 // Expected generated shape, not a claim about nullability accepted by SQL.
 const actor={p_session:'string',p_user:'string'};
@@ -21,6 +22,22 @@ export const FRONT_B_RPC_CONTRACT=Object.freeze({
  signup_prune:{args:{},returns:'Json'},
  signup_recover_verified_intent:{args:{...actor,p_subject_hash:'string',p_terms:'string',p_privacy:'string'},returns:'Json'},
 });
+// QA 028 has no legacy feedback writer; historical FRONT_B_30 retains it.
+// Typegen describes names and types, not execution privileges or nullability.
+const scoped={...actor,p_intent:'string',p_subject_hash:'string',p_request:'string',p_generation:'string'};
+export const FRONT_B_QA_028_RPC_CONTRACT=Object.freeze({
+ ...Object.fromEntries(Object.entries(FRONT_B_RPC_CONTRACT).filter(([name])=>name!=='feedback_submit')),
+ feedback_barrier_cancel:{args:{...actor,p_client:'string'},returns:'Json'},
+ feedback_barrier_status:{args:{...actor,p_client:'string'},returns:'Json'},
+ feedback_barrier_submit:{args:{...actor,p_client:'string',p_category:'string',p_message:'string'},returns:'Json'},
+ signup_fence_ack:{args:{...scoped},returns:'boolean'},
+ signup_fence_confirm:{args:{...actor,p_intent:'string'},returns:'boolean'},
+ signup_fence_finish:{args:{...scoped,p_current_origin:'string',p_current_privacy:'string',p_current_terms:'string'},returns:'boolean'},
+ signup_fence_reserve:{args:{...actor,p_intent:'string',p_subject_hash:'string',p_request:'string',p_terms:'string',p_privacy:'string',p_accept_origin:'boolean',p_origin_version:'string'},returns:'Json'},
+ signup_fence_start:{args:{...scoped},returns:'boolean'},
+ signup_fence_uncertain:{args:{...scoped},returns:'boolean'},
+ signup_fence_withdraw:{args:{...actor},returns:'Json'},
+});
 function properties(node){
  if(!node || !ts.isTypeLiteralNode(node)) throw new Error('TYPE_SHAPE_INVALID');
  const result=new Map();
@@ -29,6 +46,12 @@ function properties(node){
   result.set(item.name.text,item.type);
  }
  return result;
+}
+function emptyRecord(node){
+ return ts.isTypeReferenceNode(node)&&ts.isIdentifier(node.typeName)&&node.typeName.text==='Record'
+  &&node.typeArguments?.length===2&&ts.isTypeReferenceNode(node.typeArguments[0])
+  &&ts.isIdentifier(node.typeArguments[0].typeName)&&node.typeArguments[0].typeName.text==='PropertyKey'
+  &&node.typeArguments[0].typeArguments===undefined&&node.typeArguments[1].kind===ts.SyntaxKind.NeverKeyword;
 }
 /** Parse type declarations only; never evaluate source text. */
 export function parseFrontBTypes(source){
@@ -45,7 +68,7 @@ export function parseFrontBTypes(source){
   const shape=properties(entry);if(shape.size!==2||!shape.has('Args')||!shape.has('Returns'))throw new Error('RPC_SHAPE_INVALID');
   const argsNode=shape.get('Args'),args={};
   if(ts.isTypeLiteralNode(argsNode)){for(const [arg,type] of properties(argsNode))args[arg]=type.getText(file);}
-  else if(argsNode.getText(file)!=='Record<PropertyKey, never>')throw new Error('RPC_ARGS_INVALID');
+  else if(argsNode.kind!==ts.SyntaxKind.NeverKeyword&&!emptyRecord(argsNode))throw new Error('RPC_ARGS_INVALID');
   result[name]={args,returns:shape.get('Returns').getText(file)};
  }
  return result;
@@ -64,6 +87,12 @@ function same(a,b){
 const digest=bytes=>createHash('sha256').update(bytes).digest('hex');
 const candidateNames=['20261101020254_public_admission_gate.sql','20261101030000_signup_metrics.sql','20261101013633_feedback_requests.sql'];
 async function main(argv){
+ if(argv.length===2&&argv[0]==='--snapshot-028'){
+  const source=await readDatabaseTypesFile(argv[1]),comparison=compareFrontBTypes(parseFrontBTypes(source),FRONT_B_QA_028_RPC_CONTRACT);
+  console.log(JSON.stringify({check:'front_b_qa_028_types',...comparison,sha256:digest(source),rpc_count:Object.keys(FRONT_B_QA_028_RPC_CONTRACT).length,limitations:['Type snapshot does not prove origin, freshness or ACLs','Scalar argument nullability not represented by typegen']},null,2));
+  if(!comparison.ok)process.exitCode=1;
+  return;
+ }
  if(argv.length!==2||argv[0]!=='--package'||!isAbsolute(argv[1])||/^(?:\\\\|\/\/)/.test(argv[1])) throw new Error('Use --package com caminho absoluto local do diretório @supabase/postgrest-typegen');
  const packageDir=await realpath(argv[1]);
  if(/^(?:\\\\|\/\/)/.test(packageDir)) throw new Error('NETWORK_PATH_REFUSED');
