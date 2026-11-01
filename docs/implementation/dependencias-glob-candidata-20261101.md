@@ -1,0 +1,7 @@
+# Candidata parcial da auditoria de dependências
+
+A issue #173 identifica dois advisories. Esta candidata atualiza `glob` para 14.0.3 somente nas dependências diretas dos consumidores `@serwist/next@9.5.13`, `@serwist/build@9.5.13` e `@sentry/bundler-plugins@11.6.0`. O lock resolve `minimatch` 11.0.3 nessa cadeia. O override ultrapassa as faixas publicadas pelos consumidores; exige build e testes do PWA antes de ser aceito. Não há mudança ou exceção no gate `npm audit`.
+
+No lock candidato, a auditoria da árvore de produção reportou zero vulnerabilidades; a auditoria completa ainda reportou 14 moderadas na cadeia de lint. A issue não está resolvida. Uma instalação isolada de Serwist e Sentry comparou os resultados com a instalação anterior: o manifesto Serwist teve as mesmas 27 entradas, revisões, tamanho total e avisos, e a busca de arquivos do Sentry retornou os mesmos 15 arquivos. Quatro padrões foram comparados nas APIs síncrona e assíncrona. A verificação de abort antes do início passou com a nova versão, mas não comprova o cenário de abort durante I/O descrito no advisory.
+
+Essas evidências não substituem instalação reproduzível, build Next/PWA, testes de navegador, CI integral ou o tratamento das 14 ocorrências restantes. A comparação local foi realizada no Node disponível e deve ser complementada pelo CI fixado em Node 24; as versões suportadas do projeto também exigem análise própria. As alterações permanecem candidatas até os gates existentes passarem.
