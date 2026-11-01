@@ -1,0 +1,11 @@
+# Métricas de origem por catálogo — integração candidata
+
+A API só aceita `signup_metrics` com a versão exata do catálogo e uma distribuição validada por dimensão, totais e códigos aprovados. Campos extras, códigos livres, versões antigas e respostas inconsistentes são recusados antes da resposta HTTP. O browser também valida o contrato e usa apenas rótulos fixos. Quando o SQL instalado ainda for o anterior, a rota responde 503 e a tela de métricas fica indisponível; é um rollout coordenado, não um fallback silencioso. O conteúdo `catalog-integration.sql.txt` é um rascunho guardado, não migration, e nunca deve ser executado em QA ou produção como está.
+
+O arquivo `origin-dictionary.json` continua sendo a fonte revisável, e `origin-dictionary.generated.ts` e o SQL proposto são derivados dele. Os testes prendem versão, catálogo e hash SQL, mas um número de versão devolvido por um banco não prova sozinho qual SQL/ACL está instalado. Antes de liberar, qualificar a função, owner, RLS/grants, catálogo, ledger e tipos no destino correto, realizar publicação coordenada e validar a sessão Master; nenhuma operação remota foi realizada por esta proposta.
+
+A ausência considera valor não coletado, consentimento não concedido, retirada ou expiração, sem distinguir esses motivos. Grupos reconhecidos menores que cinco e valores não reconhecidos são Outros. Os resultados continuam sujeitos a inferência por contagens e consultas sobrepostas; não são anônimos.
+
+O catálogo inicial é apenas exemplificativo: source cobre Google e Instagram, medium cobre organic e email; campaign, term e content não têm códigos aprovados e ficam em Outros. A issue #137 não está completa até existir um processo operacional revisado e versionado para cadastrar códigos seguros nas cinco dimensões e até os gates de SQL, retenção e validação conectada serem atendidos. Não incluir e-mail, telefone ou outros identificadores pessoais em rótulos, aliases ou códigos.
+
+O diagnóstico histórico `prepare-model.mjs` fixa o hash do modelo anterior e recusará o novo modelo por desenho; não modificar esse pin automaticamente. Requalificar o diagnóstico ou manter fixture histórica antes de depender dele. Não reescrever migrations ou o catálogo histórico para contornar o descompasso.

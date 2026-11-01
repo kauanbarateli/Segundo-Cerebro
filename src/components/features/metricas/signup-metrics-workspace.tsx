@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
-import { parseMetricQuery, parseWithheldSignupMetrics, type MetricQuery, type SignupMetrics } from '@/core/acquisition/signup-metrics';
+import { METRIC_DIMENSIONS, catalogOriginLabel, parseMetricQuery, parseCatalogSignupMetrics, type MetricQuery, type SignupMetrics } from '@/core/acquisition/signup-metrics';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import './signup-metrics-workspace.css';
@@ -29,7 +29,7 @@ export function SignupMetricsWorkspace({userId}:{userId:string}) {
    if([401,403,409].includes(response.status)){if(id===generation.current)closeIdentity();return;}
    const body:unknown=await response.json();
    const envelope=body && typeof body==='object' && !Array.isArray(body) ? body as Record<string,unknown> : null;
-   const result=envelope && Object.keys(envelope).sort().join(',')==='ok,originDistribution,result' && envelope.ok===true && envelope.originDistribution==='withheld' ? parseWithheldSignupMetrics(envelope.result,query):null;
+   const result=envelope && Object.keys(envelope).sort().join(',')==='ok,originDistribution,result' && envelope.ok===true && envelope.originDistribution==='catalog' ? parseCatalogSignupMetrics(envelope.result,query):null;
    if(!response.ok || !result) throw new Error('unavailable');
    if(id===generation.current) {if(verifying){closed.current=false;setIdentityClosed(false);}setData(result);}
   } catch { if(id===generation.current) setError('Não foi possível carregar as métricas. Tente novamente.'); }
@@ -69,7 +69,9 @@ export function SignupMetricsWorkspace({userId}:{userId:string}) {
    </section>
    <section className="signup-metrics__panel" aria-labelledby="metrics-origin-title">
     <h2 id="metrics-origin-title">Origem informada</h2>
-    <p>A distribuição por origem está temporariamente indisponível enquanto protegemos os dados informados nos links de campanha.</p>
+    <p>Valores não reconhecidos e grupos menores que cinco aparecem em Outros. Sem origem ou consentimento, o cadastro aparece como Não informada.</p>
+    {METRIC_DIMENSIONS.map(dimension=><div key={dimension}><h3>{({utm_source:'Origem',utm_medium:'Mídia',utm_campaign:'Campanha',utm_term:'Termo',utm_content:'Conteúdo'} as const)[dimension]}</h3>{data.distributions[dimension].length===0 ? <p>Nenhum cadastro no período.</p> : <ul className="signup-metrics__origins">{data.distributions[dimension].map(row=><li key={row.kind+':'+(row.value??'')}><span>{catalogOriginLabel(dimension,row)}</span><strong>{row.count.toLocaleString('pt-BR')}</strong></li>)}</ul>}</div>)}
+    <p>Contagens por períodos sobrepostos podem revelar informações. Use os resultados com cuidado.</p>
    </section>
   </>}
  </div>;

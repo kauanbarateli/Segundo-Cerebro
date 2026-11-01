@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { parseMetricQuery, parseSignupMetrics, parseWithheldSignupMetrics, prepareOriginDistribution } from "../../src/core/acquisition/signup-metrics";
+import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { parseMetricQuery, parseSignupMetrics, parseWithheldSignupMetrics, parseCatalogSignupMetrics, catalogOriginLabel, prepareOriginDistribution } from "../../src/core/acquisition/signup-metrics";
 
 describe("distribuição agregada de origens", () => {
   it("mantém a população completa e reúne grupos pequenos sem expor valores", () => {
@@ -56,5 +58,27 @@ describe("contrato retido das métricas", () => {
    const result=report(7); Object.assign(result.distributions,{[dimension]:rows});
    expect(parseWithheldSignupMetrics(result,query)).toBeNull();
   }
+ });
+});
+
+import { ORIGIN_DICTIONARY, ORIGIN_DICTIONARY_VERSION } from '../../src/core/acquisition/origin-dictionary.generated';
+describe('catálogo aprovado',()=>{
+ const query={start:'2026-10-01',end:'2026-10-31',zone:'UTC' as const,bucket:'month' as const};
+ const missing=[{kind:'not-informed' as const,value:null,count:6}],source=[{kind:'value' as const,value:'google',count:5},{kind:'not-informed' as const,value:null,count:1}];
+ const good={...query,dictionaryVersion:ORIGIN_DICTIONARY_VERSION,totalPublic:6,stock:{total:6,legacy:0,admin:0,public:6,unclassified:0},series:[{period:query.start,count:6}],distributions:{utm_source:source,utm_medium:missing,utm_campaign:missing,utm_term:missing,utm_content:missing}};
+ it('mantém catálogo, versão e SQL guardado alinhados',()=>{
+  const bytes=readFileSync('scripts/verification/front-b-metrics-dictionary-draft/origin-dictionary.json');
+  expect(ORIGIN_DICTIONARY_VERSION).toBe('sha256:'+createHash('sha256').update(bytes).digest('hex'));
+  expect(ORIGIN_DICTIONARY).toEqual(JSON.parse(bytes.toString('utf8')).dimensions);
+  const sql=readFileSync('scripts/verification/front-b-metrics-dictionary-draft/catalog-integration.sql.txt','utf8');
+  expect(createHash('sha256').update(sql).digest('hex')).toBe('0aedd039e38e03ce61469ee97268f5ced3419cfb8bc6bfa32f9d3054e7009f67');
+  expect(sql).toContain(ORIGIN_DICTIONARY_VERSION);expect(sql).toMatch(/begin;\s*do \$\$ begin raise exception 'DRAFT_ONLY/);
+ });
+ it('aceita códigos conhecidos e distingue ausência de Outros',()=>{expect(parseCatalogSignupMetrics(good,query)).toEqual(good);expect(catalogOriginLabel('utm_source',source[0]!)).toBe('Google');expect(catalogOriginLabel('utm_source',source[1]!)).toBe('Não informada');});
+ it('recusa versão antiga, códigos livres, grupos duplicados e contagens divergentes',()=>{
+  expect(parseCatalogSignupMetrics({...good,dictionaryVersion:'old'},query)).toBeNull();
+  expect(parseCatalogSignupMetrics({...good,distributions:{...good.distributions,utm_source:[{kind:'value',value:'pessoa@example.invalid',count:6}]}},query)).toBeNull();
+  expect(parseCatalogSignupMetrics({...good,distributions:{...good.distributions,utm_source:[{kind:'not-informed',value:null,count:3},{kind:'not-informed',value:null,count:3}]}},query)).toBeNull();
+  expect(parseCatalogSignupMetrics({...good,distributions:{...good.distributions,utm_source:[{kind:'other',value:null,count:5}]}},query)).toBeNull();
  });
 });

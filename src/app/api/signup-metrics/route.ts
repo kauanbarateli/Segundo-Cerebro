@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { parseMetricQuery, parseSignupMetrics, withholdOriginDistribution } from '@/core/acquisition/signup-metrics';
+import { parseMetricQuery, parseCatalogSignupMetrics } from '@/core/acquisition/signup-metrics';
 import { readAuthConfiguration } from '@/lib/auth/config';
 import { isTrustedHostedDatabaseOrigin } from '@/lib/auth/database-origin-server';
 import { assertFeature } from '@/lib/auth/policy';
@@ -31,9 +31,9 @@ export async function GET(request: Request) {
   try { while(true) { const part=await reader.read(); if(part.done) break; length+=part.value.byteLength; if(length>524288) { await reader.cancel(); throw new Error('Unavailable.'); } chunks.push(part.value); } }
   finally { reader.releaseLock(); }
   const bytes=new Uint8Array(length); let offset=0; for(const chunk of chunks) {bytes.set(chunk,offset); offset+=chunk.byteLength;}
-  const result=parseSignupMetrics(JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes)) as unknown,query);
+  const result=parseCatalogSignupMetrics(JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes)) as unknown,query);
   if(!result) throw new Error('Unavailable.');
-  return NextResponse.json({ok:true,originDistribution:'withheld',result:withholdOriginDistribution(result)},{headers});
+  return NextResponse.json({ok:true,originDistribution:'catalog',result},{headers});
  } catch(error) {
   const status=error instanceof RequestFault ? error.status : error instanceof AuthGuardError ? error.code==='unauthenticated'?401:error.code==='forbidden'?403:503 : 503;
   return NextResponse.json({ok:false,message:status===400?'Revise o período informado.':status===409?'A conta mudou. Atualize a página.':'Não foi possível carregar as métricas.'},{status,headers});

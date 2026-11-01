@@ -10,10 +10,11 @@ vi.mock("react",async original=>({...await original<typeof import("react")>(),
 }));
 vi.mock("@/components/ui/field",()=>({Field:"metrics-field"}));
 vi.mock("@/components/ui/button",()=>({Button:"metrics-button"}));
+import { ORIGIN_DICTIONARY_VERSION } from '../../src/core/acquisition/origin-dictionary.generated';
 import { SignupMetricsWorkspace } from "../../src/components/features/metricas/signup-metrics-workspace";
 const owner="10000000-0000-4000-8000-000000000001",secret="ORIGEM_PRIVADA_SINTETICA";
 const json=(status:number,value:unknown)=>new Response(JSON.stringify(value),{status,headers:{"content-type":"application/json"}});
-const valid=(path:string)=>{const params=new URL(path,"https://example.invalid").searchParams,q=Object.fromEntries(params),rows=[{kind:"other",value:null,count:7}];return {ok:true,originDistribution:'withheld',result:{...q,totalPublic:7,stock:{total:7,legacy:0,admin:0,public:7,unclassified:0},series:[{period:q.start,count:7}],distributions:Object.fromEntries(["utm_source","utm_medium","utm_campaign","utm_term","utm_content"].map(key=>[key,rows]))}};};
+const valid=(path:string)=>{const params=new URL(path,"https://example.invalid").searchParams,q=Object.fromEntries(params),rows=[{kind:"other",value:null,count:7}];return {ok:true,originDistribution:'catalog',result:{...q,dictionaryVersion:ORIGIN_DICTIONARY_VERSION,totalPublic:7,stock:{total:7,legacy:0,admin:0,public:7,unclassified:0},series:[{period:q.start,count:7}],distributions:Object.fromEntries(["utm_source","utm_medium","utm_campaign","utm_term","utm_content"].map(key=>[key,rows]))}};};
 const settle=async()=>{for(let i=0;i<20;i++)await Promise.resolve();};
 function find(node:ReactNode,predicate:(element:ReactElement<Record<string,unknown>>)=>boolean):ReactElement<Record<string,unknown>>|undefined{for(const child of Children.toArray(node)){if(!isValidElement<Record<string,unknown>>(child))continue;if(predicate(child))return child;const found=find(child.props.children as ReactNode,predicate);if(found)return found;}}
 const text=(tree:ReactNode)=>JSON.stringify(tree,(_key,value)=>typeof value==="function"?undefined:value);
@@ -25,6 +26,10 @@ const click=(tree:ReactNode,label:string)=>(find(tree,node=>node.type==="metrics
 afterEach(()=>{vi.restoreAllMocks();vi.unstubAllGlobals();});
 
 describe("métricas: sessão Master",()=>{
+ it('apresenta rótulos do catálogo e Não informada sem mostrar códigos desconhecidos',async()=>{
+  const app=fixture(async path=>{const body=valid(String(path));Object.assign(body.result.distributions,{utm_source:[{kind:'value',value:'google',count:5},{kind:'not-informed',value:null,count:1},{kind:'other',value:null,count:1}]});return json(200,body);});
+  app.render();await settle();const tree=app.render();expect(text(tree)).toContain('Google');expect(text(tree)).toContain('Não informada');expect(text(tree)).toContain('Outros');app.unmount();
+ });
  it("oculta dados na volta, recusa B, ignora resposta atrasada de A e retoma filtro aprovado",async()=>{
   let finish!:(response:Response)=>void;const slow=new Promise<Response>(resolve=>{finish=resolve;});let mode:"A"|"slow"|"B"="A";const requests:{path:string;owner:unknown}[]=[];
   const app=fixture(async (path,init)=>{const url=String(path);requests.push({path:url,owner:(init?.headers as Record<string,string>)["x-expected-user-id"]});if(mode==="slow")return slow;if(mode==="B")return new Response(null,{status:403});return json(200,valid(url));});
@@ -41,7 +46,7 @@ describe("métricas: sessão Master",()=>{
  it("não reabre com envelope ok falso e permite nova verificação",async()=>{
   let calls=0;const app=fixture(async path=>{calls++;return calls===2?json(200,{...valid(String(path)),ok:false}):json(200,valid(String(path)));});app.render();await settle();app.render();window.dispatchEvent(new Event("focus"));await settle();const tree=app.render();expect(text(tree)).toContain("Confirme sua conta");expect(text(tree)).not.toContain("Cadastros ao longo do tempo");click(tree,"Verificar sessão");await settle();expect(text(app.render())).toContain("Cadastros ao longo do tempo");app.unmount();
  });
- it("não reabre com valores livres sob a marca withheld ou envelope antigo",async()=>{
+ it("não reabre com valores livres sob a marca catalog ou envelope antigo",async()=>{
   let calls=0;const app=fixture(async path=>{const body=valid(String(path));calls++;if(calls===2){Object.assign(body.result.distributions,{utm_source:[{kind:"value",value:secret,count:7}]});}if(calls===3){return json(200,{ok:body.ok,result:body.result});}return json(200,body);});
   app.render();await settle();app.render();window.dispatchEvent(new Event("focus"));await settle();let tree=app.render();expect(text(tree)).toContain("Confirme sua conta");expect(text(tree)).not.toContain(secret);click(tree,"Verificar sessão");await settle();tree=app.render();expect(text(tree)).toContain("Confirme sua conta");expect(text(tree)).not.toContain(secret);click(tree,"Verificar sessão");await settle();expect(text(app.render())).toContain("Cadastros ao longo do tempo");app.unmount();
  });

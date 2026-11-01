@@ -1,3 +1,4 @@
+import { ORIGIN_DICTIONARY, ORIGIN_DICTIONARY_VERSION } from './origin-dictionary.generated';
 /** Only already-aggregated rows belong here. This module never receives users. */
 export type SignupOriginCount = Readonly<{ value: string | null; count: number }>;
 export type DisplayOriginCount = Readonly<
@@ -91,4 +92,36 @@ export function withholdOriginDistribution(metrics: SignupMetrics): SignupMetric
       : [{ kind: "other", value: null, count: metrics.totalPublic }];
   }
   return { ...metrics, distributions };
+}
+
+/** Catalogued aggregates only: reject old SQL, unknown codes, extras and incomplete populations. */
+export type CatalogSignupMetrics = SignupMetrics & { dictionaryVersion: string };
+export function parseCatalogSignupMetrics(value: unknown, query: MetricQuery): CatalogSignupMetrics | null {
+ if (!object(value) || !exact(value,['dictionaryVersion','start','end','zone','bucket','totalPublic','stock','series','distributions']) || value.dictionaryVersion !== ORIGIN_DICTIONARY_VERSION || !count(value.totalPublic) || !object(value.distributions)) return null;
+ const total=value.totalPublic, dimensions=value.distributions;
+ if (!exact(dimensions,[...METRIC_DIMENSIONS])) return null;
+ // Reuse the existing strict metadata/series parser with a fabricated safe distribution.
+ const held=Object.fromEntries(METRIC_DIMENSIONS.map(key=>[key,total?[{kind:'other',value:null,count:total}]:[]]));
+ const base={start:value.start,end:value.end,zone:value.zone,bucket:value.bucket,totalPublic:total,stock:value.stock,series:value.series,distributions:held};
+ if (!parseWithheldSignupMetrics(base,query)) return null;
+ for (const dimension of METRIC_DIMENSIONS) {
+  const rows=dimensions[dimension],seen=new Set<string>();
+  if(!Array.isArray(rows)||rows.length>102)return null;
+  for(const row of rows) {
+   if(!object(row)||!exact(row,['kind','value','count'])||!count(row.count)||row.count===0)return null;
+   if(row.kind==='value') {
+    const entries=ORIGIN_DICTIONARY[dimension] as readonly {code:string;label:string}[];
+    if(typeof row.value!=='string'||row.count<5||!entries.some(entry=>entry.code===row.value))return null;
+   } else if((row.kind!=='other'&&row.kind!=='not-informed')||row.value!==null)return null;
+   const key=String(row.kind)+':'+String(row.value);if(seen.has(key))return null;seen.add(key);
+  }
+  if(rows.reduce((sum,row)=>sum+row.count,0)!==total)return null;
+ }
+ return value as CatalogSignupMetrics;
+}
+export function catalogOriginLabel(dimension:MetricDimension, row:DisplayOriginCount):string {
+ if(row.kind==='not-informed')return 'Não informada';
+ if(row.kind==='other')return 'Outros';
+ const entries=ORIGIN_DICTIONARY[dimension] as readonly {code:string;label:string}[];
+ return entries.find(entry=>entry.code===row.value)?.label ?? 'Outros';
 }
