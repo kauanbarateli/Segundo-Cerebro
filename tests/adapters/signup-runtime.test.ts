@@ -39,6 +39,23 @@ describe("adaptador servidor para solicitação de cadastro", () => {
     expect(doubles.signup).toHaveBeenCalledWith(expect.objectContaining({ email: input.email, password: input.password, options: { data: { sc_signup_pointer: expect.stringMatching(/^[A-Za-z0-9_-]{43}$/) }, emailRedirectTo: "https://app.example.invalid/auth/confirmar-cadastro" } }));
     expect(doubles.provider).toHaveBeenCalledWith(config.supabaseUrl, config.publishableKey, expect.objectContaining({ auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } }));
   });
+  it("envia origem nula sem consentimento e apenas UTMs permitidas com consentimento", async () => {
+    const candidate = { utm_source: "busca", utm_campaign: "organização", referrer: "privado", email: "private@example.invalid" };
+    expect(await requestPublicSignup(createSignupRequestPorts(config), input, legal, { consented: false, candidate })).toEqual({ status: "accepted" });
+    let options = vi.mocked(fetch).mock.calls[0]![1] as RequestInit;
+    let body = JSON.parse(String(options.body));
+    expect(body).toMatchObject({ p_origin: null, p_origin_version: null });
+    expect(String(options.body)).not.toContain("privado");
+
+    vi.mocked(fetch).mockClear();
+    expect(await requestPublicSignup(createSignupRequestPorts(config), input, legal, { consented: true, candidate })).toEqual({ status: "accepted" });
+    options = vi.mocked(fetch).mock.calls[0]![1] as RequestInit;
+    body = JSON.parse(String(options.body));
+    expect(body).toMatchObject({ p_origin: { utm_source: "busca", utm_campaign: "organização" }, p_origin_version: "signup-origin-v1" });
+    expect(Object.keys(body.p_origin).sort()).toEqual(["utm_campaign", "utm_source"]);
+    expect(String(options.body)).not.toContain("privado");
+    expect(String(options.body)).not.toContain("private@example.invalid");
+  });
   it("não chama Auth se o banco ou o limite forem indisponíveis", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response("erro", { status: 500 })));
     expect(await requestPublicSignup(createSignupRequestPorts(config), input, legal)).toEqual({ status: "unavailable" });
