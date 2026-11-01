@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "dimensions": {
+    "utm_source": [{"code":"google","label":"Google","aliases":["google"]},{"code":"instagram","label":"Instagram","aliases":["instagram"]}],
+    "utm_medium": [{"code":"organic","label":"Orgânico","aliases":["organic"]},{"code":"email","label":"Email","aliases":["email"]}],
+    "utm_campaign": [],
+    "utm_term": [],
+    "utm_content": []
+  }
+}

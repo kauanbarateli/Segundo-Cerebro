@@ -1,0 +1,34 @@
+/** The aliases are reviewed constants; unknown values never reach the output. */
+export function classifyOrigin(dimension: MetricDimension, value: string | null): string | null {
+  if (value === null) return null;
+  // Mirror PostgreSQL btrim(text) and lower(... COLLATE "C") for the ASCII aliases.
+  const alias = value.replace(/^ +| +$/g, '').replace(/[A-Z]/g, c=>String.fromCharCode(c.charCodeAt(0)+32));
+  return ORIGIN_DICTIONARY[dimension].find(entry=>(entry.aliases as readonly string[]).includes(alias))?.code ?? '__other__';
+}
+export function metricOriginLabel(dimension: MetricDimension, code: string): string {
+  return ORIGIN_DICTIONARY[dimension].find(entry=>entry.code===code)?.label ?? 'Outros';
+}
+/** Model for already aggregated input; never emits unapproved input strings. */
+export function prepareOriginDistribution(dimension: MetricDimension, total: number, groups: readonly SignupOriginCount[]): readonly DisplayOriginCount[] | null {
+  if (!METRIC_DIMENSIONS.includes(dimension) || !Number.isSafeInteger(total) || total<0 || !Array.isArray(groups) || groups.length>500) return null;
+  const seen = new Set<string | null>(), classified = new Map<string | null,number>();
+  let sum=0;
+  for (const group of groups) {
+    if (!group || (group.value !== null && typeof group.value !== 'string') || !Number.isSafeInteger(group.count) || group.count<1 || seen.has(group.value)) return null;
+    seen.add(group.value);
+    sum+=group.count;
+    if (!Number.isSafeInteger(sum) || sum>total) return null;
+    const value=classifyOrigin(dimension,group.value);
+    classified.set(value,(classified.get(value) ?? 0)+group.count);
+  }
+  if (sum!==total) return null;
+  const result: DisplayOriginCount[]=[];
+  let other=0;
+  for (const [value,n] of classified) {
+    if (value===null) result.push({kind:'not-informed',value:null,count:n});
+    else if (value==='__other__' || n<5) other+=n;
+    else result.push({kind:'value',value,count:n});
+  }
+  if (other) result.push({kind:'other',value:null,count:other});
+  return result;
+}
