@@ -3,6 +3,7 @@
  * This script must never become a deploy/schema-application step.
  */
 import { readFile, readdir } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import { resolve, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PGlite } from "@electric-sql/pglite";
@@ -11,9 +12,11 @@ import { pg_trgm } from "@electric-sql/pglite/contrib/pg_trgm";
 import { inspectLocalPublicDatabaseContracts } from "./operations/database-contracts.mjs";
 import { readCurrent27CanonicalMigrations } from "../tests/helpers/canonical-release-source.mjs";
 const root = fileURLToPath(new URL("../", import.meta.url));
-const db = new PGlite({ extensions: { pgcrypto, pg_trgm } });
+const db = new PGlite("memory://", { extensions: { pgcrypto, pg_trgm } });
 let current = "local Auth fixture";
 try {
+  await db.waitReady;
+  if (db.dataDir !== "memory://") throw new Error("Disposable in-memory database required.");
   await db.exec(`
     create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls;
     create schema auth; create schema extensions; create schema storage;
@@ -54,6 +57,18 @@ try {
     if (!source.trim()) throw new Error("Empty migration cannot pass release validation.");
     await db.exec(source); process.stdout.write(`PASS migration ${file}\n`);
   }
+  current = "guarded signup candidate (rollback only)";
+  const candidate = await readFile(resolve(root, "scripts/verification/front-b-135-draft/admission-fence-atomic.sql.txt"));
+  if (createHash("sha256").update(candidate).digest("hex") !== "bcf4da212db7fc310df9b72df252fab226b6cde6ea9c2b1f3715740f73c151fd") throw new Error("Signup candidate source differs from reviewed bytes.");
+  const source = candidate.toString("utf8").replaceAll("\r\n", "\n"), guard = /^DO \$scratch_guard\$ BEGIN RAISE EXCEPTION 'UNREVIEWED SCRATCH SQL: DO NOT APPLY'; END \$scratch_guard\$;$/gm;
+  const begin = /^BEGIN;$/gm, commit = /^COMMIT;$/gm;
+  if ([guard, begin, commit].some(pattern => [...source.matchAll(pattern)].length !== 1)) throw new Error("Signup candidate transaction boundary refused.");
+  const before = await db.query("select pg_get_functiondef('app_private.session_active(uuid,uuid)'::regprocedure) as identity, pg_get_constraintdef((select oid from pg_constraint where conrelid='public.domain_events'::regclass and conname='domain_events_entity_type_check')) as event_constraint");
+  const inMemory = source.replace(guard, "").replace(commit, "ROLLBACK;");
+  await db.exec(inMemory);
+  const after = await db.query("select pg_get_functiondef('app_private.session_active(uuid,uuid)'::regprocedure) as identity, pg_get_constraintdef((select oid from pg_constraint where conrelid='public.domain_events'::regclass and conname='domain_events_entity_type_check')) as event_constraint, to_regclass('app_private.user_admission') is null as admission_absent, to_regclass('app_private.signup_completion_fences_draft') is null as fence_absent, to_regprocedure('public.signup_fence_reserve(uuid,uuid,uuid,text,uuid,text,text,boolean,text)') is null as wrapper_absent");
+  if (after.rows.length !== 1 || before.rows.length !== 1 || typeof before.rows[0].identity !== "string" || typeof before.rows[0].event_constraint !== "string" || before.rows[0].identity !== after.rows[0].identity || before.rows[0].event_constraint !== after.rows[0].event_constraint || after.rows[0].admission_absent !== true || after.rows[0].fence_absent !== true || after.rows[0].wrapper_absent !== true) throw new Error("Signup candidate rollback was not confirmed.");
+  process.stdout.write("PASS guarded signup candidate in disposable memory, rolled back; no Auth or concurrency proof\n");
   current = "committed public database contracts";
   const contracts = await inspectLocalPublicDatabaseContracts(db, await readFile(resolve(root, "src/lib/supabase/database.generated.ts"), "utf8"));
   process.stdout.write(`PASS local generated contracts ${contracts.tables} tables, ${contracts.views} views, ${contracts.rpcs} RPCs, ${contracts.columns} columns, ${contracts.arguments} arguments\n`);
