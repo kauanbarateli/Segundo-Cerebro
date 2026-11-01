@@ -43,6 +43,7 @@
       "codex/front-b-historico-fontes": false,
       "codex/front-b-fontes-financeiras": false,
       "codex/front-b-restore-historico": false,
+      "codex/front-b-sequencias-historicas": false,
       "codex/reconciliacao-banco-20261031": false,
       "codex/fix-auditoria-173": false
     }
