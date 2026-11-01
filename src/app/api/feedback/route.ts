@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
-import { feedbackRpc, FeedbackGatewayError, type FeedbackCursor } from "@/adapters/db/feedback-gateway";
+import { feedbackRpc, feedbackBarrierRpc, FeedbackGatewayError, type FeedbackCursor } from "@/adapters/db/feedback-gateway";
 import { ErroDeDominio } from "@/core/contracts/base";
 import { decodeFeedbackSubmission } from "@/core/feedback/submission";
 import { readAuthConfiguration } from "@/lib/auth/config";
 import { sameOrigin } from "@/lib/auth/policy";
 import { requestAuthServices } from "@/lib/auth/runtime";
 import { AuthGuardError } from "@/lib/auth/types";
+import { feedbackReconciliationReady } from "@/lib/feedback/reconciliation-gate";
+import { runReconciliation } from "@/lib/feedback/reconciliation-service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,6 +17,7 @@ class SessionChanged extends Error {}
 async function handler(request: Request, write: boolean) {
   const resultHeaders = headers();
   try {
+    if (write && !feedbackReconciliationReady()) return NextResponse.json({ok:false,code:'UNAVAILABLE'}, {status:503,headers:resultHeaders});
     const config = readAuthConfiguration();
     if (config.mode !== "supabase") throw new AuthGuardError("demo");
     const actor = await (await requestAuthServices(true, resultHeaders)).gateway.readIdentity();
@@ -44,7 +47,8 @@ async function handler(request: Request, write: boolean) {
         input = decodeFeedbackSubmission(parsed);
       } finally { reader.releaseLock(); }
     }
-    return NextResponse.json({ ok: true, result: await feedbackRpc(config, actor, input, cursor) }, { headers: resultHeaders });
+    const result = input ? await runReconciliation({ready:feedbackReconciliationReady,perform:(who,command)=>feedbackBarrierRpc(config,who,command)},actor,{action:'submit',input}) : await feedbackRpc(config, actor, undefined, cursor);
+    return NextResponse.json({ ok: true, result }, { headers: resultHeaders });
   } catch (error) {
     const code = error instanceof SessionChanged ? "SESSION_CHANGED" : error instanceof ErroDeDominio ? "VALIDATION" : error instanceof FeedbackGatewayError ? error.code : error instanceof AuthGuardError ? error.code.toUpperCase() : "UNAVAILABLE";
     const status = code === "UNAUTHENTICATED" ? 401 : code === "FORBIDDEN" ? 403 : code === "VALIDATION" ? 400 : code === "CONFLICT" || code === "SESSION_CHANGED" ? 409 : 503;

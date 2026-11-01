@@ -6,5 +6,5 @@ import { FeedbackWorkspace } from "../../../src/components/features/feedback/fee
 Object.assign(globalThis, { __startFeedbackSession(userId: string) {
   const root = document.getElementById("feedback-session");
   if (!root) throw new Error("Fixture root missing");
-  createRoot(root).render(<FeedbackWorkspace userId={userId} supportEmail="fixture@example.invalid" />);
+  createRoot(root).render(<FeedbackWorkspace userId={userId} supportEmail="fixture@example.invalid" ownerBinding="ABCDEFGHIJKLMNOP" />);
 } });

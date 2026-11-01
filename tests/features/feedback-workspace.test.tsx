@@ -5,9 +5,12 @@ import { LEGAL_SUPPORT_EMAIL } from "../../src/lib/legal/documents";
 
 describe("histórico de feedback", () => {
   it("oferece o canal público de suporte mesmo antes do histórico carregar", () => {
-    const html = renderToStaticMarkup(<FeedbackWorkspace userId="user-fixture" supportEmail={LEGAL_SUPPORT_EMAIL} />);
+    const html = renderToStaticMarkup(<FeedbackWorkspace userId="user-fixture" supportEmail={LEGAL_SUPPORT_EMAIL} ownerBinding={null} />);
     expect(html).toContain('aria-labelledby="feedback-history"');
     expect(html).toContain(`href="mailto:${LEGAL_SUPPORT_EMAIL}"`);
     expect(html).toContain("Falar com o suporte");
+    expect(html).toContain("O envio está temporariamente indisponível");
+    expect(html).not.toContain("<form");
+    expect(html).not.toContain("Enviar mensagem</button>");
   });
 });
