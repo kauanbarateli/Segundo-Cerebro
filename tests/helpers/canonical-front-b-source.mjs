@@ -5,7 +5,7 @@
 import { createHash } from "node:crypto";
 import { lstat, readFile, readdir, realpath } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
-import { CanonicalReleaseSourceError, CURRENT27_CANONICAL_REVIEW } from "./canonical-release-source.mjs";
+import { CanonicalReleaseSourceError, CURRENT27_CANONICAL_REVIEW, readCurrent27CanonicalMigrations } from "./canonical-release-source.mjs";
 
 const refuse = code => { throw new CanonicalReleaseSourceError(code); };
 const hash = bytes => createHash("sha256").update(bytes).digest("hex");
@@ -69,4 +69,28 @@ export async function readHistorical027FromStagedFrontB30(root) {
 }
 export async function readHistorical026FromStagedFrontB30(root) {
   return Object.freeze((await readStagedFrontB30(root)).slice(0,26));
+}
+
+/** Explicitly dispatch only the two pinned states; never retry a failed state as another. */
+export async function readReviewedFrontBChain(root) {
+  if (typeof root !== "string" || !isAbsolute(root)) refuse("SOURCE_FILE_REFUSED");
+  root = resolve(root);
+  let manifest, manifestBytes;
+  try { manifestBytes=await source(root,"supabase/sql-editor/manifest.json");manifest=JSON.parse(manifestBytes); }
+  catch { refuse("MIGRATION_MANIFEST_REFUSED"); }
+  if (!object(manifest) || manifest.formatVersion !== 1 || manifest.hashAlgorithm !== "sha256" || !Array.isArray(manifest.installation) || manifest.installation.some(row=>!object(row)||Object.keys(row).sort().join(",")!=="bytes,file,order,sha256,source,version")) refuse("MIGRATION_MANIFEST_REFUSED");
+  let state, sources;
+  if (manifest.installation.length === 27) { state="reviewed_27"; sources=await readCurrent27CanonicalMigrations(root); }
+  else if (manifest.installation.length === 30) { state="draft_30"; sources=await readStagedFrontB30(root); }
+  else refuse("MIGRATION_MANIFEST_REFUSED");
+  if (!(await source(root,"supabase/sql-editor/manifest.json")).equals(manifestBytes)) refuse("MIGRATION_MANIFEST_REFUSED");
+  return Object.freeze({state,sources});
+}
+
+/** Historical prefix only after verifying whichever complete reviewed chain is present. */
+export async function readHistorical027FromReviewedFrontB(root) {
+  return Object.freeze((await readReviewedFrontBChain(root)).sources.slice(0,27));
+}
+export async function readHistorical026FromReviewedFrontB(root) {
+  return Object.freeze((await readReviewedFrontBChain(root)).sources.slice(0,26));
 }

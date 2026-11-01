@@ -3,3 +3,6 @@ export const FRONT_B_30_DRAFT_REVIEW: readonly Readonly<{file:string;sha256:stri
 export function readStagedFrontB30(root:string):Promise<readonly Readonly<{file:string;source:Buffer}>[]>;
 export function readHistorical027FromStagedFrontB30(root:string):Promise<readonly Readonly<{file:string;source:Buffer}>[]>;
 export function readHistorical026FromStagedFrontB30(root:string):Promise<readonly Readonly<{file:string;source:Buffer}>[]>;
+export function readReviewedFrontBChain(root:string):Promise<Readonly<{state:"reviewed_27"|"draft_30";sources:readonly Readonly<{file:string;source:Buffer}>[]}>>;
+export function readHistorical027FromReviewedFrontB(root:string):Promise<readonly Readonly<{file:string;source:Buffer}>[]>;
+export function readHistorical026FromReviewedFrontB(root:string):Promise<readonly Readonly<{file:string;source:Buffer}>[]>;
