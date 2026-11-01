@@ -5,7 +5,7 @@ const identity = { userId: "10000000-0000-4000-8000-000000000001", sessionId: "2
 const intent = { intentId: "30000000-0000-4000-8000-000000000001", termsVersion: "v1", privacyVersion: "v2" };
 const legal = { terms: "v1", privacy: "v2" }, token = "a".repeat(64);
 function ports(): SignupConfirmationPorts {
-  return { now: () => 1000, limitToken: vi.fn(async () => ({ allowed: true })), verifySignupToken: vi.fn(async () => identity), subjectHash: vi.fn(() => "b".repeat(64)), findBoundIntent: vi.fn(async () => intent), putCheckpoint: vi.fn(async () => {}), clearProvisionalSession: vi.fn(async () => {}) };
+  return { now: () => 1000, canBegin: () => true, limitToken: vi.fn(async () => ({ allowed: true })), verifySignupToken: vi.fn(async () => identity), subjectHash: vi.fn(() => "b".repeat(64)), findBoundIntent: vi.fn(async () => intent), putCheckpoint: vi.fn(async () => {}), clearProvisionalSession: vi.fn(async () => {}) };
 }
 
 describe("confirmação explícita de cadastro", () => {
@@ -20,6 +20,11 @@ describe("confirmação explícita de cadastro", () => {
     const p = ports(); expect(await verifySignupConfirmation(p, "inválido", legal)).toEqual({ status: "invalid" });
     vi.mocked(p.limitToken).mockResolvedValue({ allowed: false });
     expect(await verifySignupConfirmation(p, token, legal)).toEqual({ status: "rate-limited" });
+    expect(p.verifySignupToken).not.toHaveBeenCalled(); expect(p.clearProvisionalSession).not.toHaveBeenCalled();
+  });
+  it("não substitui nem limpa uma sessão pré-existente", async () => {
+    const p = ports(); p.canBegin = () => false;
+    expect(await verifySignupConfirmation(p, token, legal)).toEqual({ status: "unavailable" });
     expect(p.verifySignupToken).not.toHaveBeenCalled(); expect(p.clearProvisionalSession).not.toHaveBeenCalled();
   });
   it("não admite conta existente sem vínculo e limpa a sessão provisória", async () => {

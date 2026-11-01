@@ -3,6 +3,8 @@ import { validEmail } from "./policy";
 
 export interface SignupConfirmationPorts {
   now(): number;
+  /** Do not overwrite an existing authenticated browser session. */
+  canBegin(): boolean;
   /** Limits by a server HMAC; must be supplemented by provider/edge limits. */
   limitToken(tokenHash: string): Promise<{ allowed: boolean }>;
   /** Verifies a signup OTP, then independently verifies user and session with Auth. */
@@ -22,6 +24,7 @@ export async function verifySignupConfirmation(ports: SignupConfirmationPorts, t
   if (typeof tokenHash !== "string" || !/^[A-Za-z0-9_-]{32,256}$/.test(tokenHash)) return { status: "invalid" };
   let verificationStarted = false;
   const perform = async (): Promise<SignupConfirmationResult> => { try {
+    if (!ports.canBegin()) return { status: "unavailable" };
     if (!(await ports.limitToken(tokenHash)).allowed) return { status: "rate-limited" };
     verificationStarted = true;
     const identity = await ports.verifySignupToken(tokenHash);
