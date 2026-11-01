@@ -6,6 +6,7 @@ import { PassThrough } from "node:stream";
 import { spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { createHistorical026CanonicalSql } from "../helpers/local-canonical-sql.ts";
 import { planManagedRestore, managedRestoreRequirements, authorizeManagedRestore } from "../../scripts/operations/restore-managed-plan.mjs";
 import { runManagedRestore } from "../../scripts/operations/restore-managed-stream.mjs";
@@ -13,10 +14,13 @@ import { mintManagedSnapshot } from "../../scripts/operations/restore-managed-sn
 import { PERSONAL_REF } from "../../scripts/operations/backup-config.mjs";
 import { createManagedRestoreAdapters, checkManagedBeforeCommit, validateManagedValidation, PRIVATE_TOC_ACL_HELPER, PRIVATE_TOC_ACL_HELPER_SHA256, MANAGED_ADAPTER_DEADLINE_MS } from "../../scripts/operations/restore-managed-native-adapters.mjs";
 import { MANAGED_VALIDATION_SQL } from "../../scripts/operations/restore-managed-validation-sql.mjs";
-import { readHistorical026CanonicalMigrations } from "../helpers/canonical-release-source.mjs";
+import { readHistorical026FromReviewedFrontB } from "../helpers/canonical-front-b-source.mjs";
 
 async function historicalCatalogueSource(){
- await readHistorical026CanonicalMigrations();
+ // This is an explicitly historical 026 catalogue. Qualify the complete
+ // reviewed source tree before projecting the 026 prefix; never treat it as
+ // evidence for the later schema or bypass validation of its remaining files.
+ await readHistorical026FromReviewedFrontB(fileURLToPath(new URL("../../",import.meta.url)));
  const bytes=await readFile(new URL("../fixtures/schema-release-026/release-catalog.sql",import.meta.url));
  assert.equal(bytes.length,82143);
  assert.equal(hash(bytes),"4557741f008d48ea60ad8a3e2d5a41667630543c3bf2ab0682ec2b33ad97e297");
