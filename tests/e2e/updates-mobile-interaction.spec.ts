@@ -77,3 +77,26 @@ for (const width of [320, 390]) for (const theme of ["light", "dark"] as const) 
     expect(blocked).toEqual([]); expect(errors).toEqual([]);
   });
 }
+
+
+test("mudança de largura preserva o foco e restaura todas as etapas", async ({ page, context }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const blocked = await serve(context, "light"), errors: string[] = [];
+  page.on("pageerror", () => errors.push("PAGE_ERROR"));
+  await page.goto(origin + "/"); await page.addScriptTag({ content: script });
+  const filter = page.getByRole("combobox", { name: "Etapa" });
+  await expect(filter).toBeVisible();
+  await filter.selectOption("planned");
+  await expect(page.locator("#updates-released")).toBeHidden();
+  await page.setViewportSize({ width: 1280, height: 844 });
+  await expect(page.locator("#updates-released")).toBeVisible();
+  await expect(page.locator("#updates-stage")).toHaveValue("all");
+  const evidence = page.getByRole("link", { name: "Ver entrega: Entrega sintética" });
+  await page.keyboard.press("Tab"); await expect(evidence).toBeFocused();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(filter).toHaveValue("all");
+  await expect(evidence).toBeVisible(); await expect(evidence).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(origin + "/inicio");
+  expect(blocked).toEqual([]); expect(errors).toEqual([]);
+});

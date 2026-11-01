@@ -7,7 +7,18 @@ export function UpdatesBoard({ entries = updates }: { entries?: readonly UpdateI
   const validatedEntries = validateUpdateEntries(entries);
   const [selected, setSelected] = useState<(typeof updateStates)[number]["id"] | "all">("all");
   const [enhanced, setEnhanced] = useState(false);
-  useEffect(() => { setEnhanced(true); }, []);
+  useEffect(() => {
+    setEnhanced(true);
+    if (typeof window.matchMedia !== "function") return;
+    const mobile = window.matchMedia("(max-width: 600px)");
+    const resetOnDesktop = (event: MediaQueryListEvent) => {
+      // Desktop exposes every column. Clear the mobile-only filter before a
+      // later resize can hide a column containing keyboard focus.
+      if (!event.matches) setSelected("all");
+    };
+    mobile.addEventListener("change", resetOnDesktop);
+    return () => mobile.removeEventListener("change", resetOnDesktop);
+  }, []);
   return <>
     <Field as="select" wrapperClassName={enhanced ? "updates-filter updates-filter--ready" : "updates-filter"} label="Etapa" id="updates-stage" value={selected} onChange={(event) => setSelected(event.target.value as typeof selected)}>
         <option value="all">Todas as etapas</option>
