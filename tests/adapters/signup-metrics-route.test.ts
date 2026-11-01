@@ -12,8 +12,18 @@ describe('métricas privadas',()=>{
  beforeEach(()=>{vi.clearAllMocks();vi.stubGlobal('fetch',fake.fetch);fake.identity.mockResolvedValue({userId,sessionId,mustChangePassword:false,role:'master',entitlements:{}});fake.fetch.mockResolvedValue(new Response(JSON.stringify(result),{headers:{'Content-Type':'application/json'}}));});
  it('autoriza Master, usa ator da sessão e retorna somente agregados',async()=>{
   const response=await GET(request()); expect(response.status).toBe(200); expect(response.headers.get('cache-control')).toContain('no-store');
-  expect(await response.json()).toEqual({ok:true,result});
+  expect(await response.json()).toEqual({ok:true,originDistribution:'withheld',result});
   expect(JSON.parse(fake.fetch.mock.calls[0]![1].body)).toMatchObject({p_actor:userId,p_session:sessionId,p_start:'2026-10-01'});
+ });
+ it('não entrega valores livres de UTM, mesmo em grupos grandes ou com rótulos reservados',async()=>{
+  const hidden='pessoa@example.invalid';
+  const rows=[{kind:'value',value:hidden,count:5},{kind:'value',value:'Não informada',count:5},{kind:'not-informed',value:null,count:5},{kind:'other',value:null,count:2}];
+  const supplied={...result,totalPublic:17,series:[{period:'2026-10-01',count:17}],distributions:{utm_source:rows,utm_medium:rows,utm_campaign:rows,utm_term:rows,utm_content:rows}};
+  fake.fetch.mockResolvedValueOnce(new Response(JSON.stringify(supplied),{headers:{'Content-Type':'application/json'}}));
+  const response=await GET(request()); const body=await response.json();
+  expect(response.status).toBe(200); expect(body.originDistribution).toBe('withheld'); expect(body.result.totalPublic).toBe(17);
+  for(const value of Object.values(body.result.distributions)) expect(value).toEqual([{kind:'other',value:null,count:17}]);
+  expect(JSON.stringify(body)).not.toContain(hidden); expect(JSON.stringify(body)).not.toContain('Não informada');
  });
  it('nega anônimo, usuário comum, veto e troca de conta antes de consultar',async()=>{
   fake.identity.mockResolvedValueOnce(null);expect((await GET(request())).status).toBe(401);

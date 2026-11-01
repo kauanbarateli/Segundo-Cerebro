@@ -61,3 +61,16 @@ export function prepareOriginDistribution(total: number, groups: readonly Signup
   if (other) visible.push({ kind: "other", value: null, count: other });
   return visible;
 }
+
+/** Until a reviewed allowlist is deployed, do not disclose free-form campaign values.
+ * The database response is privileged server input, not an anonymous payload.
+ */
+export function withholdOriginDistribution(metrics: SignupMetrics): SignupMetrics {
+  const distributions = {} as SignupMetrics['distributions'];
+  for (const dimension of METRIC_DIMENSIONS) {
+    distributions[dimension] = metrics.totalPublic === 0
+      ? []
+      : [{ kind: "other", value: null, count: metrics.totalPublic }];
+  }
+  return { ...metrics, distributions };
+}

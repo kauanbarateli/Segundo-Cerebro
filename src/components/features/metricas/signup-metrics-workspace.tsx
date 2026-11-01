@@ -1,11 +1,10 @@
 'use client';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
-import { METRIC_DIMENSIONS, parseMetricQuery, parseSignupMetrics, type MetricDimension, type MetricQuery, type SignupMetrics } from '@/core/acquisition/signup-metrics';
+import { parseMetricQuery, parseSignupMetrics, type MetricQuery, type SignupMetrics } from '@/core/acquisition/signup-metrics';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import './signup-metrics-workspace.css';
 
-const labels: Record<MetricDimension,string>={utm_source:'Origem',utm_medium:'Meio',utm_campaign:'Campanha',utm_term:'Termo',utm_content:'Conteúdo'};
 function defaultQuery(): MetricQuery {
  const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Fortaleza',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
  const part=(name:string)=>parts.find(item=>item.type===name)?.value;
@@ -15,7 +14,7 @@ function defaultQuery(): MetricQuery {
 }
 const displayDate=(date:string)=>new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'short',timeZone:'UTC'}).format(new Date(`${date}T00:00:00Z`));
 export function SignupMetricsWorkspace({userId}:{userId:string}) {
- const [draft,setDraft]=useState<MetricQuery>(defaultQuery), [data,setData]=useState<SignupMetrics|null>(null), [loading,setLoading]=useState(true), [error,setError]=useState(''), [dimension,setDimension]=useState<MetricDimension>('utm_source');
+ const [draft,setDraft]=useState<MetricQuery>(defaultQuery), [data,setData]=useState<SignupMetrics|null>(null), [loading,setLoading]=useState(true), [error,setError]=useState('');
  const [owner,setOwner]=useState(userId);
  const [identityClosed,setIdentityClosed]=useState(false);
  const generation=useRef(0), closed=useRef(false), currentQuery=useRef<MetricQuery>(defaultQuery());
@@ -30,7 +29,7 @@ export function SignupMetricsWorkspace({userId}:{userId:string}) {
    if([401,403,409].includes(response.status)){if(id===generation.current)closeIdentity();return;}
    const body:unknown=await response.json();
    const envelope=body && typeof body==='object' && !Array.isArray(body) ? body as Record<string,unknown> : null;
-   const result=envelope && Object.keys(envelope).sort().join(',')==='ok,result' && envelope.ok===true ? parseSignupMetrics(envelope.result,query):null;
+   const result=envelope && Object.keys(envelope).sort().join(',')==='ok,originDistribution,result' && envelope.ok===true && envelope.originDistribution==='withheld' ? parseSignupMetrics(envelope.result,query):null;
    if(!response.ok || !result) throw new Error('unavailable');
    if(id===generation.current) {if(verifying){closed.current=false;setIdentityClosed(false);}setData(result);}
   } catch { if(id===generation.current) setError('Não foi possível carregar as métricas. Tente novamente.'); }
@@ -68,9 +67,9 @@ export function SignupMetricsWorkspace({userId}:{userId:string}) {
    <section className="signup-metrics__panel" aria-labelledby="metrics-series-title"><h2 id="metrics-series-title">Cadastros ao longo do tempo</h2>
     {data.totalPublic===0 ? <p>Nenhum cadastro público concluído neste período.</p> : <ol className="signup-metrics__series">{data.series.map(row=><li key={row.period}><span>{displayDate(row.period)}</span><span className="signup-metrics__bar"><i style={{width:`${row.count/max*100}%`}} /></span><strong>{row.count}</strong></li>)}</ol>}
    </section>
-   <section className="signup-metrics__panel" aria-labelledby="metrics-origin-title"><div className="signup-metrics__panel-heading"><div><h2 id="metrics-origin-title">Origem informada</h2><p>Dados opcionais, mantidos por até 12 meses.</p></div><Field as="select" label="Dimensão" value={dimension} onChange={event=>setDimension(event.target.value as MetricDimension)}>{METRIC_DIMENSIONS.map(key=><option key={key} value={key}>{labels[key]}</option>)}</Field></div>
-    {data.totalPublic===0 ? <p>Sem origens para apresentar neste período.</p> : <ul className="signup-metrics__origins">{data.distributions[dimension].map(row=><li key={`${row.kind}:${row.value ?? ''}`}><span>{row.kind==='other'?'Outros':row.kind==='not-informed'?'Não informada':row.value}</span><strong>{row.count}</strong></li>)}</ul>}
-    <p className="signup-metrics__note">Grupos com menos de cinco cadastros e resultados além dos 100 maiores aparecem em Outros. Ausência não significa tráfego direto; agrupamentos não garantem anonimato.</p>
+   <section className="signup-metrics__panel" aria-labelledby="metrics-origin-title">
+    <h2 id="metrics-origin-title">Origem informada</h2>
+    <p>A distribuição por origem está temporariamente indisponível enquanto protegemos os dados informados nos links de campanha.</p>
    </section>
   </>}
  </div>;
