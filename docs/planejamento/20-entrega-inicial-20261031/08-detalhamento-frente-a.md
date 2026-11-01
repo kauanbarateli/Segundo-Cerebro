@@ -37,7 +37,7 @@ A01, A02, A03 e A05 não esperam o backend de B. A06 coordena com A05 a edição
 ### Feedback, atualizações e navegação Master
 
 - A02 é dona do shell, header, sidebar e comportamento mobile. Prepara pontos opcionais para **Enviar feedback** e **Atualizações** (raio com nome acessível), com disponibilidade inicialmente falsa.
-- B é dona das rotas e comportamentos completos de `/feedback` e `/atualizacoes`, seus dados, autorização e disponibilidade. Só ativar links quando o destino funcionar; antes disso manter Ajuda acessível, sem 404, formulário simulado ou botão sem ação.
+- B é dona das rotas e comportamentos completos de `/feedback` e `/atualizacoes`, seus dados, autorização e disponibilidade. Ao ativar Feedback, Enviar feedback substitui o item Ajuda; preservar suporte em contexto apropriado e Ajuda enquanto a nova rota não estiver disponível. Só ativar links quando o destino funcionar; antes disso manter Ajuda acessível, sem 404, formulário simulado ou botão sem ação.
 - A02 aceita a indicação de disponibilidade no boundary de composição; B altera o produtor do contrato, não o JSX/CSS do shell. O integrador confere os dois estados. Se o shell precisar de ajuste adicional após B, o autor A o incorpora em patch pequeno.
 - Métricas Master e operação mínima de feedback pertencem a B. A não desativa Admin/APIs existentes nesta fase nem move tudo para o subdomínio futuro. A aparência usa os componentes disponíveis; novo design de uma aplicação administrativa independente fica para etapa 2.
 
@@ -83,7 +83,7 @@ A01, A02, A03 e A05 não esperam o backend de B. A06 coordena com A05 a edição
 - [ ] Usa o caminho de persistência existente, preservando sincronização entre abas/conta e aviso útil se salvar falhar; não cria API de tema nova.
 - [ ] Diálogos e drawers existentes têm respiro e dimensão por uso, rolagem interna, safe areas e operação com teclado virtual; não impõem o mesmo tamanho a confirmação e editor longo.
 - [ ] Escape, clique fora conforme contrato, foco inicial/devolvido, empilhamento e bloqueio de fechamento durante operação protegida continuam corretos.
-- [ ] Header/sidebar/mobile oferecem pontos opcionais de feedback/Atualizações. Desabilitados, não exibem links novos; habilitados por B, mostram destinos acordados e nomes acessíveis, sem sobreposição a 320 px.
+- [ ] Header/sidebar/mobile oferecem pontos opcionais de feedback/Atualizações. Desabilitados, não exibem links novos; habilitados por B, mostram destinos acordados e nomes acessíveis, sem sobreposição a 320 px. Enviar feedback substitui Ajuda somente quando operacional; suporte continua acessível.
 - [ ] Retira apenas mensagens rotineiras redundantes; mantém erros, conflito, rascunho, permissão, sessão e resultado incerto. Admin existente não é desativado nesta etapa.
 - [ ] Conferência de consumidores representativos inclui Calendário, Financeiro, Cofre e imagem, nos dois temas, teclado e movimento reduzido.
 
@@ -150,7 +150,7 @@ A01, A02, A03 e A05 não esperam o backend de B. A06 coordena com A05 a edição
 - [ ] Salvar um grupo não perde rascunho ou escolha ainda não enviada em outro; links profundos de perfil/legais continuam válidos.
 - [ ] Cards de Projetos têm capas proporcionais e grade por área útil; título longo, ausência de capa/descrição, zero/muitas tarefas não quebram a composição. Usam progresso real, sem prazo/status fictício do protótipo.
 - [ ] Criar/editar/abrir projeto e trocar capa usam fluxos existentes; excluir/restaurar projeto conserva os itens vinculados. Não introduz novo campo de domínio.
-- [ ] O formulário de preferências permanece compatível com os campos atuais. A06 assume depois o pequeno corte do seletor de vista e de seu payload; A05 não começa uma segunda implementação de preferências.
+- [ ] O formulário de preferências permanece compatível com os campos atuais. A06 é dona do corte do seletor de vista e de seu payload; combinar ordem de autoria e preservar o corte se já integrado, sem segunda implementação de preferências.
 
 **Fora:** nova exportação de dados, exclusão de conta, reativação do Drive, novo editor de projetos ou prazo próprio.
 
@@ -188,7 +188,7 @@ Todos os caminhos abaixo foram observados na base; novas extrações são propos
 | A02 | `src/components/layout/workspace-shell.tsx`, `workspace-shell.css`; `src/components/theme/theme-toggle.tsx`, `theme-toggle.css`, `theme-selector.tsx`; `src/components/ui/dialog.tsx`, `dialog.css`, `focus-stack.ts` | Um autor para primitives/shell. B entrega disponibilidades/destinos; não modifica o layout. A04 só altera o gatilho de Capturar após A02. |
 | A03 | `src/components/editor/document-editor.tsx`, `document-editor.css`; `src/components/features/capturar/capture-view.tsx`, `capture.css`, `drafts.ts`, `requests.ts`, `model.ts`; `src/components/features/conhecimento/knowledge-connected-workspace.tsx`, `knowledge-editor.tsx`, `knowledge-drafts.ts`, `knowledge.css` | Extração frontend restrita para A04. Não reimplementar CAS, journal, modelos ou schemas; evitar imports feature→feature. |
 | A04 | Composer extraído por A03; `src/components/layout/workspace-shell.tsx`; `src/components/features/capturar/images.ts`, `image-rules.ts`; `src/components/layout/file-upload.ts` | Shell liberado por A02. Endpoints existentes: `/api/capture-tasks`, uploads/arquivos atuais; backend permanece intocado. |
-| A05 | `src/components/features/configuracoes/settings-workspace.tsx`, `settings-connected-workspace.tsx`, `settings.css`, `settings-legal-section.tsx`, `home-image-settings.tsx`, `own-sessions-section.tsx`; `src/components/features/projetos/projects-workspace.tsx`, `project-editor.tsx`, `projects.css`; `src/components/layout/entity-image-editor.tsx` | Preferências com save atual. A06 herda depois o campo da vista; nenhuma concorrência nesse arquivo. |
+| A05 | `src/components/features/configuracoes/settings-workspace.tsx`, `settings-connected-workspace.tsx`, `settings.css`, `settings-legal-section.tsx`, `home-image-settings.tsx`, `own-sessions-section.tsx`; `src/components/features/projetos/projects-workspace.tsx`, `project-editor.tsx`, `projects.css`; `src/components/layout/entity-image-editor.tsx` | Preferências com save atual. A06 é dona do campo da vista; combinar ordem e preservar o corte quando já integrado, sem concorrência nesse arquivo. |
 | A06 | `src/components/features/calendario/calendar-workspace.tsx`, `calendar-list.tsx`, `calendar-aside.tsx`, `calendar-event-detail.tsx`, `calendar-people.tsx`, `calendar-projections.ts`, `calendar.css`; trecho do seletor e save em `settings-connected-workspace.tsx` | Ignorar preferência antiga no front; não mudar contratos/API de Calendar. Preservar cache, fuso, URL de evento e nota. |
 | B | Novos cadastro/feedback/atualizações e sua composição server; Auth services/actions/guards, contratos/rotas/adapters/dados, UTM e métricas Master | Não herdar escopo de Google login/novo ADM/purga. Definir flags e regras reais; a composição injeta disponibilidade para A. |
 

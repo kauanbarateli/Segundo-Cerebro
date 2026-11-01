@@ -19,7 +19,7 @@ A [lista de issues](05-registro-de-tickets.md) é a fonte dos bloqueios reais. O
 | Landing e login existente | A | Recebe capacidade de cadastro da composição server. Desligada: Entrar → `/entrar`; ligada: Criar conta gratuita → `/criar-conta`. Nenhum booleano de query/cookie livre autoriza cadastro. |
 | Cadastro e confirmação | B | Formulário separado; validação, rate limit, e-mails, provisionamento e onboarding. Ativa o CTA somente quando o fluxo completo estiver operacional. |
 | Shell/tema/overlays | A | Controla JSX/CSS, foco e mobile; opções de navegação recebem disponibilidade por composição, com falso seguro por padrão. |
-| Feedback/Atualizações | B | Entrega rotas `/feedback` e `/atualizacoes`, autorização e dados reais. Libera links após os destinos funcionarem. |
+| Feedback/Atualizações | B | Entrega rotas `/feedback` e `/atualizacoes`, autorização e dados reais. Libera links após os destinos funcionarem. Enviar feedback substitui Ajuda na ativação, mantendo suporte acessível e Ajuda enquanto o recurso estiver indisponível. |
 | Métricas | B | `/metricas` proposta no produto atual; autorização Master no servidor, sem dar acesso a conteúdo privado de usuários. A integra o ponto de navegação seguindo o contrato existente. |
 | Editor e captura rápida | A | Extração única compartilhada sem imports indevidos entre features; reutiliza protocolos de draft/comando/upload atuais. |
 | Dados/RPC/adapters/Auth | B | Mantém assinatura de APIs atuais de A. Alteração incompatível exige alinhamento e migração de consumidores no mesmo PR. |
