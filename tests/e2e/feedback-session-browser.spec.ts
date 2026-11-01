@@ -62,6 +62,19 @@ async function mount(page: Page, mode: Mode) {
     window.addEventListener("focus", record, true); window.addEventListener("blur", record, true);
     document.addEventListener("visibilitychange", record, true);
     Object.assign(globalThis, { __feedbackFocusEvidence: samples });
+    // Observe settlement of the original fetch promise without changing it,
+    // reading/cloning its body, or persisting input or response contents.
+    const postDelivery = { started: false, resolved: 0, rejected: 0 };
+    const nativeFetch = window.fetch.bind(window);
+    window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+      const promise = nativeFetch(input, init);
+      if (!postDelivery.started && input === "/api/feedback" && init?.method === "POST") {
+        postDelivery.started = true;
+        void promise.then(() => { postDelivery.resolved++; }, () => { postDelivery.rejected++; });
+      }
+      return promise;
+    };
+    Object.assign(globalThis, { __feedbackPostDelivery: postDelivery });
   });
   await page.context().route("**/*", async route => {
     const request = route.request(), url = new URL(request.url());
@@ -92,8 +105,8 @@ async function mount(page: Page, mode: Mode) {
     const postIndex = trace.posts.length;
     if (postIndex === 1) firstPost = request;
     if (mode === "pending" || mode === "timeout-post") {
-      if (postIndex === 1) await postBarrier;
-      if (mode === "timeout-post" && postIndex === 1) {
+      if (postIndex === 1) {
+        await postBarrier;
         try { await json(ack(payload)); settleRoute?.("fulfilled"); }
         catch { trace.abortedRoutes++; settleRoute?.("rejected"); }
         return;
@@ -204,13 +217,15 @@ test("outra conta ao retornar à aba oculta dados mesmo com POST anterior penden
   await expect(page.getByLabel("Mensagem", { exact: true })).toHaveCount(0);
   await expect(page.getByText(historyText, { exact: true })).toHaveCount(0);
   expect(await page.locator("main").innerText()).not.toContain(draftText);
-  const late = page.waitForResponse(response => response.url() === origin + "/api/feedback" && response.request().method() === "POST");
-  fixture.release(); await (await late).finished();
-  await page.evaluate(() => new Promise<void>(resolveFrame => requestAnimationFrame(() => resolveFrame())));
+  await expect.poll(() => page.evaluate(() => (globalThis as unknown as { __feedbackPostDelivery: { started: boolean; resolved: number; rejected: number } }).__feedbackPostDelivery)).toMatchObject({ started: true, resolved: 0, rejected: 0 });
+  fixture.release();
+  expect(await fixture.heldPostDone()).toBe("fulfilled");
+  await expect.poll(() => page.evaluate(() => (globalThis as unknown as { __feedbackPostDelivery: { resolved: number; rejected: number } }).__feedbackPostDelivery)).toMatchObject({ resolved: 1, rejected: 0 });
   await expect(page.getByRole("heading", { name: "Confirme sua conta" })).toBeVisible();
   await expect(page.getByText("Mensagem recebida.", { exact: true })).toHaveCount(0);
   const secondLoss = await enterControl(other, page); fixture.setActor("A"); await returnToFeedback(page, secondLoss);
   await expect(page.getByRole("button", { name: "Verificar envio", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Verificar envio", exact: true })).toBeEnabled();
   await expect(page.getByLabel("Mensagem", { exact: true })).toHaveValue(draftText);
   await page.getByRole("button", { name: "Verificar envio", exact: true }).click();
   await expect(page.getByText("Mensagem recebida.", { exact: true })).toBeVisible();
