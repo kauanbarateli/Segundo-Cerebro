@@ -50,6 +50,13 @@ describe("only C accepts the exact approved landing additions without changing h
     reject(() => qualifyVisualStableSource("unknown" as VisualTree, tokensPath, oldTokensHash));
     reject(() => qualifyVisualStableSource("C", "DESIGN.md", "0".repeat(64)));
   });
+  it("qualifies the reviewed Frente A DESIGN.md blob only in C", () => {
+    const hash = "50a267aee63986b33eb733c6587886911a7dcec08a80d63e5db8f3c4b21449c1";
+    expect(qualifyVisualStableSource("C", "DESIGN.md", hash)).toBe("frente-a");
+    for (const tree of ["B", "P"] as const) reject(() => qualifyVisualStableSource(tree, "DESIGN.md", hash));
+    for (const changed of [hash.toUpperCase(), hash + "0"]) reject(() => qualifyVisualStableSource("C", "DESIGN.md", changed));
+    reject(() => qualifyVisualStableSource("C", "PRODUCT.md", hash));
+  });
   it("qualifies the four reviewed doc18 blobs only in C, without replacing historical sources", () => {
     const sources = {
       "PRODUCT.md": "d35922ff059766eed4cc23311caa983372c8a53bd13f33ed9e892603b99bbab3",
