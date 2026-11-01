@@ -16,7 +16,7 @@ Não reaplicar as 22 migrations não registradas, não reparar ledger em lote e 
 
 1. Reconfirmar projeto, ledger, catálogo e backup/recuperação por leitura autorizada, sem consultar dados pessoais.
 2. Comparar por objeto a cadeia reproduzida e as substituições posteriores com o catálogo atual e os registros operacionais; produzir procedimento revisado por migration, sem presumir proveniência.
-3. A classificação separada do patch está disponível e foi conferida em leitura. Integrar formalmente os dois resultados ao protocolo de release, sem alterar silenciosamente os consumidores que fixam o catálogo canônico; acrescentar testes negativos para alterações de corpo e privilégios e validar os consumidores derivados.
+3. A classificação separada do patch está disponível e foi conferida em leitura. Em PGlite, `node --test tests/scripts/onboarding-conflict-verifier.test.mjs` confirmou o patch e recusou o wrapper canônico, corpo alterado e grant indevido. Integrar formalmente os dois resultados ao protocolo de release, sem alterar silenciosamente os consumidores que fixam o catálogo canônico; validar também os consumidores derivados e o comportamento em QA.
 4. Ensaiar caminho aditivo em QA autorizado e provar o conflito HTTP 409, os fluxos Admin/onboarding e isolamento, com recuperação e reversão documentadas.
 5. Só considerar reconciliado quando houver evidência suficiente de ledger e objetos, QA e procedimento revisado. O teste local desta página não equivale a esses aceites.
 
