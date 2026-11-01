@@ -43,7 +43,7 @@ export const DRIVE_FRONT_AB_SOURCES = Object.freeze([
   Object.freeze({path:"src/components/features/capturar/requests.ts",bytes:1457,sha256:"1a62a6ebe5880086da36a52f2216164f5cfc981c0f2f41860e92db57466d0e18"}),
   Object.freeze({path:"src/components/features/capturar/use-image-attachments.ts",bytes:2924,sha256:"351fe757215ed69ef2000e765e313a5c80ef1ff5b0352d4f816da860c6ecbcea"}),
   Object.freeze({path:"src/lib/access/front-b-capabilities-server.ts",bytes:752,sha256:"5525cafb6a68b6bf2861155eed795f50a93a84cc10139a29d7bc519262d07a9b"}),
-  Object.freeze({path:"src/lib/auth/signup-http.ts",bytes:5010,sha256:"aee3c47bb962f60a48a410c92a2fd8a4d65c600e8415f89517136b824b62b3ab"}),
+  Object.freeze({path:"src/lib/auth/signup-http.ts",bytes:5498,sha256:"063fe43233686461bc1ff4d30cac68d4775cb2a8493c014a75887343ad9d7697"}),
   Object.freeze({path:"src/lib/navigation/optional-destinations.ts",bytes:1975,sha256:"8b1fa3518080d1a0f663f674eb9ec30769b0a10db2d7536276e16e4cb16b4cd3"}),
   Object.freeze({path:"src/core/acquisition/signup-origin.ts",bytes:1446,sha256:"1a58e683e03290ce6616891301c5e82f3a5eff21eba2ef56c2835c3a054b2483"}),
   Object.freeze({path:"src/lib/auth/signup-checkpoint.ts",bytes:2699,sha256:"3628fb20ffbbdc50c89969f7043fe02887255c7ffdb5ee1c90710638af1318bc"}),
