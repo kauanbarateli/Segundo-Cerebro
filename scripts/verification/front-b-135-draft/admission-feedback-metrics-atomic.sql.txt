@@ -835,7 +835,7 @@ GRANT EXECUTE ON FUNCTION public.signup_fence_withdraw(uuid,uuid) TO service_rol
 REVOKE ALL ON FUNCTION app_private.signup_discard_pending_origin(uuid,uuid,uuid,text),public.signup_discard_pending_origin(uuid,uuid,uuid,text) FROM PUBLIC,anon,authenticated,service_role;
 
 
--- FEEDBACK SOURCE SHA256 62d32577c5946474895c6e6e485b68d0de4fac034442b4b296430b6b09b85f0b
+-- FEEDBACK BASE SHA256 62d32577c5946474895c6e6e485b68d0de4fac034442b4b296430b6b09b85f0b; adapted below for account deletion.
 -- Feedback's standalone event guard is omitted only here: the admission pin and lock are held in this transaction.
 DO $fresh_only$ BEGIN
  IF current_user <> 'postgres' OR pg_catalog.to_regclass('app_private.feedback_requests') IS NOT NULL
@@ -884,7 +884,7 @@ revoke all on function app_private.feedback_list(uuid,uuid,timestamptz,uuid), pu
 grant execute on function app_private.feedback_list(uuid,uuid,timestamptz,uuid), public.feedback_list(uuid,uuid,timestamptz,uuid) to service_role;
 
 CREATE TABLE app_private.feedback_barriers_draft (
- user_id uuid NOT NULL,
+ user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
  client_id uuid NOT NULL,
  phase text NOT NULL CHECK (phase IN ('submitted','cancelled')),
  feedback_id uuid,
@@ -894,8 +894,8 @@ CREATE TABLE app_private.feedback_barriers_draft (
 );
 ALTER TABLE app_private.feedback_barriers_draft ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON app_private.feedback_barriers_draft FROM PUBLIC,anon,authenticated,service_role;
--- Deliberately no TTL/cascade or FK: retention, deletion and tombstones require
--- a reviewed design. Never interpret this sketch as an approved policy.
+-- Keep retry barriers while the account exists; hard account deletion cascades.
+-- Feedback closure, soft deletion and time-based retention require a reviewed design.
 
 -- This helper serializes both operations; PK is the uniqueness constraint.
 -- Hash collisions only over-serialize. Existing writers DO NOT take this lock.

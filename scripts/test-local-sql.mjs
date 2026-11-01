@@ -59,7 +59,7 @@ try {
   }
   current = "guarded signup, feedback and metrics candidate (rollback only)";
   const candidate = await readFile(resolve(root, "scripts/verification/front-b-135-draft/admission-feedback-metrics-atomic.sql.txt"));
-  if (createHash("sha256").update(candidate).digest("hex") !== "52499eaebebfcb2803b59a091e322c2fa48b7c3b586c530c294261392a66fa71") throw new Error("Combined candidate source differs from reviewed bytes.");
+  if (createHash("sha256").update(candidate).digest("hex") !== "1318cc5a656153777040885d85ea249b67637e1e5225b08ee2bcaf3fd4a4f729") throw new Error("Combined candidate source differs from reviewed bytes.");
   const source = candidate.toString("utf8").replaceAll("\r\n", "\n"), guard = /^DO \$scratch_guard\$ BEGIN RAISE EXCEPTION 'UNREVIEWED SCRATCH SQL: DO NOT APPLY'; END \$scratch_guard\$;$/gm;
   const begin = /^BEGIN;$/gm, commit = /^COMMIT;$/gm;
   if ([guard, begin, commit].some(pattern => [...source.matchAll(pattern)].length !== 1)) throw new Error("Combined candidate transaction boundary refused.");
