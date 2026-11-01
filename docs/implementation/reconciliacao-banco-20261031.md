@@ -18,6 +18,8 @@ Após autenticação da conexão dedicada, a URL retornada identificou `twrydxsd
 
 Em leitura, o mesmo catálogo canônico retornou 2.512 verificações e a mesma divergência única do wrapper. O classificador independente do PT409 retornou `ok=true` também em QA. Assim, os resultados atuais dos checks de catálogo coincidem nos dois ambientes, com a exceção operacional reconhecida; isso **não demonstra proveniência das 22 migrations ausentes no ledger de produção**, equivalência de dados, backup nem comportamento HTTP. Nenhuma migration ou fixture foi aplicada a QA nesta verificação.
 
+O comando operacional `node scripts/operations/release-checks.mjs diagnose-patch` executa as duas consultas somente de leitura e acrescenta a classificação ao relatório de metadados. São consultas em transações separadas: a classificação é diagnóstico, não prova de instantâneo atômico. Mesmo quando o patch é reconhecido, o resultado bruto e o código de saída do catálogo permanecem falhos; outros desvios não são aceitos por esse diagnóstico. O comando `check` conserva seu contrato anterior.
+
 ## Restante para conclusão
 
 1. Projeto, ledger e catálogo foram reconfirmados nos dois ambientes por leitura; ainda falta confirmar backup/recuperação sem consultar dados pessoais.
