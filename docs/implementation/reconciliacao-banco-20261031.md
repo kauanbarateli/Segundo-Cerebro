@@ -28,7 +28,7 @@ Após autenticação da conexão dedicada, a URL retornada identificou `twrydxsd
 
 Em leitura, o mesmo catálogo canônico retornou 2.512 verificações e a mesma divergência única do wrapper. O classificador independente do PT409 retornou `ok=true` também em QA. Assim, os resultados atuais dos checks de catálogo coincidem nos dois ambientes, com a exceção operacional reconhecida; isso **não demonstra proveniência das 22 migrations ausentes no ledger de produção**, equivalência de dados, backup nem comportamento HTTP. Nenhuma migration ou fixture foi aplicada a QA nesta verificação.
 
-Após a reconfirmação do endpoint QA, o ensaio isolado [qa-additive-probe-134.sql](../../supabase/tests/qa-additive-probe-134.sql) criou uma tabela de teste dentro de transação revertida, ativou RLS e retirou grants públicos. O resultado foi `rls=true`, `anon_read=false`, `authenticated_read=false` e `existing_onboarding=true`. Uma consulta posterior confirmou a ausência da tabela; o ledger manteve as mesmas 27 entradas. Este ensaio não aplica uma migration real e não substitui o teste da futura alteração, a prova de HTTP ou o backup.
+Após a reconfirmação do endpoint QA, o ensaio isolado [qa-additive-probe-134.sql](../../supabase/operations/qa-additive-probe-134.sql) criou uma tabela de teste dentro de transação revertida, ativou RLS e retirou grants públicos. O resultado foi `rls=true`, `anon_read=false`, `authenticated_read=false` e `existing_onboarding=true`. Uma consulta posterior confirmou a ausência da tabela; o ledger manteve as mesmas 27 entradas. Este ensaio não aplica uma migration real e não substitui o teste da futura alteração, a prova de HTTP ou o backup.
 
 O [registro conectado anterior em QA](retomada-aceites-20261029.md) documenta o mesmo patch PT409 instalado e respostas HTTP `409 CONFLICT` em operações de onboarding com revisão antiga, em 496–642 ms. As contas de teste foram posteriormente removidas. É evidência histórica no mesmo ambiente, e não uma nova execução ou prova da futura implementação de cadastro; a confirmação atual do fingerprint do patch liga apenas o corpo e os privilégios àquele contrato.
 
@@ -43,5 +43,11 @@ O comando operacional `node scripts/operations/release-checks.mjs diagnose-patch
 5. Só considerar reconciliado quando houver evidência suficiente de ledger e objetos, QA e procedimento revisado. O teste local desta página não equivale a esses aceites.
 
 Após a introdução do diagnóstico separado, a execução local das suítes `release-catalog`, `release-default-acl-count`, `release-patch-classification` e `onboarding-conflict-verifier` aprovou 11 testes. Os consumidores de restore e a validação conectada do candidato futuro mantêm seus aceites próprios.
+
+### SQL Editor e tipos de QA
+
+`npm run check:sql-editor` passou com 27 migrations e 45 arquivos separados após manter a sonda operacional fora do diretório de asserções automaticamente empacotadas. A sonda não integra a instalação nem é executada por CI.
+
+Uma exportação de tipos do MCP de QA retornou 62.626 bytes, SHA-256 `485db981cae7e1d5da429ef28d077768f43bc6f37fb9f3c95951547946338ee8`, igual ao export histórico registrado para QA. O arquivo versionado possui 59.546 bytes e SHA-256 `09af79f6075576ea656d59f54023dde606d8f604e3c36de34deefb0cf7e678a7`. A comparação AST existente retornou `SNAPSHOT_DIFFER`: 35 tabelas e uma view com diferenças, cinco RPCs diferentes, sem nomes adicionados ou removidos. Há diferenças de geração visíveis, incluindo `ComputedFields` e metadados do PostgREST; ainda não se concluiu se todas as diferenças são somente de representação. Não sobrescrever os tipos, desabilitar o comparador nem declarar compatibilidade sem investigar os contratos e a origem do gerador.
 
 Nenhuma alteração de banco, ledger, dados, Auth ou Storage foi realizada para esta evidência.
