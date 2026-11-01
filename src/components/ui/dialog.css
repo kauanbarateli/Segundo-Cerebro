@@ -67,7 +67,7 @@ html[data-input="keyboard"] :is(.ui-dialog, .ui-dialog::backdrop),
 .ui-dialog__close { flex: 0 0 var(--target); padding: var(--space-2); margin-top: calc(-1 * var(--space-2)); }
 /* The body scrolls alone; the side gutter keeps focus rings of edge fields from being clipped. */
 .ui-dialog__body {
-  display: grid; align-content: start; gap: var(--space-4); flex: 1 1 auto; min-width: 0; min-height: 0;
+  display: grid; grid-auto-rows: max-content; align-content: start; gap: var(--space-4); flex: 1 1 auto; min-width: 0; min-height: 0;
   margin: var(--space-6) calc(-1 * var(--space-2)) 0; padding: var(--space-1) var(--space-2);
   overflow: auto; overscroll-behavior: contain; overflow-wrap: anywhere;
 }
