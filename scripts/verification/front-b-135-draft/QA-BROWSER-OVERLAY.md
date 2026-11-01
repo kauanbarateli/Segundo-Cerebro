@@ -1,9 +1,10 @@
 # Ensaio de cadastro no QA — preparação, não execução
 
 Este overlay parte de `f19a550ad31bb41e6d3f87b5546d827d406d9c65` do PR #212.
-Ele é uma **proposta local de ensaio**, não uma liberação: não aplicar na main,
-não mesclar no PR de produto, não publicar, não executar DDL, não trocar flags
-e não enviar emails como parte desta preparação. O teste ainda não ocorreu.
+Ele é uma **proposta de ensaio**, não uma liberação: não aplicar na main,
+não mesclar no PR de produto, não executar DDL, não trocar flags e não enviar
+emails como parte desta preparação. `vercel.json` bloqueia o deploy automático
+desta branch; a publicação do PR é para revisão. O teste ainda não ocorreu.
 
 ## Isolamento do overlay
 
