@@ -50,6 +50,9 @@
       "codex/front-b-sequencia-fixture30": false,
       "codex/front-b-restore-fixture30": false,
       "codex/front-b-atualizacoes-editoriais": false,
+      "codex/front-b-feedback-confirmacao": false,
+      "codex/front-b-feedback-sessao": false,
+      "codex/front-b-feedback-browser": false,
       "codex/reconciliacao-banco-20261031": false,
       "codex/fix-auditoria-173": false
     }

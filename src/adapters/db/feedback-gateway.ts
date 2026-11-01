@@ -9,7 +9,8 @@ export class FeedbackGatewayError extends Error {
   constructor(readonly code: "FORBIDDEN" | "CONFLICT" | "UNAVAILABLE" | "COMMIT_UNKNOWN") { super(code); }
 }
 
-function validItem(value: unknown): boolean {
+type FeedbackItem = { id: string; category: string; text: string; status: "received"; createdAt: string };
+function validItem(value: unknown): value is FeedbackItem {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const item = value as Record<string, unknown>;
   return Object.keys(item).sort().join(",") === "category,createdAt,id,status,text"
@@ -46,7 +47,12 @@ export async function feedbackRpc(config: SupabaseAuthConfig, actor: Authenticat
       if (code === "23505" || code === "22023" || code === "23514") throw new FeedbackGatewayError("CONFLICT");
       throw new FeedbackGatewayError(writing ? "COMMIT_UNKNOWN" : "UNAVAILABLE");
     }
-    if (writing) { if (!validItem(data)) throw new Error("invalid response"); return data; }
+    if (writing) {
+      // The decoder already NFC-normalizes and trims input; the receipt must
+      // describe that same submission. It does not include the client ID.
+      if (!validItem(data) || data.category !== input.category || data.text !== input.text) throw new Error("invalid response");
+      return data;
+    }
     if (!Array.isArray(data) || data.length > 51 || !data.every(validItem)) throw new Error("invalid response");
     const items = data.slice(0, 50); const last = items.at(-1) as { id: string; createdAt: string } | undefined;
     return { items, next: data.length > 50 && last ? { id: last.id, before: last.createdAt } : null };
