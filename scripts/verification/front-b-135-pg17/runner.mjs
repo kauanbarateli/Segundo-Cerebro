@@ -1,0 +1,104 @@
+/** Scratch integration candidate; no hosted endpoints. Never run outside reviewed Git CI. */
+import {randomBytes,createHash} from 'node:crypto';
+import {readFile,lstat,realpath,mkdtemp} from 'node:fs/promises';
+import {resolve,join,relative,isAbsolute} from 'node:path';
+import {fileURLToPath,pathToFileURL} from 'node:url';
+import {execFileSync} from 'node:child_process';
+const BASE='scripts/verification/front-b-135-pg17/',ROOT=resolve(process.cwd());
+const AUTH_PINS=[
+ ['scripts/verification/auth-local-ci.mjs','bc1c2b27124ba05bd896fd72c5f8144fa85f0703db7eb641b3b9887f3591136b'],
+ ['tests/e2e-auth-local/identity-data-api-contract.mjs','75f0adde06c81d9a3a068ac9873a6eb09eff41952c1b02a3cfe1a9341e9f4aa'],
+ ['tests/e2e-auth-local/capture-task-persistence-contract.mjs','f28aa8e3ae0f37821ab6e7b2ccbc13fc0b50fadd9c39c9b599ae8dd2917b6009'],
+ ['tests/e2e-auth-local/qualified-chromium.mjs','70097633fa0a16a196e84e4cf0dd6b8908c78578be40ba09a553df515998cd2b'],
+ ['tests/e2e-auth-local/browser-process-environment.mjs','ffe33d1ec57378b04d18c180dd6601589cf4f3f82721d92be53ca1aa31d82a99'],
+ ['tests/e2e-auth-local/auth-local-lifecycle-contract.mjs','fff2bfb451fd9cb523f4712bb7912d2521629eff844e33574354647c453c5a4f'],
+ ['tests/helpers/canonical-release-source.mjs','6bbe4329fb5f5647d44497e4d8d39de835735a72ee8845a8af949138fdd68fea'],
+ ['tests/helpers/canonical-front-b-source.mjs','fcdbeb291832d3025d3551d42e47fb8b20ecbf1b7fe294990b6be25d41202040']
+ ,['scripts/verification/front-b-signup-reservation-draft/candidate-reservation.sql.txt','18288441c5195279ad3b31bb3cf68ededd914fe0121533f8210fbbb33d843dd7']
+ ];
+const LOCAL_PINS=Object.freeze({
+ 'offline-contract.mjs':'538e2e31e3a69ac34029848beb414e6146f54bba4c39fbf32806c06c4193e707',
+ 'qualify.mjs':'8816d54b6d9b0265c024a6c86b5f235695eed800376522f202eb1b39060b825c',
+ 'race.mjs':'0ad7bd5665904b1ad87b3677abf50514041fcac126a74d4c866440b4de26e9ea',
+ 'session.mjs':'02f5bc09f3778c1d65917989fefd3959dc80c2a2d345e2288121abc1f2997acc',
+ 'cleanup.mjs':'41ee0a110504fc4b39817644b005ba3b2f849377c8356d338d5bbc52f49a2835',
+ 'fixture.sql':'db35f101300407095589e7279a7af23fc89bad2bab87e302bb3b5cb0673fbbe2',
+ 'reservation.sql.txt':'2ed365eb0943c25d3463b7a8578268d47e1813c39cadcacf3b3eac35094b42bc'
+});
+const SUPPORT_PINS=Object.freeze([
+ [BASE+'runner.test.mjs','0fe875930d1bd5cae8ed105dd304f11e5f4c2189702b371ace0b5a0475118eda'],
+ [BASE+'session.test.mjs','0d5abd786b5011ded73d60a1b25c365413df6516e7a598bc9064a99dd2ff15cc'],
+ [BASE+'race.test.mjs','abc65232de672d573755e2c9b8a9dfbfc31833b33c6829cfa7511795bcbf6233'],
+ [BASE+'qualify.test.mjs','34bf3c2caac26f380ceec8ac85eddebe691063880ab028ddcbf322ed1e3eec6d'],
+ [BASE+'cleanup.test.mjs','8ed8aebf5635913c5653d29a427cd570e7513988481469fabd53593e1ffd1ccc'],
+ [BASE+'offline-contract.test.mjs','9a044453c2a82033fc5dcc6afca527a3bfb7865aec49b76a4d113caae61a8dc8'],
+ ['.nvmrc','68ca3fba3b7e864770cb61aeb306d4bd4354b68ab4dd38450860c5d823e42a53'],
+ ['.github/workflows/front-b-135-pg17-races.yml','67cbffb9ba0c12fdcd0d24bed96a77cd0b9af9dc1879ec63a53d8696b1c1c822']
+]);
+const SHA=/^[a-f0-9]{40}$/,ID=/^[a-f0-9]{64}$/,digest=b=>createHash('sha256').update(b).digest('hex');
+const SAFE_PATH='/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',REF='refs/heads/codex/front-b-135-pg17-races';
+const allowed=new Set(['PATH','LANG','LC_ALL','TZ','CI','GITHUB_ACTIONS','GITHUB_EVENT_NAME','GITHUB_REF','RUNNER_TEMP','GITHUB_SHA','SC_FRONT_B_PG17_RACE']);
+const fail=()=>{throw Error('RACE_RUNNER_REFUSED');};
+export function environment(env,platform=process.platform){const descriptors=Object.getOwnPropertyDescriptors(env??{}),keys=Reflect.ownKeys(descriptors);if(platform!=='linux'||keys.some(k=>typeof k!=='string'||!allowed.has(k)||!Object.hasOwn(descriptors[k],'value')||typeof descriptors[k].value!=='string'||descriptors[k].value.includes('\0'))||env.CI!=='true'||env.GITHUB_ACTIONS!=='true'||env.GITHUB_EVENT_NAME!=='push'||env.GITHUB_REF!==REF||env.SC_FRONT_B_PG17_RACE!=='1'||!SHA.test(env.GITHUB_SHA??'')||env.PATH!==SAFE_PATH||!isAbsolute(env.RUNNER_TEMP??'')||resolve(env.RUNNER_TEMP)!==env.RUNNER_TEMP)fail();}
+export function assertIntegratedPath(path){if(path!==BASE+'runner.mjs')fail();}
+async function source(path){const p=resolve(ROOT,path),rel=relative(ROOT,p);if(!rel||rel.startsWith('..')||isAbsolute(rel))fail();const st=await lstat(p);if(!st.isFile()||st.isSymbolicLink()||st.nlink!==1||st.size>2097152||await realpath(p)!==p)fail();return readFile(p);}
+function json(s){if(typeof s!=='string'||Buffer.byteLength(s)>65536||s.trim().split(/\r?\n/).length!==1)fail();return JSON.parse(s.trim());}
+const pause=ms=>new Promise(resolveTimer=>setTimeout(resolveTimer,ms));
+async function groupAbsent(pid){if(!Number.isSafeInteger(pid)||pid<2)return false;for(let i=0;i<20;i++){try{process.kill(-pid,0);}catch(e){return e?.code==='ESRCH';}await pause(50);}return false;}
+export function mayTeardown(groupKnown,pending,states){return groupKnown===true&&pending===0&&Array.isArray(states)&&states.every(s=>s?.groupGone===true);}
+export function receipt(sha,results,groupKnown,pending,allClean){
+ if(!SHA.test(sha)||!mayTeardown(groupKnown,pending,[])||allClean!==true||!Array.isArray(results)||results.length!==2)fail();
+ for(const [index,name] of ['reservation-exclusive-pg17','start-exclusive-pg17'].entries()){const r=results[index];if(!r||Object.keys(r).sort().join(',')!=='acceptance,hostedCertified,scenario,status'||r.scenario!==name||r.status!=='CASE_OBSERVED_CLEANUP_PENDING'||r.acceptance!==false||r.hostedCertified!==false)fail();}
+ return {scenario:'front-b-reservation-races-pg17',status:'OBSERVED',acceptance:false,hostedCertified:false,cleanupConfirmed:true,cases:2,sourceSha:sha};
+}
+export async function execute(env=process.env){
+ environment(env);assertIntegratedPath(relative(ROOT,fileURLToPath(import.meta.url)).replaceAll('\\','/'));if(await realpath(ROOT)!==ROOT||await realpath(env.RUNNER_TEMP)!==env.RUNNER_TEMP||Object.keys(LOCAL_PINS).length!==7)fail();
+ const os={PATH:SAFE_PATH,HOME:env.RUNNER_TEMP,LANG:env.LANG??'C.UTF-8',LC_ALL:env.LC_ALL??'C.UTF-8',TZ:'UTC',NO_COLOR:'1',GIT_CONFIG_NOSYSTEM:'1',GIT_CONFIG_GLOBAL:'/dev/null',GIT_CONFIG_SYSTEM:'/dev/null',GIT_CONFIG_COUNT:'1',GIT_CONFIG_KEY_0:'core.fsmonitor',GIT_CONFIG_VALUE_0:'false',GIT_TERMINAL_PROMPT:'0',DOCKER_HOST:'unix:///var/run/docker.sock'};
+ const git=args=>execFileSync('git',['-c','gc.auto=0','-c','protocol.allow=never','-c','core.hooksPath=/dev/null',...args],{cwd:ROOT,env:os,timeout:15000,maxBuffer:2097152});
+ if(git(['rev-parse','HEAD']).toString().trim()!==env.GITHUB_SHA||git(['status','--porcelain','--untracked-files=all']).toString().trim())fail();
+ const pins=[...AUTH_PINS,...SUPPORT_PINS,...Object.entries(LOCAL_PINS).map(([p,h])=>[BASE+p,h]),[BASE+'runner.mjs',null]];const bytes=new Map();
+ for(const [path,hash] of pins){const b=await source(path);if(!b.equals(git(['show','HEAD:'+path]))||hash&&digest(b)!==hash)fail();bytes.set(path,b);}
+ const {IMAGE,requireImage,requireOfflineContainer,sameSessionGuard,requireSqlBytes}=await import(pathToFileURL(join(ROOT,BASE+'offline-contract.mjs')).href);
+ const {qualifySources}=await import(pathToFileURL(join(ROOT,BASE+'qualify.mjs')).href),{observeReservationRace,seedStartSql,nullCaseSql,nullBaselineSql}=await import(pathToFileURL(join(ROOT,BASE+'race.mjs')).href),{openDockerSession}=await import(pathToFileURL(join(ROOT,BASE+'session.mjs')).href),{removeEmptyOwnedDirectory}=await import(pathToFileURL(join(ROOT,BASE+'cleanup.mjs')).href);
+ const {runBoundedProcess}=await import(pathToFileURL(join(ROOT,'scripts/verification/auth-local-ci.mjs')).href);
+ const qualified=qualifySources(bytes.get(BASE+'fixture.sql'),bytes.get(BASE+'reservation.sql.txt'),bytes.get('scripts/verification/front-b-signup-reservation-draft/candidate-reservation.sql.txt'));requireSqlBytes(qualified.fixture);requireSqlBytes(qualified.candidate);
+ let home,groupKnown=true;const pending=new Set();
+ const run=async(args,timeout=30000,options={})=>{const promise=runBoundedProcess('docker',args,{cwd:ROOT,env:os,timeoutMs:timeout,maxBytes:2097152,...options});pending.add(promise);try{const v=await promise;if(v.groupConfirmed!==true){groupKnown=false;fail();}return v;}catch(e){if(e?.groupConfirmed!==true)groupKnown=false;throw e;}finally{pending.delete(promise);}};
+ const list=async filter=>(await run(['ps','--all','--no-trunc','--quiet','--filter',filter])).stdout.trim().split(/\r?\n/).filter(Boolean);
+ const inspect=async id=>json((await run(['inspect','--format','{{json .}}',id])).stdout);
+ let allClean=true;const results=[];
+ try{
+  home=await mkdtemp(join(env.RUNNER_TEMP,'sc-fb-race-'));if(await realpath(home)!==home)fail();os.HOME=home;os.DOCKER_CONFIG=join(home,'docker-config');
+  await run(['pull','--platform','linux/amd64',IMAGE],300000,{capture:false});const image=requireImage(json((await run(['image','inspect','--format','{{json .}}',IMAGE])).stdout));
+  for(const kind of ['reservation','start']){
+   const nonce=randomBytes(16).toString('hex'),name='sc-front-b-offline-'+nonce,label='sc.front-b-offline='+nonce;let id=null,created=false,ok=false;const sessions=[];
+   const owned=async()=>{const a=await list('name=^/'+name+'$'),b=await list('label='+label);if(a.length>1||b.length>1||JSON.stringify(a)!==JSON.stringify(b)||a.some(x=>!ID.test(x)))fail();return a[0]??null;};
+   try{
+    if(await owned()!==null)fail();created=true;
+    id=(await run(['create','--platform','linux/amd64','--name',name,'--label',label,'--network','none','--read-only','--tmpfs','/var/lib/postgresql/data:rw,nosuid,nodev,size=536870912','--tmpfs','/var/run/postgresql:rw,nosuid,nodev,size=16777216','--tmpfs','/tmp:rw,nosuid,nodev,size=16777216','--env','POSTGRES_HOST_AUTH_METHOD=trust',IMAGE],60000)).stdout.trim();
+    if(!ID.test(id)||await owned()!==id)fail();requireOfflineContainer(await inspect(id),id,name,image,nonce,false);await run(['start',id],30000,{capture:false});requireOfflineContainer(await inspect(id),id,name,image,nonce);
+    const psql=async sql=>(await run(['exec','--interactive','--user','postgres',id,'psql','--no-psqlrc','--no-password','--quiet','--tuples-only','--no-align','--set','ON_ERROR_STOP=1','--host','/var/run/postgresql','--username','postgres','--dbname','postgres','--file=-'],60000,{input:sql})).stdout;
+    const probe="select json_build_object('database',current_database(),'owner',current_user,'version',current_setting('server_version_num')::integer,'systemIdentifier',(select system_identifier::text from pg_control_system()));";let instance;
+    for(let i=0;i<60;i++){try{instance=json(await psql(probe));break;}catch(e){if(!groupKnown)throw e;await pause(1000);}}
+    if(!instance||instance.database!=='postgres'||instance.owner!=='postgres'||!Number.isSafeInteger(instance.version)||instance.version<170000||instance.version>=180000||!/^\d{16,20}$/.test(instance.systemIdentifier))fail();const systemIdentifier=instance.systemIdentifier;
+    await psql(`begin;do $boot$ begin if current_user<>'postgres' or current_database()<>'postgres' or current_setting('server_version_num')::integer<170000 or current_setting('server_version_num')::integer>=180000 or inet_server_addr() is not null or inet_client_addr() is not null or (select system_identifier::text from pg_control_system())<>'${systemIdentifier}' then raise exception 'REFUSED';end if;end $boot$;create schema sc_front_b_observation;revoke all on schema sc_front_b_observation from public;create table sc_front_b_observation.marker(nonce text primary key,system_identifier text not null);revoke all on sc_front_b_observation.marker from public;insert into sc_front_b_observation.marker values('${nonce}','${systemIdentifier}');commit;`);
+    const checked=async sql=>psql(sameSessionGuard(nonce,systemIdentifier)+requireSqlBytes(Buffer.from(sql)).toString('utf8'));
+    await checked(qualified.fixture.toString('utf8'));await checked(qualified.candidate.toString('utf8'));
+    const context={nonce,systemIdentifier,user:'10000000-0000-4000-8000-000000000001',session:'20000000-0000-4000-8000-000000000001',intent:'30000000-0000-4000-8000-000000000001',requestA:'40000000-0000-4000-8000-000000000001',requestB:'40000000-0000-4000-8000-000000000002'};
+    if(kind==='reservation')for(const nullCase of ['intent_state','intent_expiry','admission_origin','admission_state','identity_null']){const result=json(await checked(nullCaseSql(context,nullCase)));if(result.kind!=='null-refused'||result.case!==nullCase||Object.keys(result).length!==2)fail();const baseline=json(await checked(nullBaselineSql(context)));if(baseline.kind!=='baseline'||baseline.intact!==true||Object.keys(baseline).length!==2)fail();}
+    let generation=null;if(kind==='start'){const seed=json(await checked(seedStartSql(context)));if(seed.kind!=='seed'||seed.result?.status!=='acquired'||seed.result.requestId!==context.requestA||!/^[0-9a-f-]{36}$/i.test(seed.result.generation))fail();generation=seed.result.generation;}
+    const ports={open:async()=>{const session=openDockerSession({id,cwd:ROOT,env:os,checkSql:requireSqlBytes,groupAbsent});sessions.push(session);return session;},query:async sql=>json(await checked(sql)),pause:()=>pause(100)};
+    results.push(await observeReservationRace(ports,context,generation));requireOfflineContainer(await inspect(id),id,name,image,nonce);ok=true;
+   }finally{
+    const cleanupAllowed=mayTeardown(groupKnown,pending.size,sessions.map(s=>s.state()));if(!cleanupAllowed)allClean=false;
+    if(cleanupAllowed)try{const found=await owned();if(id&&found!==id)fail();if(!id)id=found;if(id){const state=await inspect(id);requireOfflineContainer(state,id,name,image,nonce,state.State?.Running);await run(['rm','--force','--volumes',id],60000,{capture:false});}if(await owned()!==null||id&&(await list('id='+id)).length!==0||created&&!id)fail();await run(['info','--format','{{json .ID}}']);}catch{allClean=false;}
+   }
+   if(!ok||!allClean)fail();
+  }
+ }finally{if(home&&groupKnown&&pending.size===0&&allClean)try{await removeEmptyOwnedDirectory(env.RUNNER_TEMP,home);}catch{allClean=false;}}
+ if(!allClean||!groupKnown||pending.size||git(['rev-parse','HEAD']).toString().trim()!==env.GITHUB_SHA||git(['status','--porcelain','--untracked-files=all']).toString().trim())fail();
+ for(const [path,previous] of bytes){const current=await source(path);if(!current.equals(previous)||!current.equals(git(['show','HEAD:'+path])))fail();}
+ return receipt(env.GITHUB_SHA,results,groupKnown,pending.size,allClean);
+}
+export async function main(argv=process.argv.slice(2),env=process.env,output=x=>process.stdout.write(JSON.stringify(x)+'\n')){if(!argv.length||argv.length===1&&argv[0]==='--help'){output({code:'NO_SERVICE_STARTED',acceptance:false});return 0;}if(argv.length!==1||argv[0]!=='--execute'){output({code:'RACE_RUNNER_REFUSED',acceptance:false});return 1;}try{output(await execute(env));return 0;}catch{output({code:'RACE_RUNNER_REFUSED',acceptance:false});return 1;}}
+if(process.argv[1]&&pathToFileURL(resolve(process.argv[1])).href===import.meta.url)process.exitCode=await main();
