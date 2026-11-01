@@ -53,7 +53,7 @@ type SignupRpcArguments = {
   signup_browser_find: { p_browser:string };
   signup_browser_recover_bound: Actor & { p_subject:string; p_terms:string; p_privacy:string };
   signup_browser_reconsent_probe: Actor & { p_subject:string; p_terms:string; p_privacy:string };
-  signup_browser_renew: Actor & { p_intent:string; p_subject:string; p_terms:string; p_privacy:string; p_keep_origin:boolean; p_origin_version:string };
+  signup_browser_renew: Actor & { p_intent:string; p_subject:string; p_terms:string; p_privacy:string; p_keep_origin:boolean; p_origin_version:string; p_proof_expires_at:string };
   signup_browser_admit: Actor & { p_intent:string; p_subject:string; p_browser:string; p_terms:string; p_privacy:string; p_accept_origin:boolean; p_origin_version:string };
   signup_discard_pending_origin: BoundIntent;
   signup_attest_password_reset: BoundIntent;

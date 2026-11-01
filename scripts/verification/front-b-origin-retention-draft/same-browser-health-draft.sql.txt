@@ -1,5 +1,5 @@
 -- READ-ONLY DRAFT for composed candidate SHA-256
--- 39abb9b4af679d761f6bd05388f9d5a85b10fa7dc66cb5f91ccfd671f89d119e.
+-- 038f7a9fa96eaebcdee44b8974e41a1b13dd796651ca5d0fe12a56dcec7fb652.
 -- Neither function fingerprint is approved. Cannot qualify a release, activate
 -- jobs or clean data. Any change in the candidate requires review and revalidation.
 -- Requires the same-browser schema; run only on an independently identified,

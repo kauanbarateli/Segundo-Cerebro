@@ -8,7 +8,7 @@ export interface SignupReconsentPorts {
  enabled():boolean;now():number;readCheckpoint():SignupReconsentCheckpoint|null;readVerifiedIdentity():Promise<Identity|null>;
  subjectHash(email:string):string;limit(userId:string):Promise<{allowed:boolean}>;
  writeCheckpoint(value:SignupCheckpoint):Promise<void>;
- renew(value:{userId:string;sessionId:string;intentId:string;subjectHash:string;terms:string;privacy:string;keepOrigin:boolean;originVersion:string}):Promise<unknown>;
+ renew(value:{userId:string;sessionId:string;intentId:string;subjectHash:string;terms:string;privacy:string;keepOrigin:boolean;originVersion:string;proofExpiresAt:string}):Promise<unknown>;
 }
 /** A signed checkpoint is created only after a fresh OTP. No password is sent. */
 export async function renewSignupConsent(ports:SignupReconsentPorts,input:{acceptedLegal:unknown;termsVersion:unknown;privacyVersion:unknown;acceptedOrigin:unknown},current:{terms:string;privacy:string;originVersion:string}):Promise<{status:"renewed"|"invalid"|"needs-verification"|"rate-limited"|"unknown"}> {
@@ -27,7 +27,7 @@ export async function renewSignupConsent(ports:SignupReconsentPorts,input:{accep
   // after acquiring locks to guarantee the deadline throughout the transaction.
   const beforeRenew=ports.now();
   if(!Number.isSafeInteger(beforeRenew) || beforeRenew<now || beforeRenew>=checkpoint.expiresAt)return {status:"needs-verification"};
-  const result=await ports.renew({userId:actor.userId,sessionId:actor.sessionId,intentId:checkpoint.intentId,subjectHash:hash,terms:current.terms,privacy:current.privacy,keepOrigin:checkpoint.originPending&&input.acceptedOrigin===true,originVersion:current.originVersion});
+  const result=await ports.renew({userId:actor.userId,sessionId:actor.sessionId,intentId:checkpoint.intentId,subjectHash:hash,terms:current.terms,privacy:current.privacy,keepOrigin:checkpoint.originPending&&input.acceptedOrigin===true,originVersion:current.originVersion,proofExpiresAt:new Date(checkpoint.expiresAt).toISOString()});
   if(!result || typeof result!=="object" || Array.isArray(result) || Object.keys(result).sort().join(",")!=="originPending,status" || (result as {status:unknown}).status!=="renewed" || typeof (result as {originPending:unknown}).originPending!=="boolean")return {status:"unknown"};
   // Preserve the original OTP deadline; reflect a concurrent withdrawal.
   await ports.writeCheckpoint({...checkpoint,originPending:(result as {originPending:boolean}).originPending});

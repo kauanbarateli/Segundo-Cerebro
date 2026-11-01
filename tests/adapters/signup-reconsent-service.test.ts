@@ -11,7 +11,7 @@ function setup(){return {enabled:()=>true,now:()=>2000,readCheckpoint:()=>({chec
 describe("revisão explícita após novo OTP",()=>{
  it("descarta origem não escolhida e preserva prazo da prova",async()=>{
   const p=setup();expect(await renewSignupConsent(p,input,legal)).toEqual({status:"renewed"});
-  expect(p.renew).toHaveBeenCalledWith(expect.objectContaining({userId,sessionId,intentId,keepOrigin:false}));
+  expect(p.renew).toHaveBeenCalledWith(expect.objectContaining({userId,sessionId,intentId,keepOrigin:false,proofExpiresAt:new Date(checkpoint.expiresAt).toISOString()}));
   expect(p.writeCheckpoint).toHaveBeenCalledWith({...checkpoint,originPending:false});
  });
  it("permite manter apenas origem já consentida e explicitamente confirmada",async()=>{

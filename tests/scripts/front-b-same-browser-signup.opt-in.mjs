@@ -145,15 +145,30 @@ try {
  const session5='20000000-0000-4000-8000-000000000005';await pg.query('INSERT INTO auth.sessions VALUES($1,$2,null)',[session5,user5]);await pg.query("INSERT INTO public.user_moderation VALUES($1,'active',false)",[user5]);
  await pg.query("UPDATE app_private.signup_intents SET expires_at=now()-interval '1 second' WHERE id=$1",[intent5]);await pg.query('DELETE FROM app_private.signup_browser_attempts WHERE intent_id=$1',[intent5]);
  assert.equal((await pg.query("SELECT app_private.signup_browser_reconsent_probe($1,$2,$3,'terms-v1','privacy-v1') result",[user5,session5,subject])).rows[0].result,null);
- await assert.rejects(()=>pg.query("SELECT app_private.signup_browser_renew($1,$2,$3,$4,'terms-v1','privacy-v1',false,'utm-v1')",[user5,session5,intent5,subject]),{code:'42501'});
+ await assert.rejects(()=>pg.query("SELECT app_private.signup_browser_renew($1,$2,$3,$4,'terms-v1','privacy-v1',false,'utm-v1',clock_timestamp()+interval '10 minutes')",[user5,session5,intent5,subject]),{code:'42501'});
  assert.deepEqual((await pg.query('SELECT origin FROM app_private.signup_intents WHERE id=$1',[intent5])).rows[0].origin,{utm_source:'first'});
  const user6='10000000-0000-4000-8000-000000000006',session6='20000000-0000-4000-8000-000000000006',pointer7='u'.repeat(43),browser7='6'.repeat(64),binding7=createHash('sha256').update(pointer7).digest('hex');
  const intent7=await prepare(binding7,browser7,JSON.stringify({utm_source:'explicit'}));
  await pg.query('INSERT INTO auth.users VALUES($1,now(),false,null,null,$2)',[user6,JSON.stringify({sc_signup_pointer:pointer7})]);await pg.query('INSERT INTO auth.sessions VALUES($1,$2,null)',[session6,user6]);await pg.query("INSERT INTO public.user_moderation VALUES($1,'active',false)",[user6]);
  await pg.query("UPDATE app_private.signup_intents SET expires_at=now()-interval '1 second' WHERE id=$1",[intent7]);
  const probe=()=>pg.query("SELECT app_private.signup_browser_reconsent_probe($1,$2,$3,'terms-v1','privacy-v1') result",[user6,session6,subject]);
- const renew=(keep=false,terms='terms-v1')=>pg.query("SELECT app_private.signup_browser_renew($1,$2,$3,$4,$5,'privacy-v1',$6,'utm-v1') result",[user6,session6,intent7,subject,terms,keep]);
+ const renew=(keep=false,terms='terms-v1')=>pg.query("SELECT app_private.signup_browser_renew($1,$2,$3,$4,$5,'privacy-v1',$6,'utm-v1',clock_timestamp()+interval '10 minutes') result",[user6,session6,intent7,subject,terms,keep]);
  assert.deepEqual((await probe()).rows[0].result,{intentId:intent7,originPending:false});
+ // A server-authenticated checkpoint deadline is checked by SQL after its locks.
+ for(const deadline of [null,'2000-01-01T00:00:00.000Z','infinity']) {
+  await assert.rejects(()=>pg.query("SELECT app_private.signup_browser_renew($1,$2,$3,$4,'terms-v1','privacy-v1',false,'utm-v1',$5::timestamptz)",[user6,session6,intent7,subject,deadline]),{code:'42501'});
+ }
+ assert.equal((await pg.query('SELECT requires_password FROM app_private.signup_browser_attempts WHERE intent_id=$1',[intent7])).rows[0].requires_password,false);
+ // Force expiry after the first check but before renewal completes; all writes must roll back.
+ await pg.exec("CREATE FUNCTION app_private.test_slow_renew_event() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN PERFORM pg_sleep(0.25); RETURN NEW; END $$; CREATE TRIGGER test_slow_renew_event BEFORE INSERT ON app_private.events FOR EACH ROW EXECUTE FUNCTION app_private.test_slow_renew_event()");
+ const oldIntent=(await pg.query('SELECT expires_at,origin,terms_version FROM app_private.signup_intents WHERE id=$1',[intent7])).rows[0];
+ const oldEvents=(await pg.query('SELECT count(*)::int n FROM app_private.events WHERE user_id=$1',[user6])).rows[0].n;
+ await assert.rejects(()=>pg.query("SELECT app_private.signup_browser_renew($1,$2,$3,$4,'terms-v1','privacy-v1',false,'utm-v1',clock_timestamp()+interval '100 milliseconds')",[user6,session6,intent7,subject]),{code:'42501'});
+ assert.deepEqual((await pg.query('SELECT expires_at,origin,terms_version FROM app_private.signup_intents WHERE id=$1',[intent7])).rows[0],oldIntent);
+ assert.equal((await pg.query('SELECT count(*)::int n FROM app_private.events WHERE user_id=$1',[user6])).rows[0].n,oldEvents);
+ assert.equal((await pg.query('SELECT requires_password FROM app_private.signup_browser_attempts WHERE intent_id=$1',[intent7])).rows[0].requires_password,false);
+ await pg.exec('DROP TRIGGER test_slow_renew_event ON app_private.events; DROP FUNCTION app_private.test_slow_renew_event()');
+
  await assert.rejects(()=>renew(false,'old'),{code:'42501'});assert.deepEqual((await pg.query('SELECT origin FROM app_private.signup_intents WHERE id=$1',[intent7])).rows[0].origin,{utm_source:'explicit'});
  await pg.query('INSERT INTO app_private.signup_completion_fences_draft(user_id) VALUES($1)',[user6]);await assert.rejects(()=>renew(),{code:'42501'});await pg.query('DELETE FROM app_private.signup_completion_fences_draft WHERE user_id=$1',[user6]);
  assert.deepEqual((await renew(true)).rows[0].result,{status:'renewed',originPending:false}); // Expired origin cannot be revived.
@@ -173,7 +188,7 @@ try {
  await pg.query('INSERT INTO auth.users VALUES($1,now(),false,null,null,$2)',[user7,JSON.stringify({sc_signup_pointer:pointer8})]);await pg.query('INSERT INTO auth.sessions VALUES($1,$2,null)',[session7,user7]);await pg.query("INSERT INTO public.user_moderation VALUES($1,'active',false)",[user7]);
  await pg.exec("UPDATE app_private.signup_browser_legal_versions SET terms_version='terms-v2',origin_version='utm-v2'");
  assert.deepEqual((await pg.query("SELECT app_private.signup_browser_reconsent_probe($1,$2,$3,'terms-v2','privacy-v1') result",[user7,session7,subject])).rows[0].result,{intentId:intent8,originPending:true});
- assert.deepEqual((await pg.query("SELECT app_private.signup_browser_renew($1,$2,$3,$4,'terms-v2','privacy-v1',true,'utm-v2') result",[user7,session7,intent8,subject])).rows[0].result,{status:'renewed',originPending:true});
+ assert.deepEqual((await pg.query("SELECT app_private.signup_browser_renew($1,$2,$3,$4,'terms-v2','privacy-v1',true,'utm-v2',clock_timestamp()+interval '10 minutes') result",[user7,session7,intent8,subject])).rows[0].result,{status:'renewed',originPending:true});
  assert.deepEqual((await pg.query('SELECT terms_version,origin,origin_consent_version FROM app_private.signup_intents WHERE id=$1',[intent8])).rows[0],{terms_version:'terms-v2',origin:{utm_source:'keep-explicit'},origin_consent_version:'utm-v2'});
  await pg.query("UPDATE app_private.signup_browser_attempts SET expires_at=now()-interval '1 second' WHERE intent_id=$1",[intent3]);
  assert.equal(await find(browser3),null);

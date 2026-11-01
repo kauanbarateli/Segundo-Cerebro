@@ -223,3 +223,17 @@ they cannot simply be reused. A reviewed cutover must introduce compatible
 health checks and schedulers covering the protected window and both intent and
 browser cleanup, repin the new bodies, and observe results before activation.
 Do not run legacy cron scripts against this candidate. No scheduler is enabled.
+
+### OTP deadline and transaction boundary
+
+The signed reconsent checkpoint supplies its original expiry to the server-only
+renewal RPC; no deadline is read from the form. The guarded SQL checks that
+finite deadline after its locked identity/intent/attempt checks and again
+after all renewal writes before returning; an expired deadline raises and rolls
+back the transaction. A committed operation whose reply is lost remains
+unknown and must not be replayed as though a timeout cancelled it. This check
+does not certify hosted clock synchronization, cross-session races, the time
+between RPC return and actual transaction commit, or the retention scheduler.
+The changed RPC signature and composition need new independent review and
+qualification: all prior `39abb` retention/health/PG17 evidence stays pinned
+to the old artifact and must not be silently carried forward.

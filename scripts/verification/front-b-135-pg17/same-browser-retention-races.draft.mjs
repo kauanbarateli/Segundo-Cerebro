@@ -22,20 +22,21 @@ export function retentionRacePlan(input,scenario){
   and (select count(*)=1 from app_private.signup_intents where state in ('pending','bound') and expires_at<=now())
   and (select count(*)=1 from app_private.signup_browser_attempts where intent_id='${c.intent}'::uuid and expires_at>now()-interval '24 hours')
   and not exists(select 1 from app_private.signup_completion_fences_draft where user_id='${c.user}'::uuid or intent_id='${c.intent}'::uuid));rollback;`;
- const renew=`app_private.signup_browser_renew('${c.user}'::uuid,'${c.session}'::uuid,'${c.intent}'::uuid,'${'a'.repeat(64)}','terms-v1','privacy-v1',false,'origin-v1')`;
+ const renew=`app_private.signup_browser_renew('${c.user}'::uuid,'${c.session}'::uuid,'${c.intent}'::uuid,'${'a'.repeat(64)}','terms-v1','privacy-v1',false,'origin-v1',clock_timestamp()+interval '5 minutes')`;
  const reserve=`app_private.draft_reserve_completion('${c.user}'::uuid,'${c.session}'::uuid,'${c.intent}'::uuid,'${'a'.repeat(64)}','${c.request}'::uuid,'terms-v1','privacy-v1',true,'origin-v1')`;
  const action=scenario==='renewal'
   ? `select json_build_object('kind','first','pid',pg_backend_pid(),'result',${renew});`
-  // Restore a live expiry within A solely to call the real reservation, then
-  // expire it in the same transaction. B still sees the old expired version.
-  : `select pg_advisory_xact_lock(pg_catalog.hashtextextended('${c.user}' || ':signup',0));update app_private.signup_intents set expires_at=clock_timestamp()+interval '30 minutes' where id='${c.intent}'::uuid;select json_build_object('kind','first','pid',pg_backend_pid(),'result',${reserve});update app_private.signup_intents set expires_at=clock_timestamp()-interval '1 second' where id='${c.intent}'::uuid;`;
+  // Restore a live expiry to call the real reservation, then synthetically
+  // model an uncertain Auth outcome and expiry in the same transaction. B
+  // still sees the old expired version. No real external Auth call is made.
+  : `select pg_advisory_xact_lock(pg_catalog.hashtextextended('${c.user}' || ':signup',0));update app_private.signup_intents set expires_at=clock_timestamp()+interval '30 minutes' where id='${c.intent}'::uuid;do $capture$ begin perform pg_catalog.set_config('sc.retention.reservation',(${reserve})::text,true);end $capture$;update app_private.signup_completion_fences_draft set phase='uncertain' where user_id='${c.user}'::uuid and intent_id='${c.intent}'::uuid and phase='reserved';update app_private.signup_intents set expires_at=clock_timestamp()-interval '1 second' where id='${c.intent}'::uuid;select json_build_object('kind','first','pid',pg_backend_pid(),'result',current_setting('sc.retention.reservation')::json);`;
  return Object.freeze({
   preflight,
   first:`begin;${base}set local application_name='${prefix}.a';${guard(c)} ${action}`,
   second:`begin;${base}set local application_name='${prefix}.b';${guard(c)} select json_build_object('kind','second','pid',pg_backend_pid(),'result',app_private.signup_prune());commit;select json_build_object('kind','secondCommitted','pid',pg_backend_pid());`,
   held:pid=>{if(!Number.isSafeInteger(pid)||pid<1)fail();return `begin;${guard(c)} select json_build_object('kind','held','ownerActive',exists(select 1 from pg_stat_activity where pid=${pid} and application_name='${prefix}.a' and state='idle in transaction'),'lockHeld',not pg_try_advisory_xact_lock(pg_catalog.hashtextextended('${c.user}' || ':signup',0)));rollback;`;},
   sweep:`begin;${base}${guard(c)} select json_build_object('kind','sweep','result',app_private.signup_prune());commit;`,
-  final:`begin read only;${guard(c)} select json_build_object('kind','final','intentPreserved',exists(select 1 from app_private.signup_intents where id='${c.intent}'::uuid and state='bound' and origin is null${scenario==='renewal'?' and expires_at>now()':''}),'fencePreserved',exists(select 1 from app_private.signup_completion_fences_draft where user_id='${c.user}'::uuid and intent_id='${c.intent}'::uuid),'attemptPreserved',exists(select 1 from app_private.signup_browser_attempts where intent_id='${c.intent}'::uuid));rollback;`
+  final:`begin read only;${guard(c)} select json_build_object('kind','final','intentPreserved',exists(select 1 from app_private.signup_intents where id='${c.intent}'::uuid and state='bound' and origin is null and origin_consent_version is null and origin_consented_at is null${scenario==='renewal'?' and expires_at>now()':''}),'fencePreserved',exists(select 1 from app_private.signup_completion_fences_draft where user_id='${c.user}'::uuid and intent_id='${c.intent}'::uuid),'fenceOriginExpired',(select origin_expired from app_private.signup_completion_fences_draft where user_id='${c.user}'::uuid and intent_id='${c.intent}'::uuid),'fencePhase',(select phase from app_private.signup_completion_fences_draft where user_id='${c.user}'::uuid and intent_id='${c.intent}'::uuid),'attemptPreserved',exists(select 1 from app_private.signup_browser_attempts where intent_id='${c.intent}'::uuid));rollback;`
  });
 }
 
@@ -61,7 +62,7 @@ export async function observeRetentionRace(ports,input,scenario){
   const sweep=await ports.query(plan.sweep);
   if(!exact(sweep,['kind','result'])||sweep.kind!=='sweep'||sweep.result?.expiredRemoved!==0||sweep.result?.fencedExamined!==(scenario==='fence'?1:0)||sweep.result?.expiredOriginsCleared!==(scenario==='fence'?1:0))fail();
   const final=await ports.query(plan.final);
-  if(!exact(final,['kind','intentPreserved','fencePreserved','attemptPreserved'])||final.kind!=='final'||final.intentPreserved!==true||final.fencePreserved!==(scenario==='fence')||final.attemptPreserved!==true)fail();
+  if(!exact(final,['kind','intentPreserved','fencePreserved','fenceOriginExpired','fencePhase','attemptPreserved'])||final.kind!=='final'||final.intentPreserved!==true||final.fencePreserved!==(scenario==='fence')||final.fenceOriginExpired!==(scenario==='fence'?true:null)||final.fencePhase!==(scenario==='fence'?'uncertain':null)||final.attemptPreserved!==true)fail();
  }catch(error){primary=error;}
  finally{try{if(a)closedA=await a.close()===true;}catch{}try{if(b)closedB=await b.close()===true;}catch{}}
  if(primary||!closedA||!closedB)fail();

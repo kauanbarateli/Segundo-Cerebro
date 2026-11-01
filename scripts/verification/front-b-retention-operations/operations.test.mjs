@@ -9,7 +9,7 @@ const source=async path=>readFile(new URL(path,import.meta.url),'utf8');
 const sha=s=>createHash('sha256').update(s).digest('hex');
 test('both job operations are guarded, isolated and fail closed on drift',{timeout:60000},async()=>{
  const [proposal,originProposal,health,composition]=await Promise.all([source('./browser-job.guarded.sql.txt'),source('./origin-job.guarded.sql.txt'),source('./health.readonly.sql.txt'),source('../front-b-135-draft/same-browser-composed-v1.guarded.sql.txt')]);
- assert.equal(sha(composition),'39abb9b4af679d761f6bd05388f9d5a85b10fa7dc66cb5f91ccfd671f89d119e');
+ assert.equal(sha(composition),'038f7a9fa96eaebcdee44b8974e41a1b13dd796651ca5d0fe12a56dcec7fb652');
  assert.match(proposal,/begin;\s*do \$draft_only\$ begin raise exception 'DRAFT_ONLY:/i);
  assert.match(proposal,/operation text:=null/);assert.match(proposal,/rollback;\s*$/i);
  assert.match(originProposal,/begin;\s*do \$draft_only\$ begin raise exception 'DRAFT_ONLY:/i);assert.match(originProposal,/operation text:=null/);assert.match(originProposal,/rollback;\s*$/i);

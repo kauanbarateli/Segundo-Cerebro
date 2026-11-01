@@ -1,6 +1,6 @@
-# Operação candidata de retenção — composição 39abb
+# Operação candidata de retenção — composição 038f
 
-Este pacote prepara a operação dos dois prunes da composição guardada `same-browser-composed-v1.guarded.sql.txt`, SHA-256 `39abb9b4af679d761f6bd05388f9d5a85b10fa7dc66cb5f91ccfd671f89d119e`. **Nenhum job foi criado ou ativado por estes arquivos.** Não são migrations, não alteram o ledger e não autorizam instalação, ativação, deploy ou abertura do cadastro. O QA ainda exige a instalação separadamente autorizada e qualificada do contrato #212; a 028 isolada não tem a função de navegador. Se o composto mudar, revisar função, hashes, testes e operação; nunca aplicar o pacote por aproximação.
+Este pacote prepara a operação dos dois prunes da composição guardada `same-browser-composed-v1.guarded.sql.txt`, SHA-256 `038f7a9fa96eaebcdee44b8974e41a1b13dd796651ca5d0fe12a56dcec7fb652`. **Nenhum job foi criado ou ativado por estes arquivos.** Não são migrations, não alteram o ledger e não autorizam instalação, ativação, deploy ou abertura do cadastro. O QA ainda exige a instalação separadamente autorizada e qualificada do contrato #212; a 028 isolada não tem a função de navegador. Se o composto mudar, revisar função, hashes, testes e operação; nunca aplicar o pacote por aproximação.
 
 ## Operação concreta
 
@@ -29,4 +29,4 @@ Para conter um problema, executar `pause` somente após o gate aplicável e conf
 
 O prazo acordado de UTM é de 12 meses para uso lógico. A remoção física depende de jobs, disponibilidade e backlog; `DELETE` ou anonimização não comprovam eliminação imediata em MVCC, WAL ou backups. Feedback encerrado por 12 meses depende do futuro estado de encerramento no ADM, não destes jobs.
 
-Teste local sintético: `node --test scripts/verification/front-b-retention-operations-39abb/operations.test.mjs`. O fixture PGlite exercita os corpos fixados e jobs simulados, incluindo colisão, drift e pausa, sem conectar ou agendar no Supabase. Não prova pg_cron real nem concorrência PostgreSQL. Referências: [Supabase Cron](https://supabase.com/docs/guides/cron) e [pg_cron](https://github.com/citusdata/pg_cron).
+Teste local sintético: `node --test scripts/verification/front-b-retention-operations/operations.test.mjs`. O fixture PGlite exercita os corpos fixados e jobs simulados, incluindo colisão, drift e pausa, sem conectar ou agendar no Supabase. Não prova pg_cron real nem concorrência PostgreSQL. Referências: [Supabase Cron](https://supabase.com/docs/guides/cron) e [pg_cron](https://github.com/citusdata/pg_cron).

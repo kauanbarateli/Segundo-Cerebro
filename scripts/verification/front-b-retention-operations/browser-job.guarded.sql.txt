@@ -1,15 +1,15 @@
 -- INERT candidate for QA review only. Not a migration, CI hook or approval.
 -- Requires the separately installed and reviewed same-browser composition
--- 39abb9b4af679d761f6bd05388f9d5a85b10fa7dc66cb5f91ccfd671f89d119e.
+-- 038f7a9fa96eaebcdee44b8974e41a1b13dd796651ca5d0fe12a56dcec7fb652.
 -- The QA project must be independently identified through the control plane.
 begin;
 do $draft_only$ begin raise exception 'DRAFT_ONLY: review destination and operation.'; end $draft_only$;
 do $manage$
 declare
  operation text:=null; -- choose register, activate or pause in a reviewed execution copy
- job_name constant text:='sc-signup-origin-retention-v1';
- job_schedule constant text:='*/5 * * * *';
- job_command constant text:='SET statement_timeout = ''20s''; SET lock_timeout = ''250ms''; SELECT app_private.signup_prune();';
+ job_name constant text:='sc-signup-browser-retention-v1';
+ job_schedule constant text:='1,6,11,16,21,26,31,36,41,46,51,56 * * * *';
+ job_command constant text:='SET statement_timeout = ''20s''; SET lock_timeout = ''250ms''; SELECT app_private.signup_browser_prune(500);';
  target_id bigint; current_job record; qualified boolean; expected record;
 begin
  if operation is null or operation not in ('register','activate','pause') then raise exception 'Choose an authorized operation.'; end if;

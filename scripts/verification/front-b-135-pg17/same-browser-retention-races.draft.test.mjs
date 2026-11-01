@@ -17,7 +17,7 @@ function ports(scenario,patch={}){
   if(sql.includes("'preflight'")){events.push('preflight');return {kind:'preflight',eligible:true};}
   if(sql.includes("'held'")){events.push('held');held++;return {kind:'held',ownerActive:true,lockHeld:patch.noLock&&held===2?false:true};}
   if(sql.includes("'sweep'")){events.push('sweep');return {kind:'sweep',result:scenario==='fence'?stats(1,1):stats()};}
-  if(sql.includes("'final'")){events.push('final');return {kind:'final',intentPreserved:true,fencePreserved:scenario==='fence',attemptPreserved:true};}
+  if(sql.includes("'final'")){events.push('final');return {kind:'final',intentPreserved:true,fencePreserved:scenario==='fence',fenceOriginExpired:scenario==='fence'?!patch.noExpired:null,fencePhase:scenario==='fence'?'uncertain':null,attemptPreserved:true};}
   throw Error('unknown SQL');
  }};
 }
@@ -27,12 +27,15 @@ for(const scenario of ['renewal','fence'])test(`${scenario} plan insists on two 
  assert.deepEqual(p.events,['preflight','start-a','held','start-b','held','commit-a','sweep','final']);assert.deepEqual(p.closed,['a','b']);
  const plan=retentionRacePlan(ctx,scenario);
  assert.match(plan.first,/OFFLINE_INSTANCE_REFUSED/);assert.match(plan.second,/signup_prune\(\)/);
+ if(scenario==='fence'){assert.match(plan.first,/phase='uncertain'/);assert.match(plan.final,/fenceOriginExpired/);}
  assert.match(plan.held(101),/pg_try_advisory_xact_lock/);
+ if(scenario==='renewal')assert.match(plan.first,/origin-v1',clock_timestamp\(\)\+interval '5 minutes'/);
 });
 test('unverified overlap, identical sessions or unsafe identifiers fail closed',async()=>{
  for(const patch of [{samePid:true},{noLock:true}]){
   const p=ports('renewal',patch);await assert.rejects(observeRetentionRace(p,ctx,'renewal'),/RETENTION_RACE_REFUSED/);assert.deepEqual(p.closed,['a','b']);
  }
+ const p=ports('fence',{noExpired:true});await assert.rejects(observeRetentionRace(p,ctx,'fence'),/RETENTION_RACE_REFUSED/);assert.deepEqual(p.closed,['a','b']);
  assert.throws(()=>retentionRacePlan({...ctx,user:"';delete--"},'fence'),/RETENTION_RACE_REFUSED/);
  assert.throws(()=>retentionRacePlan(ctx,'other'),/RETENTION_RACE_REFUSED/);
  assert.throws(()=>retentionRacePlan(ctx,'fence').held(-1),/RETENTION_RACE_REFUSED/);
