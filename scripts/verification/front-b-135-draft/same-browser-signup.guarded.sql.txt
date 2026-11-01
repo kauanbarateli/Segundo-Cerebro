@@ -22,6 +22,7 @@ CREATE TABLE app_private.signup_browser_attempts (
  consumed_at timestamptz,
  accept_origin boolean,
  origin_version text,
+ requires_password boolean NOT NULL DEFAULT false,
  CHECK ((consumed_at IS NULL AND accept_origin IS NULL AND origin_version IS NULL)
      OR (consumed_at IS NOT NULL AND accept_origin IS NOT NULL AND origin_version IS NOT NULL))
 );
@@ -40,6 +41,52 @@ BEGIN
  v_intent:=app_private.signup_intent_create(p_binding,p_subject,p_terms,p_privacy,p_expires,p_origin,p_origin_version);
  INSERT INTO app_private.signup_browser_attempts(intent_id,browser_hash,expires_at) VALUES(v_intent,p_browser,p_expires);
  RETURN v_intent;
+END $$;
+
+-- After a freshly verified OTP, identify only an existing stale bound intent.
+-- A previously pruned intent cannot be reconstructed from email ownership.
+CREATE FUNCTION app_private.signup_browser_reconsent_probe(p_user uuid,p_session uuid,p_subject text,p_terms text,p_privacy text) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE i app_private.signup_intents; v_intent uuid;
+BEGIN
+ SELECT id INTO v_intent FROM app_private.signup_intents WHERE user_id=p_user AND subject_hash=p_subject AND state='bound';
+ IF NOT FOUND THEN RETURN NULL; END IF;
+ PERFORM app_private.draft_completion_context(p_user,p_session,v_intent,p_subject,true,false);
+ PERFORM 1 FROM app_private.signup_browser_legal_versions WHERE singleton AND terms_version=p_terms AND privacy_version=p_privacy FOR SHARE;
+ IF NOT FOUND OR EXISTS(SELECT 1 FROM app_private.signup_completion_fences_draft WHERE user_id=p_user) THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ SELECT * INTO STRICT i FROM app_private.signup_intents WHERE id=v_intent FOR UPDATE;
+ IF NOT EXISTS(SELECT 1 FROM app_private.signup_browser_attempts WHERE intent_id=v_intent AND expires_at>pg_catalog.clock_timestamp()-interval '24 hours') THEN RETURN NULL; END IF;
+ IF i.expires_at>pg_catalog.clock_timestamp() AND i.terms_version IS NOT DISTINCT FROM p_terms AND i.privacy_version IS NOT DISTINCT FROM p_privacy THEN RETURN NULL; END IF;
+ RETURN pg_catalog.jsonb_build_object('intentId',i.id,'originPending',i.origin IS NOT NULL AND i.expires_at>pg_catalog.clock_timestamp());
+END $$;
+
+-- Caller must present explicit current legal consent and origin decision from
+-- the OTP-bound session. Only an existing stale intent may be renewed.
+CREATE FUNCTION app_private.signup_browser_renew(p_user uuid,p_session uuid,p_intent uuid,p_subject text,p_terms text,p_privacy text,p_keep_origin boolean,p_origin_version text) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE i app_private.signup_intents; keep_origin boolean;
+BEGIN
+ IF p_keep_origin IS NULL OR p_origin_version IS NULL THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ PERFORM app_private.draft_completion_context(p_user,p_session,p_intent,p_subject,true,false);
+ PERFORM 1 FROM app_private.signup_browser_legal_versions WHERE singleton AND terms_version=p_terms AND privacy_version=p_privacy AND origin_version=p_origin_version FOR SHARE;
+ IF NOT FOUND OR EXISTS(SELECT 1 FROM app_private.signup_completion_fences_draft WHERE user_id=p_user) THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ SELECT * INTO STRICT i FROM app_private.signup_intents WHERE id=p_intent FOR UPDATE;
+ PERFORM 1 FROM app_private.signup_browser_attempts WHERE intent_id=p_intent AND expires_at>pg_catalog.clock_timestamp()-interval '24 hours' FOR UPDATE;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ IF i.expires_at>pg_catalog.clock_timestamp() AND i.terms_version IS NOT DISTINCT FROM p_terms AND i.privacy_version IS NOT DISTINCT FROM p_privacy THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ keep_origin:=p_keep_origin AND i.origin IS NOT NULL AND i.expires_at>pg_catalog.clock_timestamp();
+ -- keep_origin is a new explicit choice under the current version; it can
+ -- retain existing values but can never recreate values already withdrawn.
+ IF keep_origin AND (i.origin_consented_at IS NULL OR i.origin_consented_at<=pg_catalog.clock_timestamp()-interval '12 months') THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ IF i.origin IS NOT NULL AND NOT keep_origin THEN
+  PERFORM app_private.append_event(p_user,'signup_origin',p_user,'deleted','web',NULL,pg_catalog.jsonb_build_object('consent','withdrawn'));
+ END IF;
+ UPDATE app_private.signup_intents SET terms_version=p_terms,privacy_version=p_privacy,expires_at=pg_catalog.clock_timestamp()+interval '30 minutes',
+  origin=CASE WHEN keep_origin THEN i.origin ELSE NULL END,origin_consent_version=CASE WHEN keep_origin THEN p_origin_version ELSE NULL END,
+  origin_consented_at=CASE WHEN keep_origin THEN pg_catalog.now() ELSE NULL END WHERE id=p_intent AND state='bound';
+ IF NOT FOUND THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ -- Fence out delayed direct-admission calls until the password-after-OTP path.
+ UPDATE app_private.signup_browser_attempts SET requires_password=true WHERE intent_id=p_intent;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ RETURN pg_catalog.jsonb_build_object('status','renewed','originPending',keep_origin);
 END $$;
 
 -- Explicitly invoked by a reviewed retention process; never scheduled here.
@@ -110,7 +157,7 @@ BEGIN
   RETURN adm.origin='public' AND adm.state='admitted' AND a.consumed_at IS NOT NULL
    AND a.accept_origin IS NOT DISTINCT FROM p_accept_origin AND a.origin_version IS NOT DISTINCT FROM p_origin_version;
  END IF;
- IF i.state IS DISTINCT FROM 'bound' OR i.expires_at<=pg_catalog.clock_timestamp()
+ IF i.state IS DISTINCT FROM 'bound' OR i.expires_at<=pg_catalog.clock_timestamp() OR a.requires_password
   OR adm.origin IS DISTINCT FROM 'unclassified' OR adm.state IS DISTINCT FROM 'pending' OR a.consumed_at IS NOT NULL
   OR EXISTS(SELECT 1 FROM app_private.signup_completion_fences_draft WHERE user_id=p_user)
   THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
@@ -133,11 +180,17 @@ END $$;
 
 REVOKE ALL ON FUNCTION app_private.signup_browser_prepare(text,text,text,text,text,timestamptz,jsonb,text),app_private.signup_browser_find(text),app_private.signup_browser_recover_bound(uuid,uuid,text,text,text),app_private.signup_browser_admit(uuid,uuid,uuid,text,text,text,text,boolean,text),app_private.signup_browser_prune(integer) FROM PUBLIC,anon,authenticated,service_role;
 GRANT EXECUTE ON FUNCTION app_private.signup_browser_prepare(text,text,text,text,text,timestamptz,jsonb,text),app_private.signup_browser_find(text),app_private.signup_browser_recover_bound(uuid,uuid,text,text,text),app_private.signup_browser_admit(uuid,uuid,uuid,text,text,text,text,boolean,text),app_private.signup_browser_prune(integer) TO service_role;
+REVOKE ALL ON FUNCTION app_private.signup_browser_reconsent_probe(uuid,uuid,text,text,text),app_private.signup_browser_renew(uuid,uuid,uuid,text,text,text,boolean,text) FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION app_private.signup_browser_reconsent_probe(uuid,uuid,text,text,text),app_private.signup_browser_renew(uuid,uuid,uuid,text,text,text,boolean,text) TO service_role;
 CREATE FUNCTION public.signup_browser_prepare(p_binding text,p_browser text,p_subject text,p_terms text,p_privacy text,p_expires timestamptz,p_origin jsonb,p_origin_version text) RETURNS uuid LANGUAGE sql SECURITY INVOKER SET search_path='' AS $$ SELECT app_private.signup_browser_prepare(p_binding,p_browser,p_subject,p_terms,p_privacy,p_expires,p_origin,p_origin_version) $$;
 CREATE FUNCTION public.signup_browser_find(p_browser text) RETURNS jsonb LANGUAGE sql SECURITY INVOKER SET search_path='' AS $$ SELECT app_private.signup_browser_find(p_browser) $$;
 CREATE FUNCTION public.signup_browser_recover_bound(p_user uuid,p_session uuid,p_subject text,p_terms text,p_privacy text) RETURNS jsonb LANGUAGE sql SECURITY INVOKER SET search_path='' AS $$ SELECT app_private.signup_browser_recover_bound(p_user,p_session,p_subject,p_terms,p_privacy) $$;
+CREATE FUNCTION public.signup_browser_reconsent_probe(p_user uuid,p_session uuid,p_subject text,p_terms text,p_privacy text) RETURNS jsonb LANGUAGE sql SECURITY INVOKER SET search_path='' AS $$ SELECT app_private.signup_browser_reconsent_probe(p_user,p_session,p_subject,p_terms,p_privacy) $$;
+CREATE FUNCTION public.signup_browser_renew(p_user uuid,p_session uuid,p_intent uuid,p_subject text,p_terms text,p_privacy text,p_keep_origin boolean,p_origin_version text) RETURNS jsonb LANGUAGE sql SECURITY INVOKER SET search_path='' AS $$ SELECT app_private.signup_browser_renew(p_user,p_session,p_intent,p_subject,p_terms,p_privacy,p_keep_origin,p_origin_version) $$;
 CREATE FUNCTION public.signup_browser_admit(p_user uuid,p_session uuid,p_intent uuid,p_subject text,p_browser text,p_terms text,p_privacy text,p_accept_origin boolean,p_origin_version text) RETURNS boolean LANGUAGE sql SECURITY INVOKER SET search_path='' AS $$ SELECT app_private.signup_browser_admit(p_user,p_session,p_intent,p_subject,p_browser,p_terms,p_privacy,p_accept_origin,p_origin_version) $$;
 CREATE FUNCTION public.signup_browser_prune(p_limit integer) RETURNS integer LANGUAGE sql SECURITY INVOKER SET search_path='' AS $$ SELECT app_private.signup_browser_prune(p_limit) $$;
 REVOKE ALL ON FUNCTION public.signup_browser_prepare(text,text,text,text,text,timestamptz,jsonb,text),public.signup_browser_find(text),public.signup_browser_recover_bound(uuid,uuid,text,text,text),public.signup_browser_admit(uuid,uuid,uuid,text,text,text,text,boolean,text),public.signup_browser_prune(integer) FROM PUBLIC,anon,authenticated,service_role;
 GRANT EXECUTE ON FUNCTION public.signup_browser_prepare(text,text,text,text,text,timestamptz,jsonb,text),public.signup_browser_find(text),public.signup_browser_recover_bound(uuid,uuid,text,text,text),public.signup_browser_admit(uuid,uuid,uuid,text,text,text,text,boolean,text),public.signup_browser_prune(integer) TO service_role;
+REVOKE ALL ON FUNCTION public.signup_browser_reconsent_probe(uuid,uuid,text,text,text),public.signup_browser_renew(uuid,uuid,uuid,text,text,text,boolean,text) FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION public.signup_browser_reconsent_probe(uuid,uuid,text,text,text),public.signup_browser_renew(uuid,uuid,uuid,text,text,text,boolean,text) TO service_role;
 COMMIT;

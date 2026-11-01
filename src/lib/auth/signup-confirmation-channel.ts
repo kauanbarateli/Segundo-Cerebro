@@ -57,7 +57,7 @@ export async function submitSignupEmailLink(request: NextRequest, purpose: Purpo
     const passwordFallback=async()=>{
       const fallback=await verifySignupConfirmation(createSignupConfirmationPorts(config,jar,headers,purpose,true),proof.token,legal);
       store.set(cookieName(purpose), "", secureCookieOptions(config.secureCookies, { maxAge: 0 }));
-      const response=signupRedirect(config,fallback.status==="ready"?"/cadastro/definir-senha":"/cadastro?status=review");
+      const response=signupRedirect(config,fallback.status==="ready"?"/cadastro/definir-senha":fallback.status==="reconsent"?"/cadastro/revisar":"/cadastro?status=review");
       for(const [name,value] of headers) response.headers.set(name,value);
       return response;
     };
@@ -70,7 +70,7 @@ export async function submitSignupEmailLink(request: NextRequest, purpose: Purpo
     // existing password-after-OTP fence; never treat the stale cookie as proof.
     if(result.status==="other-browser") return passwordFallback();
     store.set(cookieName(purpose), "", secureCookieOptions(config.secureCookies, { maxAge: 0 }));
-    const response = signupRedirect(config, result.status === "completed" ? "/onboarding" : result.status === "password-required" ? "/cadastro/definir-senha" : "/cadastro?status=repeat");
+    const response = signupRedirect(config, result.status === "completed" ? "/onboarding" : result.status === "password-required" ? "/cadastro/definir-senha" : result.status==="reconsent" ? "/cadastro/revisar" : "/cadastro?status=repeat");
     // Never overwrite the browser cookie here: another tab may have started a
     // newer attempt after this request captured its cookie. Its TTL is bounded.
     for (const [name, value] of headers) response.headers.set(name, value);

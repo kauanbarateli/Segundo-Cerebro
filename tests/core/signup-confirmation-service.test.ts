@@ -42,6 +42,18 @@ describe("confirmação explícita de cadastro", () => {
     expect(await verifySignupConfirmation(p, token, legal)).toEqual({ status: "unavailable" });
     expect(p.clearProvisionalSession).toHaveBeenCalledTimes(2);
   });
+  it("após OTP novo oferece revisão apenas para intenção antiga comprovada",async()=>{
+    const p=ports();vi.mocked(p.recoverVerifiedIntent).mockRejectedValueOnce(Error("stale"));
+    p.inspectReconsent=vi.fn(async()=>({intentId:intent.intentId,originPending:true}));
+    p.putReconsentCheckpoint=vi.fn(async()=>{});
+    expect(await verifySignupConfirmation(p,token,legal)).toEqual({status:"reconsent"});
+    expect(p.verifyEmailProof).toHaveBeenCalledOnce();expect(p.putReconsentCheckpoint).toHaveBeenCalledWith(expect.objectContaining({checkpoint:expect.objectContaining({intentId:intent.intentId,originPending:true,passwordConfirmed:false}),terms:"v1",privacy:"v2"}));expect(p.putCheckpoint).not.toHaveBeenCalled();
+    expect(p.clearProvisionalSession).not.toHaveBeenCalled();
+  });
+  it("se a intenção foi apagada não recria cadastro apenas pelo e-mail",async()=>{
+    const p=ports();vi.mocked(p.recoverVerifiedIntent).mockRejectedValueOnce(Error("missing"));p.inspectReconsent=vi.fn(async()=>null);p.putReconsentCheckpoint=vi.fn(async()=>{});
+    expect(await verifySignupConfirmation(p,token,legal)).toEqual({status:"unavailable"});expect(p.putCheckpoint).not.toHaveBeenCalled();expect(p.clearProvisionalSession).toHaveBeenCalledOnce();
+  });
   it("não informa confirmação quando a limpeza da sessão provisória falha", async () => {
     const p = ports(); vi.mocked(p.recoverVerifiedIntent).mockRejectedValue(new Error("privado")); vi.mocked(p.clearProvisionalSession).mockRejectedValue(new Error("privado"));
     expect(await verifySignupConfirmation(p, token, legal)).toEqual({ status: "unavailable" });

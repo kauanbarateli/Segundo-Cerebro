@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { signSignupCheckpoint } from "../../src/lib/auth/signup-checkpoint";
+import { signSignupReconsent } from "../../src/lib/auth/signup-reconsent-checkpoint";
 import { createSignupEmailLink } from "../../src/lib/auth/signup-email-link";
+import { LEGAL_DOCUMENTS } from "../../src/lib/legal/documents";
 
 const fake = vi.hoisted(() => ({ available: vi.fn(), enabled: vi.fn(), getAll: vi.fn() }));
 const config = { mode: "supabase" as const, appOrigin: "https://app.example.invalid", supabaseUrl: "https://db.example.invalid", publishableKey: "sb_publishable_test", secretKey: "sb_secret_test", rateLimitSecret: "r".repeat(32), stateSecret: "s".repeat(32), secureCookies: true };
@@ -9,11 +11,12 @@ vi.mock("server-only", () => ({}));
 vi.mock("next/headers", () => ({ cookies: async () => ({ getAll: fake.getAll }) }));
 vi.mock("@/lib/auth/signup-availability", () => ({ signupAvailable: fake.available }));
 vi.mock("@/lib/auth/config", () => ({ readAuthConfiguration: () => config }));
-vi.mock("@/lib/auth/signup-http", () => ({ signupEnabled: fake.enabled }));
+vi.mock("@/lib/auth/signup-http", () => ({ signupEnabled: fake.enabled, signupSameBrowserEnabled:fake.enabled }));
 import SignupPage from "../../src/app/(auth)/cadastro/page";
 import ConfirmPage from "../../src/app/(auth)/cadastro/confirmar/page";
 import PasswordPage from "../../src/app/(auth)/cadastro/definir-senha/page";
 import ResendPage from "../../src/app/(auth)/cadastro/reenviar/page";
+import ReviewPage from "../../src/app/(auth)/cadastro/revisar/page";
 
 describe("páginas preparadas de cadastro", () => {
   beforeEach(() => { vi.clearAllMocks(); fake.available.mockReturnValue(true); fake.enabled.mockReturnValue(true); fake.getAll.mockReturnValue([]); });
@@ -45,6 +48,16 @@ describe("páginas preparadas de cadastro", () => {
     fake.available.mockReturnValue(false);
     const html = renderToStaticMarkup(await ConfirmPage({ searchParams: Promise.resolve({}) }));
     expect(html).toContain("temporariamente indisponível"); expect(html).not.toContain("/cadastro/reenviar");
+  });
+  it("revisão só aparece após OTP e informa o descarte opcional de origem",async()=>{
+    const absent=renderToStaticMarkup(await ReviewPage({searchParams:Promise.resolve({})}));expect(absent).not.toContain('action="/auth/revisar-cadastro"');
+    const now=Date.now(),checkpoint={userId:"10000000-0000-4000-8000-000000000001",sessionId:"20000000-0000-4000-8000-000000000001",intentId:"30000000-0000-4000-8000-000000000001",issuedAt:now,expiresAt:now+600000,passwordConfirmed:false,originPending:true};
+    fake.getAll.mockReturnValue([{name:"sc-flow-signup-confirmation",value:signSignupCheckpoint(checkpoint,config.stateSecret,now)}]);
+    expect(renderToStaticMarkup(await ReviewPage({searchParams:Promise.resolve({})}))).not.toContain('action="/auth/revisar-cadastro"');
+    const token=signSignupReconsent({checkpoint,terms:LEGAL_DOCUMENTS.termos.version,privacy:LEGAL_DOCUMENTS.privacidade.version},config.stateSecret,now);
+    fake.getAll.mockReturnValue([{name:"sc-flow-signup-reconsent",value:token}]);
+    const present=renderToStaticMarkup(await ReviewPage({searchParams:Promise.resolve({})}));expect(present).toContain('action="/auth/revisar-cadastro"');expect(present).toContain('name="acceptedLegal"');expect(present).toContain('name="acceptedOrigin"');expect(present).toContain("será descartada");expect(present).not.toContain(token);
+    const uncertain=renderToStaticMarkup(await ReviewPage({searchParams:Promise.resolve({status:"unknown"})}));expect(uncertain).not.toContain('action="/auth/revisar-cadastro"');expect(uncertain).toContain('action="/auth/limpar-revisao"');expect(uncertain).toContain("Encerrar sessão e pedir novo link");
   });
   it("só permite definir senha com checkpoint válido e oferece retomada após troca", async () => {
     const absent = renderToStaticMarkup(await PasswordPage({ searchParams: Promise.resolve({}) }));

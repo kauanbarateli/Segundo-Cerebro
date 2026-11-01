@@ -55,10 +55,10 @@ describe("adaptador de confirmação de cadastro", () => {
     expect(mocks.signupRpc.mock.calls.map(call=>call[1])).toEqual(["signup_find_bound_intent","signup_browser_recover_bound"]);
   });
   it("no fallback estrito não recria intenção ausente nem emite checkpoint",async()=>{
-    mocks.signupRpc.mockResolvedValueOnce(null).mockRejectedValueOnce(Error("missing or expired"));
+    mocks.signupRpc.mockResolvedValueOnce(null).mockRejectedValueOnce(Error("missing or expired")).mockResolvedValueOnce(null);
     const {jar,set}=cookies();
     expect(await verifySignupConfirmation(createSignupConfirmationPorts(config,jar,undefined,"continuation",true),token,legal)).toEqual({status:"unavailable"});
-    expect(mocks.signupRpc.mock.calls.map(call=>call[1])).toEqual(["signup_find_bound_intent","signup_browser_recover_bound"]);
+    expect(mocks.signupRpc.mock.calls.map(call=>call[1])).toEqual(["signup_find_bound_intent","signup_browser_recover_bound","signup_browser_reconsent_probe"]);
     expect(set.mock.calls.filter(call=>call[0]===SIGNUP_CHECKPOINT_COOKIE).every(call=>call[1]==="")).toBe(true);
   });
   it("retoma prova reconhecida somente depois da verificação OTP, sem recuperar outra intenção", async () => {

@@ -31,7 +31,13 @@ export function createSameBrowserConfirmationPorts(config:SupabaseAuthConfig,jar
   canBegin:base.canBegin,browserHash:secret=>signupBrowserSecretHash(secret,config.stateSecret),limitToken:base.limitToken,
   verifyEmailProof:base.verifyEmailProof,subjectHash:base.subjectHash,clearProvisionalSession:base.clearProvisionalSession,
   async findAttempt(hash) {const value=await signupRpc(config,"signup_browser_find",{p_browser:hash});if(value===null)return null;if(!value || typeof value!=="object" || Array.isArray(value) || Object.keys(value).sort().join(",")!=="intentId,originPending,userId")return signupUnavailable();const data=value as Record<string,unknown>;if(typeof data.intentId!=="string" || !UUID.test(data.intentId) || typeof data.userId!=="string" || !UUID.test(data.userId) || typeof data.originPending!=="boolean")return signupUnavailable();return {intentId:data.intentId,userId:data.userId,originPending:data.originPending};},
-  async continueVerified(identity,legal){return (await continueVerifiedSignup(base,identity,legal)).status==="ready";},
+  async continueVerified(identity,legal){const result=(await continueVerifiedSignup(base,identity,legal)).status;return result==="ready"||result==="reconsent"?result:"unavailable";},
+  async inspectReconsent(identity,legal){
+   if(!base.inspectReconsent || !base.putReconsentCheckpoint)return false;
+   const hash=base.subjectHash(identity.email.trim().toLowerCase()),pending=await base.inspectReconsent(identity.userId,identity.sessionId,hash,legal.terms,legal.privacy),now=base.now();
+   if(!pending || !Number.isSafeInteger(now) || now<0 || !Number.isSafeInteger(now+600_000))return false;
+   await base.putReconsentCheckpoint({checkpoint:{userId:identity.userId,sessionId:identity.sessionId,intentId:pending.intentId,issuedAt:now,expiresAt:now+600_000,passwordConfirmed:false,originPending:pending.originPending},terms:legal.terms,privacy:legal.privacy});return true;
+  },
   async admit(value) {return signupRpc(config,"signup_browser_admit",{p_user:value.userId,p_session:value.sessionId,p_intent:value.intentId,p_subject:value.subjectHash,p_browser:value.browserHash,p_terms:value.terms,p_privacy:value.privacy,p_accept_origin:value.acceptOrigin,p_origin_version:value.originVersion});},
  };
 }

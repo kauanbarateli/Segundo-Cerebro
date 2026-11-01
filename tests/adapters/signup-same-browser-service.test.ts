@@ -9,7 +9,7 @@ const secret="a".repeat(43), token="b".repeat(48), hash="c".repeat(64);
 const current={terms:"terms-v1",privacy:"privacy-v1",originVersion:"utm-v1"};
 const input={browserSecret:secret,token,terms:current.terms,privacy:current.privacy};
 function setup() {
- const ports={canBegin:vi.fn(()=>true),browserHash:vi.fn(()=>hash),findAttempt:vi.fn(async()=>({intentId,userId,originPending:true})),limitToken:vi.fn(async()=>({allowed:true})),verifyEmailProof:vi.fn(async()=>({userId,sessionId,email:"person@example.invalid"})),subjectHash:vi.fn(()=>hash),continueVerified:vi.fn(async()=>true),admit:vi.fn(async()=>true),clearProvisionalSession:vi.fn(async()=>{})};
+ const ports={canBegin:vi.fn(()=>true),browserHash:vi.fn(()=>hash),findAttempt:vi.fn(async()=>({intentId,userId,originPending:true})),limitToken:vi.fn(async()=>({allowed:true})),verifyEmailProof:vi.fn(async()=>({userId,sessionId,email:"person@example.invalid"})),subjectHash:vi.fn(()=>hash),continueVerified:vi.fn(async():Promise<"ready"|"reconsent"|"unavailable">=>"ready"),inspectReconsent:vi.fn(async()=>false),admit:vi.fn(async()=>true),clearProvisionalSession:vi.fn(async()=>{})};
  return ports satisfies SameBrowserSignupPorts;
 }
 describe("same-browser signup candidate",()=>{
@@ -42,7 +42,7 @@ describe("same-browser signup candidate",()=>{
   expect(ports.admit).not.toHaveBeenCalled();expect(ports.clearProvisionalSession).not.toHaveBeenCalled();
  });
  it("fecha a sessão provisória se a retomada da tentativa anterior falha",async()=>{
-  const ports=setup();ports.verifyEmailProof.mockResolvedValueOnce({userId:"10000000-0000-4000-8000-000000000002",sessionId,email:"old@example.invalid"});ports.continueVerified.mockResolvedValueOnce(false);
+  const ports=setup();ports.verifyEmailProof.mockResolvedValueOnce({userId:"10000000-0000-4000-8000-000000000002",sessionId,email:"old@example.invalid"});ports.continueVerified.mockResolvedValueOnce("unavailable");
   expect(await confirmSameBrowserSignup(ports,input,current)).toEqual({status:"unavailable"});expect(ports.admit).not.toHaveBeenCalled();expect(ports.clearProvisionalSession).toHaveBeenCalledOnce();
  });
  it("fails closed and clears a provisional session when provider or admission fails",async()=>{
@@ -50,6 +50,10 @@ describe("same-browser signup candidate",()=>{
   expect(await confirmSameBrowserSignup(ports,input,current)).toEqual({status:"unavailable"});expect(ports.clearProvisionalSession).toHaveBeenCalledOnce();
   const invalid=setup();invalid.verifyEmailProof.mockResolvedValueOnce(null as never);
   expect(await confirmSameBrowserSignup(invalid,input,current)).toEqual({status:"unavailable"});expect(invalid.admit).not.toHaveBeenCalled();expect(invalid.clearProvisionalSession).toHaveBeenCalledOnce();
+ });
+ it("após admissão ambígua só oferece revisão com intenção vencida comprovada",async()=>{
+  const ports=setup();ports.admit.mockRejectedValueOnce(Error("timeout"));ports.inspectReconsent.mockResolvedValueOnce(true);
+  expect(await confirmSameBrowserSignup(ports,input,current)).toEqual({status:"reconsent"});expect(ports.continueVerified).not.toHaveBeenCalled();expect(ports.clearProvisionalSession).not.toHaveBeenCalled();
  });
  it("creates unrelated 256-bit secrets and domain-separated digests",()=>{
   const a=newSignupBrowserSecret(),b=newSignupBrowserSecret(),key="k".repeat(32);

@@ -16,7 +16,7 @@ try {
   CREATE TABLE app_private.signup_settings(singleton boolean PRIMARY KEY,enabled boolean);
   CREATE TABLE app_private.user_admission(user_id uuid PRIMARY KEY,origin text,state text,admitted_at timestamptz);
   CREATE TABLE app_private.signup_intents(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),binding_hash text UNIQUE,subject_hash text,terms_version text,privacy_version text,expires_at timestamptz,state text DEFAULT 'pending',user_id uuid UNIQUE,origin jsonb,origin_consent_version text,origin_consented_at timestamptz,consumed_at timestamptz);
-  CREATE TABLE app_private.signup_completion_fences_draft(user_id uuid PRIMARY KEY,intent_id uuid,origin_withdrawn boolean DEFAULT false,updated_at timestamptz DEFAULT now());
+  CREATE TABLE app_private.signup_completion_fences_draft(user_id uuid PRIMARY KEY,intent_id uuid,origin_withdrawn boolean DEFAULT false,origin_expired boolean DEFAULT false,updated_at timestamptz DEFAULT now());
   CREATE TABLE app_private.signup_origins(user_id uuid PRIMARY KEY,origin jsonb,consent_version text,consented_at timestamptz,expires_at timestamptz);
   CREATE TABLE app_private.onboarding_entries(user_id uuid,source_operation uuid,source_kind text,source_intent uuid UNIQUE);
   CREATE TABLE app_private.events(user_id uuid,entity text);
@@ -25,12 +25,14 @@ try {
   INSERT INTO app_private.signup_settings VALUES (true,true);
  `);
  const installed=await readFile(new URL('../../scripts/verification/front-b-135-draft/admission-feedback-metrics-atomic.sql.txt',import.meta.url),'utf8');
- for(const [start,end] of [['create function app_private.signup_intent_create(', '\nend $$;'],['create function app_private.signup_pending_identity(', '\n$$;'],['create function app_private.admission_new_identity()', '\nend $$;'],['CREATE FUNCTION app_private.draft_completion_context(', '\nEND $$;'],['CREATE FUNCTION app_private.draft_withdraw_identity(', '\n$$;'],['CREATE FUNCTION app_private.draft_withdraw_current(', '\nEND $$;']]) {
+ for(const [start,end] of [['create function app_private.signup_intent_create(', '\nend $$;'],['create function app_private.signup_pending_identity(', '\n$$;'],['create function app_private.admission_new_identity()', '\nend $$;'],['CREATE FUNCTION app_private.draft_completion_context(', '\nEND $$;'],['CREATE FUNCTION app_private.draft_withdraw_identity(', '\n$$;'],['CREATE FUNCTION app_private.draft_withdraw_current(', '\nEND $$;'],['CREATE FUNCTION app_private.signup_prune()', '\nEND $$;'],['create function app_private.signup_recover_verified_intent(', '\nend $$;']]) {
   const from=installed.indexOf(start),to=installed.indexOf(end,from);assert.ok(from>=0 && to>=0);await pg.exec(installed.slice(from,to+end.length));
  }
+ await pg.exec('REVOKE ALL ON FUNCTION app_private.signup_prune(),app_private.signup_recover_verified_intent(uuid,uuid,text,text,text) FROM PUBLIC,anon,authenticated,service_role; GRANT EXECUTE ON FUNCTION app_private.signup_prune(),app_private.signup_recover_verified_intent(uuid,uuid,text,text,text) TO service_role');
  await pg.exec('CREATE TRIGGER test_admission AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION app_private.admission_new_identity()');
  const draft=await readFile(new URL('../../scripts/verification/front-b-135-draft/same-browser-signup.guarded.sql.txt',import.meta.url),'utf8');
  const guard="DO $scratch_guard$ BEGIN RAISE EXCEPTION 'UNREVIEWED SCRATCH SQL: DO NOT APPLY'; END $scratch_guard$;";assert.equal(draft.split(guard).length,2);await pg.exec(draft.replace(guard,''));
+ const retention=await readFile(new URL('../../scripts/verification/front-b-135-draft/same-browser-retention.guarded.sql.txt',import.meta.url),'utf8');assert.equal(retention.split(guard).length,2);const rolloutBlock="DO $rollout_block$ BEGIN RAISE EXCEPTION 'CLEANUP_WRITERS_NOT_PROVEN_PAUSED_AND_DRAINED'; END $rollout_block$;";assert.equal(retention.split(rolloutBlock).length,2);await pg.exec(retention.replace(guard,'').replace(rolloutBlock,''));
  const user='10000000-0000-4000-8000-000000000001',session='20000000-0000-4000-8000-000000000001',pointer='p'.repeat(43),binding=createHash('sha256').update(pointer).digest('hex'),browser='a'.repeat(64),subject='b'.repeat(64);
  const prepare=async(b,br,origin)=> (await pg.query("SELECT app_private.signup_browser_prepare($1,$2,$3,'terms-v1','privacy-v1',now()+interval '30 minutes',$4,$5) AS id",[b,br,subject,origin,origin?'utm-v1':null])).rows[0].id;
  await assert.rejects(()=>prepare(binding,browser,null),{code:'42501'}); // Missing authoritative versions closes signup.
@@ -90,10 +92,71 @@ try {
  assert.equal(await find(browser6),null); // No second INSERT, so the duplicate intent cannot bind.
  const duplicate=(await pg.query('SELECT state,user_id,origin FROM app_private.signup_intents WHERE id=$1',[intent6])).rows[0];assert.equal(duplicate.state,'pending');assert.equal(duplicate.user_id,null);
  assert.deepEqual((await pg.query('SELECT origin FROM app_private.signup_intents WHERE id=$1',[intent5])).rows[0].origin,{utm_source:'first'});
+ // Missing public-attempt provenance must not allow renewal of an older account.
+ const session5='20000000-0000-4000-8000-000000000005';await pg.query('INSERT INTO auth.sessions VALUES($1,$2,null)',[session5,user5]);await pg.query("INSERT INTO public.user_moderation VALUES($1,'active',false)",[user5]);
+ await pg.query("UPDATE app_private.signup_intents SET expires_at=now()-interval '1 second' WHERE id=$1",[intent5]);await pg.query('DELETE FROM app_private.signup_browser_attempts WHERE intent_id=$1',[intent5]);
+ assert.equal((await pg.query("SELECT app_private.signup_browser_reconsent_probe($1,$2,$3,'terms-v1','privacy-v1') result",[user5,session5,subject])).rows[0].result,null);
+ await assert.rejects(()=>pg.query("SELECT app_private.signup_browser_renew($1,$2,$3,$4,'terms-v1','privacy-v1',false,'utm-v1')",[user5,session5,intent5,subject]),{code:'42501'});
+ assert.deepEqual((await pg.query('SELECT origin FROM app_private.signup_intents WHERE id=$1',[intent5])).rows[0].origin,{utm_source:'first'});
+ const user6='10000000-0000-4000-8000-000000000006',session6='20000000-0000-4000-8000-000000000006',pointer7='u'.repeat(43),browser7='6'.repeat(64),binding7=createHash('sha256').update(pointer7).digest('hex');
+ const intent7=await prepare(binding7,browser7,JSON.stringify({utm_source:'explicit'}));
+ await pg.query('INSERT INTO auth.users VALUES($1,now(),false,null,null,$2)',[user6,JSON.stringify({sc_signup_pointer:pointer7})]);await pg.query('INSERT INTO auth.sessions VALUES($1,$2,null)',[session6,user6]);await pg.query("INSERT INTO public.user_moderation VALUES($1,'active',false)",[user6]);
+ await pg.query("UPDATE app_private.signup_intents SET expires_at=now()-interval '1 second' WHERE id=$1",[intent7]);
+ const probe=()=>pg.query("SELECT app_private.signup_browser_reconsent_probe($1,$2,$3,'terms-v1','privacy-v1') result",[user6,session6,subject]);
+ const renew=(keep=false,terms='terms-v1')=>pg.query("SELECT app_private.signup_browser_renew($1,$2,$3,$4,$5,'privacy-v1',$6,'utm-v1') result",[user6,session6,intent7,subject,terms,keep]);
+ assert.deepEqual((await probe()).rows[0].result,{intentId:intent7,originPending:false});
+ await assert.rejects(()=>renew(false,'old'),{code:'42501'});assert.deepEqual((await pg.query('SELECT origin FROM app_private.signup_intents WHERE id=$1',[intent7])).rows[0].origin,{utm_source:'explicit'});
+ await pg.query('INSERT INTO app_private.signup_completion_fences_draft(user_id) VALUES($1)',[user6]);await assert.rejects(()=>renew(),{code:'42501'});await pg.query('DELETE FROM app_private.signup_completion_fences_draft WHERE user_id=$1',[user6]);
+ assert.deepEqual((await renew(true)).rows[0].result,{status:'renewed',originPending:false}); // Expired origin cannot be revived.
+ assert.equal((await pg.query('SELECT origin FROM app_private.signup_intents WHERE id=$1',[intent7])).rows[0].origin,null);
+ assert.deepEqual((await pg.query("SELECT app_private.signup_browser_recover_bound($1,$2,$3,'terms-v1','privacy-v1') result",[user6,session6,subject])).rows[0].result,{intentId:intent7,termsVersion:'terms-v1',privacyVersion:'privacy-v1',state:'bound',originPending:false});
+ assert.equal((await pg.query('SELECT requires_password FROM app_private.signup_browser_attempts WHERE intent_id=$1',[intent7])).rows[0].requires_password,true);
+ await assert.rejects(()=>pg.query("SELECT app_private.signup_browser_admit($1,$2,$3,$4,$5,'terms-v1','privacy-v1',false,'utm-v1')",[user6,session6,intent7,subject,browser7]),{code:'42501'});
+ await assert.rejects(()=>renew(),{code:'42501'}); // no silent replay or second modification
+ const user7='10000000-0000-4000-8000-000000000007',session7='20000000-0000-4000-8000-000000000007',pointer8='v'.repeat(43),browser8='5'.repeat(64),binding8=createHash('sha256').update(pointer8).digest('hex');
+ const intent8=await prepare(binding8,browser8,JSON.stringify({utm_source:'keep-explicit'}));
+ await pg.query('INSERT INTO auth.users VALUES($1,now(),false,null,null,$2)',[user7,JSON.stringify({sc_signup_pointer:pointer8})]);await pg.query('INSERT INTO auth.sessions VALUES($1,$2,null)',[session7,user7]);await pg.query("INSERT INTO public.user_moderation VALUES($1,'active',false)",[user7]);
+ await pg.exec("UPDATE app_private.signup_browser_legal_versions SET terms_version='terms-v2',origin_version='utm-v2'");
+ assert.deepEqual((await pg.query("SELECT app_private.signup_browser_reconsent_probe($1,$2,$3,'terms-v2','privacy-v1') result",[user7,session7,subject])).rows[0].result,{intentId:intent8,originPending:true});
+ assert.deepEqual((await pg.query("SELECT app_private.signup_browser_renew($1,$2,$3,$4,'terms-v2','privacy-v1',true,'utm-v2') result",[user7,session7,intent8,subject])).rows[0].result,{status:'renewed',originPending:true});
+ assert.deepEqual((await pg.query('SELECT terms_version,origin,origin_consent_version FROM app_private.signup_intents WHERE id=$1',[intent8])).rows[0],{terms_version:'terms-v2',origin:{utm_source:'keep-explicit'},origin_consent_version:'utm-v2'});
  await pg.query("UPDATE app_private.signup_browser_attempts SET expires_at=now()-interval '1 second' WHERE intent_id=$1",[intent3]);
  assert.equal(await find(browser3),null);
+ assert.equal((await pg.query('SELECT app_private.signup_browser_prune(1) result')).rows[0].result,0);
+ await pg.query("UPDATE app_private.signup_browser_attempts SET expires_at=now()-interval '25 hours' WHERE intent_id=$1",[intent3]);
  assert.equal((await pg.query('SELECT app_private.signup_browser_prune(1) result')).rows[0].result,1);
  await assert.rejects(()=>pg.query('SELECT app_private.signup_browser_prune(0)'),{code:'22023'});
+ // Recovery retention is independently guarded and never extends expired UTM retention.
+ const user8='10000000-0000-4000-8000-000000000008',session8='20000000-0000-4000-8000-000000000008',pointer9='w'.repeat(43),browser9='4'.repeat(64),binding9=createHash('sha256').update(pointer9).digest('hex');
+ await pg.exec("UPDATE app_private.signup_browser_legal_versions SET terms_version='terms-v1',origin_version='utm-v1'");
+ const intent9=await prepare(binding9,browser9,JSON.stringify({utm_source:'expires-on-time'}));
+ await pg.exec("UPDATE app_private.signup_browser_legal_versions SET terms_version='terms-v2',origin_version='utm-v2'");
+ await pg.query('INSERT INTO auth.users VALUES($1,now(),false,null,null,$2)',[user8,JSON.stringify({sc_signup_pointer:pointer9})]);await pg.query('INSERT INTO auth.sessions VALUES($1,$2,null)',[session8,user8]);await pg.query("INSERT INTO public.user_moderation VALUES($1,'active',false)",[user8]);
+ await pg.query("UPDATE app_private.signup_intents SET expires_at=now()-interval '1 second' WHERE id=$1",[intent9]);
+ await assert.rejects(()=>pg.query("SELECT app_private.signup_recover_verified_intent($1,$2,$3,'terms-v2','privacy-v1')",[user8,session8,subject]),{code:'42501'});
+ assert.equal((await pg.query('SELECT count(*)::int n FROM app_private.signup_intents WHERE id=$1',[intent9])).rows[0].n,1);
+ // A legacy pending account with no new-browser marker keeps the old continuation path.
+ assert.equal((await pg.query("SELECT (app_private.signup_recover_verified_intent($1,$2,$3,'terms-v2','privacy-v1')->>'state') state",[user5,session5,subject])).rows[0].state,'bound');
+ await pg.query('SELECT app_private.signup_prune()');
+ assert.deepEqual((await pg.query('SELECT state,origin,origin_consent_version,origin_consented_at FROM app_private.signup_intents WHERE id=$1',[intent9])).rows[0],{state:'bound',origin:null,origin_consent_version:null,origin_consented_at:null});
+ assert.deepEqual((await pg.query("SELECT app_private.signup_browser_reconsent_probe($1,$2,$3,'terms-v2','privacy-v1') result",[user8,session8,subject])).rows[0].result,{intentId:intent9,originPending:false});
+ // Repeated cleanup should not let protected rows monopolize the bounded batch.
+ await pg.query('SELECT app_private.signup_prune()');
+ await pg.query("UPDATE app_private.signup_browser_attempts SET expires_at=now()-interval '25 hours' WHERE intent_id=$1",[intent9]);
+ await pg.query('SELECT app_private.signup_prune()');
+ assert.equal((await pg.query('SELECT count(*)::int n FROM app_private.signup_intents WHERE id=$1',[intent9])).rows[0].n,0);
+ assert.equal((await pg.query('SELECT count(*)::int n FROM app_private.signup_browser_attempts WHERE intent_id=$1',[intent9])).rows[0].n,0);
+ // A preexisting uncertainty fence survives even beyond the recovery window.
+ const user9='10000000-0000-4000-8000-000000000009',pointer10='x'.repeat(43),browser10='3'.repeat(64),binding10=createHash('sha256').update(pointer10).digest('hex');
+ await pg.exec("UPDATE app_private.signup_browser_legal_versions SET terms_version='terms-v1',origin_version='utm-v1'");
+ const intent10=await prepare(binding10,browser10,JSON.stringify({utm_source:'fenced'}));
+ await pg.query('INSERT INTO auth.users VALUES($1,now(),false,null,null,$2)',[user9,JSON.stringify({sc_signup_pointer:pointer10})]);
+ await pg.query('INSERT INTO app_private.signup_completion_fences_draft(user_id,intent_id) VALUES($1,$2)',[user9,intent10]);
+ await pg.query("UPDATE app_private.signup_intents SET expires_at=now()-interval '25 hours' WHERE id=$1",[intent10]);
+ await pg.query("UPDATE app_private.signup_browser_attempts SET expires_at=now()-interval '25 hours' WHERE intent_id=$1",[intent10]);
+ await pg.query('SELECT app_private.signup_prune()');
+ assert.equal((await pg.query('SELECT origin FROM app_private.signup_intents WHERE id=$1',[intent10])).rows[0].origin,null);
+ assert.equal((await pg.query('SELECT origin_expired FROM app_private.signup_completion_fences_draft WHERE user_id=$1',[user9])).rows[0].origin_expired,true);
  const privileges=(await pg.query("SELECT has_function_privilege('anon','public.signup_browser_admit(uuid,uuid,uuid,text,text,text,text,boolean,text)','EXECUTE') AS anon,has_function_privilege('authenticated','public.signup_browser_admit(uuid,uuid,uuid,text,text,text,text,boolean,text)','EXECUTE') AS auth,has_function_privilege('service_role','public.signup_browser_admit(uuid,uuid,uuid,text,text,text,text,boolean,text)','EXECUTE') AS service")).rows[0];assert.deepEqual(privileges,{anon:false,auth:false,service:true});
  console.log('Synthetic same-browser signup diagnostic passed.');
 } finally {await pg.close();}

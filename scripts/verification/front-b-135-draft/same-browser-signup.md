@@ -47,8 +47,19 @@ password chosen by the email holder. Its uncertain Auth outcomes remain blocked.
 This fallback now uses `signup_browser_recover_bound`: it accepts only a live
 already-bound intent with unchanged legal versions and no completion fence. It
 never creates an intent, rewrites accepted versions or drops the pending UTM.
-Expired or missing intents, changed legal versions and existing fences fail
-closed and require a separate recovery/support workflow; this narrower behavior
+If that intent is stale because its deadline passed or legal versions changed,
+a fresh OTP may authorize a distinct, short session-bound reconsent checkpoint,
+issued only after the stale intent was observed and bound to current document
+versions. An ordinary confirmation checkpoint cannot authorize review. The review page
+requires explicit current legal consent and separately asks whether to retain
+existing origin data. Renewal updates only the same bound intent, either keeps
+the existing UTM under the new explicit choice or clears it and records a
+withdrawal event. It marks the browser attempt as requiring the fenced password
+path, so a delayed direct admission cannot bypass the new decision. Renewal
+then issues the ordinary password checkpoint without extending the OTP deadline.
+An unknown renewal result requires a fresh OTP instead of blind retry. Missing/pruned
+intent or provenance, existing fences, mismatched identity and moderation
+refusals remain closed and require a separate recovery/support workflow. This
 does not by itself complete #135's interrupted-signup recovery requirement.
 Immediately after OTP verification, getUser/getClaims
 must establish identity and session; only the trusted server can invoke the
@@ -116,3 +127,34 @@ Evidence so far: a focused Vitest suite and an explicitly opted-in PGlite
 diagnostic exercise synthetic data, including the installed pending-identity
 and Auth INSERT trigger functions. They do not establish hosted Supabase Auth,
 Postgres version, email, browser, or production security behavior.
+
+## Separate recovery retention candidate — not deployed
+
+`same-browser-retention.guarded.sql.txt` is a separately guarded, unapproved
+candidate, not a migration and not an instruction to run one. The currently
+installed 028 cleanup may delete an expired intent at its first run; there is
+therefore no deployed recovery-window guarantee. The candidate would retain
+only a bound intent with its original browser-attempt provenance for up to 24
+hours after that attempt's original deadline. It removes UTM and its consent
+metadata at the original intent expiry; expired attribution is not restored on
+renewal. Existing uncertainty fences remain protected beyond that window. New
+OTP, current legal consent, the same bound identity, moderation checks, and
+absence of a fence are still required for renewal. A missing intent or attempt
+is refused; no old account is identified by email alone.
+
+This candidate pins the expected 028 cleanup and proposed browser-cleanup
+functions and legacy recovery writer, owner and privileges before replacing them. The candidate makes the legacy writer refuse a bound intent carrying the new browser-attempt provenance, while retaining its existing behavior for unmarked legacy intents. This does not stop an invocation that began before replacement or other writers; existing deployments and sessions must be drained. It needs an independent
+security and concurrency review, a new migration with its own authorization,
+and coordination with the existing scheduled cleanup and its monitoring. A second unconditional SQL blocker remains even if the scratch guard is removed; it must stay until a reviewed, enforceable protocol proves the scheduled job and every other cleanup caller paused and drained, controls concurrent writers (in particular the legacy `signup_recover_verified_intent`, which may delete an expired bound intent), drains old deployments, and coordinates health checks and new function hashes. The rollout must include a concurrent test proving legacy recovery cannot race retention or a new OTP. The candidate alone cannot guarantee the window. No
+cron is installed or enabled here. Health checks that count all expired intents
+as stale must be updated to recognize this bounded protected population, and
+function hashes/qualification must be reviewed for the new definition. Prompt
+scrubbing depends on the actual scheduled cleanup running successfully; these
+synthetic tests are not evidence of hosted scheduling or race safety.
+
+If renewal's outcome is unknown, the review screen offers an explicit request
+to locally end the matching provisional session and request a fresh link. That
+operation verifies the signed review proof and the current user/session first;
+it does not globally revoke an account session. Cross-tab cookie replacement
+between request and response cannot be made atomic with browser Set-Cookie and
+remains an integration limitation requiring review.

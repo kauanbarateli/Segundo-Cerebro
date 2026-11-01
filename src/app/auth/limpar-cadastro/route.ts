@@ -7,6 +7,7 @@ import { sameOrigin } from "@/lib/auth/policy";
 import { signupRedirect, SIGNUP_CONTINUATION_COOKIE, SIGNUP_OTP_COOKIE } from "@/lib/auth/signup-channel";
 import { readSignupEmailLink } from "@/lib/auth/signup-email-link";
 import { SIGNUP_CHECKPOINT_COOKIE } from "@/lib/auth/signup-confirmation-runtime";
+import { SIGNUP_RECONSENT_COOKIE } from "@/lib/auth/signup-reconsent-checkpoint";
 import { readSignupForm } from "@/lib/auth/signup-form-body";
 import { signupEnabled } from "@/lib/auth/signup-http";
 
@@ -26,7 +27,7 @@ export async function POST(request: NextRequest) {
     const headers = new Headers(noStoreHeaders()), client = createRequestClient(config, jar, true, headers);
     try { await client.auth.signOut({ scope: "local" }); } catch { /* Local cookies are cleared below. */ }
     const expired = secureCookieOptions(config.secureCookies, { maxAge: 0 });
-    for (const name of new Set([AUTH_COOKIE_NAME, SIGNUP_CHECKPOINT_COOKIE, ...jar.getAll().filter(cookie => authCookie(cookie.name)).map(cookie => cookie.name)])) jar.set(name, "", expired);
+    for (const name of new Set([AUTH_COOKIE_NAME, SIGNUP_CHECKPOINT_COOKIE, SIGNUP_RECONSENT_COOKIE, ...jar.getAll().filter(cookie => authCookie(cookie.name)).map(cookie => cookie.name)])) jar.set(name, "", expired);
     const response = signupRedirect(config, `/cadastro/confirmar?flow=${form.flow}&nonce=${proof.nonce}`);
     for (const [name, value] of headers) response.headers.set(name, value);
     return response;

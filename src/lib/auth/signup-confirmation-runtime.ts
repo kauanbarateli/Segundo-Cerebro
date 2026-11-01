@@ -4,6 +4,7 @@ import type { SupabaseAuthConfig } from "./config";
 import { AUTH_COOKIE_NAME, secureCookieOptions } from "./cookie-policy";
 import { subjectHash } from "./flow-state";
 import { signSignupCheckpoint } from "./signup-checkpoint";
+import { signSignupReconsent, SIGNUP_RECONSENT_COOKIE } from "./signup-reconsent-checkpoint";
 import { signupEnabled, signupRpc, signupUnavailable } from "./signup-http";
 import type { SignupConfirmationPorts } from "./signup-confirmation-service";
 
@@ -55,6 +56,17 @@ export function createSignupConfirmationPorts(config: SupabaseAuthConfig, jar: A
       const rebound = await signupRpc(config, "signup_rebind_verified_ack", args);
       return parseIntent(rebound === null ? await signupRpc(config, "signup_recover_verified_intent", args) : rebound);
     },
+    ...(strictBound ? {async inspectReconsent(userId:string,sessionId:string,hash:string,terms:string,privacy:string) {
+      const value=await signupRpc(config,"signup_browser_reconsent_probe",{p_user:userId,p_session:sessionId,p_subject:hash,p_terms:terms,p_privacy:privacy});
+      if(value===null)return null;
+      if(!value || typeof value!=="object" || Array.isArray(value) || Object.keys(value).sort().join(",")!=="intentId,originPending")return signupUnavailable();
+      const data=value as Record<string,unknown>;
+      if(typeof data.intentId!=="string" || !UUID.test(data.intentId) || typeof data.originPending!=="boolean")return signupUnavailable();
+      return {intentId:data.intentId,originPending:data.originPending};
+    }, async putReconsentCheckpoint(value:import("./signup-reconsent-checkpoint").SignupReconsentCheckpoint){
+      if(!signupEnabled(config))return signupUnavailable();const now=Date.now(),token=signSignupReconsent(value,config.stateSecret,now);
+      jar.set(SIGNUP_RECONSENT_COOKIE,token,secureCookieOptions(config.secureCookies,{maxAge:Math.ceil((value.checkpoint.expiresAt-now)/1000)}));
+    }} : {}),
     async putCheckpoint(value) {
       if (!signupEnabled(config)) return signupUnavailable();
       const now = Date.now(), token = signSignupCheckpoint(value, config.stateSecret, now);
@@ -64,7 +76,7 @@ export function createSignupConfirmationPorts(config: SupabaseAuthConfig, jar: A
       try { if (client) await client.auth.signOut({ scope: "local" }); }
       finally {
         const expired = secureCookieOptions(config.secureCookies, { maxAge: 0 });
-        for (const name of new Set([AUTH_COOKIE_NAME, SIGNUP_CHECKPOINT_COOKIE, ...jar.getAll().filter(cookie => authCookie(cookie.name)).map(cookie => cookie.name)])) jar.set(name, "", expired);
+        for (const name of new Set([AUTH_COOKIE_NAME, SIGNUP_CHECKPOINT_COOKIE, SIGNUP_RECONSENT_COOKIE, ...jar.getAll().filter(cookie => authCookie(cookie.name)).map(cookie => cookie.name)])) jar.set(name, "", expired);
       }
     },
   };
