@@ -92,12 +92,13 @@ test("drawer conserva o formulário ao trocar desktop por tela cheia mobile", as
   // The 180ms drawer entrance (layout Codex) must settle before geometry is read.
   await drawer.evaluate((element) => Promise.all(element.getAnimations().map((animation) => animation.finished)));
   const desktopBox = await drawer.boundingBox();
-  expect(desktopBox?.width).toBe(560);
-  expect(desktopBox?.x).toBe(720);
+  // Painel flutuante: 12 px de respiro em cima, embaixo e à direita.
+  expect(desktopBox).toMatchObject({ width: 560, x: 708, y: 12, height: 876 });
   await page.setViewportSize({ width: 320, height: 568 });
   await expect(field).toHaveValue("O mesmo formulário nos dois tamanhos");
   const mobileBox = await drawer.boundingBox();
-  expect(mobileBox).toMatchObject({ x: 0, y: 0, width: 320, height: 568 });
+  // No celular ocupa a largura toda e deixa 16 px livres no topo, com cantos superiores arredondados.
+  expect(mobileBox).toMatchObject({ x: 0, y: 16, width: 320, height: 552 });
   expect(await drawer.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
   await drawer.getByRole("button", { name: "Fechar", exact: true }).click();
   await page.getByRole("button", { name: "Abrir painel inferior", exact: true }).click();
@@ -198,3 +199,34 @@ for (const colorScheme of ["light", "dark"] as const) {
     await notice.screenshot({ path: `test-results/toast-${colorScheme}.png` });
   });
 }
+
+test("painéis têm dimensão por uso e só o corpo rola, mantendo cabeçalho e ações à vista", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/design-system");
+  await page.getByRole("button", { name: "Confirmar remoção", exact: true }).click();
+  const confirmation = page.getByRole("dialog", { name: "Remover exemplo?", exact: true });
+  await confirmation.evaluate((element) => Promise.all(element.getAnimations().map((animation) => animation.finished)));
+  // Confirmação estreita; o diálogo de edição mantém a largura padrão.
+  expect((await confirmation.boundingBox())?.width).toBe(420);
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Abrir diálogo", exact: true }).click();
+  const editor = page.getByRole("dialog", { name: "Editar exemplo", exact: true });
+  await editor.evaluate((element) => Promise.all(element.getAnimations().map((animation) => animation.finished)));
+  expect((await editor.boundingBox())?.width).toBe(600);
+  await page.keyboard.press("Escape");
+
+  // Em uma altura mínima o corpo rola sozinho; fechar e confirmar continuam alcançáveis.
+  await page.setViewportSize({ width: 390, height: 340 });
+  await page.getByRole("button", { name: "Abrir drawer", exact: true }).click();
+  const drawer = page.getByRole("dialog", { name: "Detalhes do exemplo", exact: true });
+  await drawer.evaluate((element) => Promise.all(element.getAnimations().map((animation) => animation.finished)));
+  const body = drawer.locator(".ui-dialog__body");
+  expect(await body.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);
+  expect(await drawer.evaluate((element) => element.scrollHeight <= element.clientHeight)).toBe(true);
+  await expect(drawer.getByRole("button", { name: "Fechar", exact: true })).toBeInViewport();
+  await expect(drawer.getByRole("button", { name: "Concluir leitura", exact: true })).toBeInViewport();
+  await body.evaluate((element) => { element.scrollTop = element.scrollHeight; });
+  await expect(drawer.getByRole("button", { name: "Concluir leitura", exact: true })).toBeInViewport();
+  await page.keyboard.press("Escape");
+  await expect(drawer).not.toBeVisible();
+});

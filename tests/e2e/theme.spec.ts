@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { themeToggle } from "./helpers/theme";
 
 // DS 2.1 canvas values: doc 14 and the approved prototype, not DS 1.0.
 const LIGHT_CANVAS = "rgb(245, 245, 242)";
@@ -7,8 +8,7 @@ const DARK_CANVAS = "rgb(13, 13, 12)";
 test("a barra do navegador acompanha a escolha explícita, independente do SO", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "light" });
   await page.goto("/");
-  const selector = page.getByRole("combobox", { name: "Tema", exact: true });
-  await selector.selectOption("dark");
+  await themeToggle(page).click();
   const themeColor = page.locator('meta[name="theme-color"]');
   await expect(themeColor).toHaveCount(1);
   await expect(themeColor).toHaveAttribute("content", "#0d0d0c");
@@ -19,6 +19,8 @@ test("a barra do navegador acompanha a escolha explícita, independente do SO", 
   await expect(page).toHaveURL(/\/design-system$/);
   await expect(themeColor).toHaveAttribute("content", "#0d0d0c");
   await page.emulateMedia({ colorScheme: "dark" });
+  // O design system mantém o seletor completo, inclusive Sistema.
+  const selector = page.getByRole("combobox", { name: "Tema", exact: true });
   await selector.selectOption("light");
   await expect(themeColor).toHaveAttribute("content", "#f5f5f2");
   await selector.selectOption("system");
@@ -28,16 +30,16 @@ test("a barra do navegador acompanha a escolha explícita, independente do SO", 
 test("a escolha de tema persiste depois de recarregar a página", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "light" });
   await page.goto("/");
-  const selector = page.getByRole("combobox", { name: "Tema", exact: true });
   await expect(page.locator("body")).toHaveCSS("background-color", LIGHT_CANVAS);
-  await selector.selectOption("dark");
+  await expect(themeToggle(page)).toHaveAccessibleName("Ativar tema escuro");
+  await themeToggle(page).click();
   await expect(page.locator("body")).toHaveCSS("background-color", DARK_CANVAS);
   await page.reload();
-  await expect(selector).toHaveValue("dark");
+  await expect(themeToggle(page)).toHaveAccessibleName("Ativar tema claro");
   await expect(page.locator("body")).toHaveCSS("background-color", DARK_CANVAS);
-  await selector.selectOption("light");
+  await themeToggle(page).click();
   await page.reload();
-  await expect(selector).toHaveValue("light");
+  await expect(themeToggle(page)).toHaveAccessibleName("Ativar tema escuro");
   await expect(page.locator("body")).toHaveCSS("background-color", LIGHT_CANVAS);
 });
 
@@ -55,13 +57,17 @@ test("Sistema acompanha mudanças do SO enquanto a página permanece aberta", as
 test("escolha explícita ignora o SO até voltar para Sistema", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "light" });
   await page.goto("/");
-  const selector = page.getByRole("combobox", { name: "Tema", exact: true });
-  await selector.selectOption("light");
+  // Dois cliques: escuro e de volta ao claro, agora como escolha explícita.
+  await themeToggle(page).click();
+  await themeToggle(page).click();
   await page.emulateMedia({ colorScheme: "dark" });
   await expect(page.locator("body")).toHaveCSS("background-color", LIGHT_CANVAS);
-  await selector.selectOption("dark");
+  await themeToggle(page).click();
   await page.emulateMedia({ colorScheme: "light" });
   await expect(page.locator("body")).toHaveCSS("background-color", DARK_CANVAS);
+  // Sistema só existe no seletor completo (design system, Configurações e login).
+  await page.goto("/design-system");
+  const selector = page.getByRole("combobox", { name: "Tema", exact: true });
   await selector.selectOption("system");
   await expect(page.locator("body")).toHaveCSS("background-color", LIGHT_CANVAS);
   await page.reload();
@@ -89,14 +95,13 @@ test("a preferência se propaga entre abas e sua remoção volta ao sistema", as
   const secondPage = await context.newPage();
   await secondPage.emulateMedia({ colorScheme: "light" });
   await secondPage.goto("/design-system");
-  const firstSelector = page.getByRole("combobox", { name: "Tema", exact: true });
   const secondSelector = secondPage.getByRole("combobox", { name: "Tema", exact: true });
-  await firstSelector.selectOption("dark");
+  await themeToggle(page).click();
   await expect(secondSelector).toHaveValue("dark");
   await expect(secondPage.locator("body")).toHaveCSS("background-color", DARK_CANVAS);
   await secondSelector.selectOption("light");
-  await expect(firstSelector).toHaveValue("light");
-  await firstSelector.selectOption("dark");
+  await expect(themeToggle(page)).toHaveAccessibleName("Ativar tema escuro");
+  await themeToggle(page).click();
   await expect(secondSelector).toHaveValue("dark");
   await page.evaluate(() => localStorage.removeItem("segundo-cerebro-theme"));
   await expect(secondSelector).toHaveValue("system");
@@ -113,13 +118,13 @@ test("armazenamento indisponível mantém a página e a troca de tema funcionand
     });
   });
   await page.goto("/");
-  const selector = page.getByRole("combobox", { name: "Tema", exact: true });
   await expect(page.locator("body")).toHaveCSS("background-color", DARK_CANVAS);
-  await selector.selectOption("light");
-  await expect(selector).toHaveValue("light");
+  await expect(themeToggle(page)).toHaveAccessibleName("Ativar tema claro");
+  await themeToggle(page).click();
+  await expect(themeToggle(page)).toHaveAccessibleName("Ativar tema escuro");
   await expect(page.locator("body")).toHaveCSS("background-color", LIGHT_CANVAS);
   await page.reload();
-  await expect(selector).toHaveValue("system");
+  await expect(themeToggle(page)).toHaveAccessibleName("Ativar tema claro");
   await expect(page.locator("body")).toHaveCSS("background-color", DARK_CANVAS);
   expect(errors).toEqual([]);
 });

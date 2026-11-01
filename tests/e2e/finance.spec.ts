@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { financePeriodTrigger, readFinancePeriod, selectFinancePeriod } from "./helpers/finance-period";
+import { chooseTheme } from "./helpers/theme";
 
 function section(page: Page) { return page.getByRole("region", { name: "Gestão financeira", exact: true }); }
 function visibleRows(page: Page, width: number) { return section(page).locator(width < 768 ? ".ui-data-table__cards > li" : ".ui-data-table tbody > tr"); }
@@ -117,7 +118,7 @@ test("SPEC-08: análise mensal acessível, máscara integral e dados sem pagina�
   const last = accumulated.getByRole("row").last();
   for (const value of ["30/09/2026", "8.000,00", "3.247,60", "4.752,40"]) await expect(last).toContainText(value);
   for (const theme of ["light", "dark"] as const) {
-    await page.getByLabel("Tema", { exact: true }).selectOption(theme);
+    await chooseTheme(page, theme);
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
     for (const width of [320, 390, 768, 1280]) {
       await page.setViewportSize({ width, height: 900 });
@@ -240,7 +241,7 @@ test("SPEC-08: período tem alvos de 44px e popup contido nos dois temas e largu
   await openFinance(page, "/financeiro?tab=lancamentos&month=2026-09");
   for (const theme of ["light", "dark"] as const) {
     await page.emulateMedia({ colorScheme: theme });
-    await page.getByLabel("Tema", { exact: true }).selectOption(theme);
+    await chooseTheme(page, theme);
     for (const width of [320, 390, 768, 1024, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       const controls = page.getByRole("group", { name: "Período financeiro", exact: true });

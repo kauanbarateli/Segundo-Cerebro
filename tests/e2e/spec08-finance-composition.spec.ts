@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { chooseTheme } from "./helpers/theme";
 
 const workspace = (page: Page) => page.getByRole("region", { name: "Gestão financeira", exact: true });
 async function open(page: Page) {
@@ -275,7 +276,7 @@ for (const theme of ["light", "dark"] as const) {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.emulateMedia({ colorScheme: theme });
     await open(page);
-    await page.getByLabel("Tema", { exact: true }).selectOption(theme);
+    await chooseTheme(page, theme);
     await page.getByRole("button", { name: "Detalhes do cartão Nubank", exact: true }).click();
     const face = page.getByRole("dialog", { name: "Nubank", exact: true }).getByLabel("Identificação do cartão", { exact: true });
     await expect(face).toBeVisible();
@@ -303,7 +304,7 @@ for (const theme of ["light", "dark"] as const) for (const width of [320, 390, 7
     await page.setViewportSize({ width, height: 900 });
     await page.emulateMedia({ reducedMotion: "reduce", colorScheme: theme });
     await open(page);
-    await page.getByLabel("Tema", { exact: true }).selectOption(theme);
+    await chooseTheme(page, theme);
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
     const main = workspace(page).locator(".finance-dashboard-main"), side = workspace(page).locator(".finance-dashboard-side");
     expect(await main.evaluate((element) => Boolean(element.compareDocumentPosition(element.nextElementSibling!) & Node.DOCUMENT_POSITION_FOLLOWING))).toBe(true);
