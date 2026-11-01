@@ -1,0 +1,67 @@
+name: Comparativo de foco no Chromium
+on:
+  push:
+    branches: [codex/front-b-focus-modes]
+    paths: [.github/workflows/front-b-feedback-focus-modes.yml]
+permissions:
+  contents: read
+jobs:
+  headed:
+    if: github.repository == 'kauanbarateli/Segundo-Cerebro'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:bc6ab0d6d44ff4826e4cb8c1e6d801e185bfc42bb0753f8e2a30efc70db054c7
+      options: --ipc=host
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {persist-credentials: false}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with: {node-version-file: .nvmrc}
+      - name: Preparar
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          npm ci
+          PLAYWRIGHT_BROWSERS_PATH=/ms-playwright node scripts/verification/check-ci-browser-runtime.mjs
+      - name: Testar Chromium com janela virtual
+        run: |
+          command -v xvfb-run
+          env -i PATH="$PATH" HOME="$RUNNER_TEMP" LANG=C.UTF-8 LC_ALL=C.UTF-8 TZ=UTC CI=true PLAYWRIGHT_BROWSERS_PATH=/ms-playwright FRONT_B_FOCUS_EXPECT_HEADED=1 xvfb-run -a node node_modules/playwright/cli.js test --config=playwright.feedback-headed.config.ts
+      - name: Guardar evidência sintética em falha
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: feedback-focus-headed-evidence
+          path: test-results/feedback-focus-headed
+          retention-days: 3
+          if-no-files-found: warn
+  new-headless:
+    if: github.repository == 'kauanbarateli/Segundo-Cerebro'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:bc6ab0d6d44ff4826e4cb8c1e6d801e185bfc42bb0753f8e2a30efc70db054c7
+      options: --ipc=host
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {persist-credentials: false}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with: {node-version-file: .nvmrc}
+      - name: Preparar
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          npm ci
+          PLAYWRIGHT_BROWSERS_PATH=/ms-playwright node scripts/verification/check-ci-browser-runtime.mjs
+      - name: Testar novo Chromium headless
+        run: |
+          env -i PATH="$PATH" HOME="$RUNNER_TEMP" LANG=C.UTF-8 LC_ALL=C.UTF-8 TZ=UTC CI=true PLAYWRIGHT_BROWSERS_PATH=/ms-playwright FRONT_B_FOCUS_EXPECT_NEW_HEADLESS=1 node node_modules/playwright/cli.js test --config=playwright.feedback-new-headless.config.ts
+      - name: Guardar evidência sintética em falha
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: feedback-focus-new-headless-evidence
+          path: test-results/feedback-focus-new-headless
+          retention-days: 3
+          if-no-files-found: warn
