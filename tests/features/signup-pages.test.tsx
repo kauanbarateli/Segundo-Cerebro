@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { signSignupCheckpoint } from "../../src/lib/auth/signup-checkpoint";
+import { createSignupEmailLink } from "../../src/lib/auth/signup-email-link";
 
 const fake = vi.hoisted(() => ({ available: vi.fn(), enabled: vi.fn(), getAll: vi.fn() }));
 const config = { mode: "supabase" as const, appOrigin: "https://app.example.invalid", supabaseUrl: "https://db.example.invalid", publishableKey: "sb_publishable_test", secretKey: "sb_secret_test", rateLimitSecret: "r".repeat(32), stateSecret: "s".repeat(32), secureCookies: true };
@@ -29,12 +30,21 @@ describe("páginas preparadas de cadastro", () => {
     expect(resend).toContain('value="signup"'); expect(resend).toContain('value="continuation"');
   });
   it("apresenta POST explícito sem incluir o token no HTML e protege sessão existente", async () => {
-    fake.getAll.mockReturnValue([{ name: "sc-signup-continuation-otp", value: "a".repeat(64) }]);
-    const html = renderToStaticMarkup(await ConfirmPage({ searchParams: Promise.resolve({ flow: "continuation" }) }));
+    const proof = createSignupEmailLink("continuation", "a".repeat(64), config.stateSecret, Date.now());
+    fake.getAll.mockReturnValue([{ name: "sc-signup-continuation-otp", value: proof.cookie }]);
+    const html = renderToStaticMarkup(await ConfirmPage({ searchParams: Promise.resolve({ flow: "continuation", nonce: proof.nonce }) }));
     expect(html).toContain('action="/auth/continuar-cadastro"'); expect(html).not.toContain("a".repeat(64));
-    fake.getAll.mockReturnValue([{ name: "sc-signup-continuation-otp", value: "a".repeat(64) }, { name: "sc-auth", value: "sessao" }]);
-    const existing = renderToStaticMarkup(await ConfirmPage({ searchParams: Promise.resolve({ flow: "continuation" }) }));
+    expect(html).not.toContain(proof.cookie); expect(html).toContain(`value="${proof.nonce}"`);
+    fake.getAll.mockReturnValue([{ name: "sc-signup-continuation-otp", value: proof.cookie }, { name: "sc-auth", value: "sessao" }]);
+    const existing = renderToStaticMarkup(await ConfirmPage({ searchParams: Promise.resolve({ flow: "continuation", nonce: proof.nonce }) }));
     expect(existing).toContain('action="/auth/limpar-cadastro"'); expect(existing).not.toContain('action="/auth/continuar-cadastro"');
+    const other = renderToStaticMarkup(await ConfirmPage({ searchParams: Promise.resolve({ flow: "continuation", nonce: "z".repeat(43) }) }));
+    expect(other).not.toContain('action="/auth/limpar-cadastro"'); expect(other).not.toContain('action="/auth/continuar-cadastro"');
+  });
+  it("não oferece reenvio quando confirmação permanece indisponível", async () => {
+    fake.available.mockReturnValue(false);
+    const html = renderToStaticMarkup(await ConfirmPage({ searchParams: Promise.resolve({}) }));
+    expect(html).toContain("temporariamente indisponível"); expect(html).not.toContain("/cadastro/reenviar");
   });
   it("só permite definir senha com checkpoint válido e oferece retomada após troca", async () => {
     const absent = renderToStaticMarkup(await PasswordPage({ searchParams: Promise.resolve({}) }));
