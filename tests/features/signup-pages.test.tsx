@@ -49,6 +49,9 @@ describe("páginas preparadas de cadastro", () => {
   it("só permite definir senha com checkpoint válido e oferece retomada após troca", async () => {
     const absent = renderToStaticMarkup(await PasswordPage({ searchParams: Promise.resolve({}) }));
     expect(absent).not.toContain('action="/auth/finalizar-cadastro"'); expect(absent).toContain("/cadastro/reenviar");
+    const pendingWithoutCheckpoint = renderToStaticMarkup(await PasswordPage({ searchParams: Promise.resolve({ status: "pending-reconciliation" }) }));
+    expect(pendingWithoutCheckpoint).toContain('href="mailto:suporte@segundocerebroapp.com.br"');
+    expect(pendingWithoutCheckpoint).not.toContain("/cadastro/reenviar");
     const now = Date.now(), token = signSignupCheckpoint({ userId: "10000000-0000-4000-8000-000000000001", sessionId: "20000000-0000-4000-8000-000000000001", intentId: "30000000-0000-4000-8000-000000000001", issuedAt: now, expiresAt: now + 600_000, passwordConfirmed: true, originPending: false }, config.stateSecret, now);
     fake.getAll.mockReturnValue([{ name: "sc-flow-signup-confirmation", value: token }]);
     const resume = renderToStaticMarkup(await PasswordPage({ searchParams: Promise.resolve({}) }));
@@ -57,6 +60,9 @@ describe("páginas preparadas de cadastro", () => {
     fake.getAll.mockReturnValue([{ name: "sc-flow-signup-confirmation", value: pendingOrigin }]);
     const origin = renderToStaticMarkup(await PasswordPage({ searchParams: Promise.resolve({}) }));
     expect(origin).toContain('name="acceptedOrigin"'); expect(origin).not.toContain('name="acceptedOrigin" type="checkbox" value="yes" checked');
+    const pendingOriginPage = renderToStaticMarkup(await PasswordPage({ searchParams: Promise.resolve({ status: "pending-reconciliation" }) }));
+    expect(pendingOriginPage).toContain('href="mailto:suporte@segundocerebroapp.com.br"');
+    expect(pendingOriginPage).toContain("solicitar a retirada do consentimento"); expect(pendingOriginPage).toContain('name="acceptedOrigin"');
   });
   it("mostra indisponibilidade sem oferecer reenvio quando o gate está fechado", async () => {
     fake.enabled.mockReturnValue(false);
