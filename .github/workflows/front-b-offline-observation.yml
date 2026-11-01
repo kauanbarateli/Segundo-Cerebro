@@ -33,6 +33,9 @@ jobs:
       - name: Diagnóstico sintético da pré-condição 028
         run: |
           env -i PATH="$PATH" HOME="$RUNNER_TEMP" LANG=C.UTF-8 LC_ALL=C.UTF-8 TZ=UTC SC_FRONT_B_028_DIAGNOSTIC=1 node scripts/verification/front-b-offline-observation/028-precondition-diagnostic.mjs --execute
+      - name: Diagnóstico sintético de conta legada
+        run: |
+          env -i PATH="$PATH" HOME="$RUNNER_TEMP" LANG=C.UTF-8 LC_ALL=C.UTF-8 TZ=UTC SC_FRONT_B_LEGACY_DIAGNOSTIC=1 node scripts/verification/front-b-offline-observation/028-legacy-account-diagnostic.mjs --execute
 
       - name: Observação sintética sem rede
         run: |
