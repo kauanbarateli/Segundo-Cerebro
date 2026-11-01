@@ -62,7 +62,7 @@ REVOKE ALL ON FUNCTION app_private.draft_completion_context(uuid,uuid,uuid,text,
 
 CREATE FUNCTION app_private.draft_reserve_completion(p_user uuid,p_session uuid,p_intent uuid,p_subject_hash text,p_request uuid,p_terms text,p_privacy text,p_accept_origin boolean,p_origin_version text)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
-DECLARE i app_private.signup_intents; v_generation uuid; v_effective boolean;
+DECLARE i app_private.signup_intents; f app_private.signup_completion_fences_draft; v_generation uuid; v_effective boolean;
 BEGIN
  IF p_request IS NULL OR p_terms IS NULL OR p_privacy IS NULL OR p_accept_origin IS NULL THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
  PERFORM app_private.draft_completion_context(p_user,p_session,p_intent,p_subject_hash,true,true);
@@ -74,7 +74,15 @@ BEGIN
  END IF;
  -- A losing request cannot alter the winning decision here. Withdrawal is a
  -- separate explicitly authorized monotonic operation below.
- IF EXISTS(SELECT 1 FROM app_private.signup_completion_fences_draft WHERE user_id=p_user) THEN RETURN pg_catalog.jsonb_build_object('status','pending'); END IF;
+ SELECT * INTO f FROM app_private.signup_completion_fences_draft WHERE user_id=p_user FOR UPDATE;
+ IF FOUND THEN
+  -- Only a committed password acknowledgement owned by this verified session
+  -- can resume. The finish function rechecks the live proof and consent.
+  IF f.intent_id=p_intent AND f.owner_session_id=p_session AND f.phase='password_acknowledged' THEN
+   RETURN pg_catalog.jsonb_build_object('status','acknowledged','requestId',f.request_id,'generation',f.generation);
+  END IF;
+  RETURN pg_catalog.jsonb_build_object('status','pending');
+ END IF;
  IF NOT v_effective AND i.origin IS NOT NULL THEN
   UPDATE app_private.signup_intents SET origin=NULL,origin_consent_version=NULL,origin_consented_at=NULL WHERE id=p_intent;
  END IF;

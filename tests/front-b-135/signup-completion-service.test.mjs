@@ -13,7 +13,7 @@ function fixture({provider=async()=> 'updated',enabled=true,markFail=false,ackFa
   reservationEnabled:()=>enabled,now:()=>2000,readCheckpoint:()=>checkpoint,readVerifiedIdentity:async()=>{identityCalls++;return identity;},subjectHash:()=> 'a'.repeat(64),limit:async()=>({allowed:true}),
   findBoundIntent:async()=>({intentId,termsVersion:'v1',privacyVersion:'v2',state:'bound',originPending:true}),
   newRequestId:()=>`50000000-0000-4000-8000-${String(++request).padStart(12,'0')}`,
-  async reserveCompletion(value){if(state!=='empty')return {status:'pending'};state='reserved';owner=value.requestId;reservationInput=value;return {status:'acquired',requestId:owner,generation};},
+  async reserveCompletion(value){if(state==='password_acknowledged'&&value.userId===userId&&value.sessionId===sessionId&&value.intentId===intentId)return {status:'acknowledged',requestId:owner,generation};if(state!=='empty')return {status:'pending'};state='reserved';owner=value.requestId;reservationInput=value;return {status:'acquired',requestId:owner,generation};},
   async startCompletion(f){if(state!=='reserved'||f.requestId!==owner||f.generation!==generation)return false;state='auth_in_flight';return true;},
   async updatePassword(){authCalls++;return provider();},
   async markUncertain(){if(markFail)throw Error('lost');if(state==='auth_in_flight')state='uncertain';},
@@ -72,7 +72,23 @@ test('lost ack or finish response after commit never triggers another Auth call'
  for(const name of ['acknowledgePassword','finishCompletion']){
   const f=fixture(),original=f.ports[name];f.ports[name]=async fence=>{await original(fence);throw Error('response lost');};
   assert.equal((await completePublicSignup(f.ports,input,legal)).status,'pending-reconciliation');
-  assert.equal((await completePublicSignup(f.ports,input,legal)).status,name==='finishCompletion'?'completed':'pending-reconciliation');assert.equal(f.calls,1);
+  assert.equal((await completePublicSignup(f.ports,input,legal)).status,'completed');assert.equal(f.calls,1);
+ }
+});
+test('acknowledged retry can withdraw origin and finish without calling Auth again',async()=>{
+ const f=fixture(),ack=f.ports.acknowledgePassword;let lost=true;
+ f.ports.acknowledgePassword=async fence=>{const result=await ack(fence);if(lost){lost=false;throw Error('response lost');}return result;};
+ assert.equal((await completePublicSignup(f.ports,input,legal)).status,'pending-reconciliation');assert.equal(f.state,'password_acknowledged');
+ assert.equal((await completePublicSignup(f.ports,{...input,acceptedOrigin:false},legal)).status,'completed');
+ assert.equal(f.withdrawn,true);assert.equal(f.originRecorded,false);assert.equal(f.calls,1);
+});
+test('acknowledged retry still requires the same session and current legal consent',async()=>{
+ for(const changed of ['session','legal']){
+  const f=fixture(),ack=f.ports.acknowledgePassword;f.ports.acknowledgePassword=async fence=>{await ack(fence);throw Error('response lost');};
+  assert.equal((await completePublicSignup(f.ports,input,legal)).status,'pending-reconciliation');
+  if(changed==='session')f.ports.readVerifiedIdentity=async()=>({...identity,sessionId:'20000000-0000-4000-8000-000000000002'});
+  const result=await completePublicSignup(f.ports,changed==='legal'?{...input,termsVersion:'old'}:input,legal);
+  assert.equal(result.status,changed==='session'?'needs-verification':'invalid');assert.equal(f.state,'password_acknowledged');assert.equal(f.calls,1);
  }
 });
 test('session rotation after external success stays pending and never retries Auth',async()=>{

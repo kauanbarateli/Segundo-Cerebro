@@ -59,13 +59,38 @@ try {
   }
   current = "guarded signup, feedback and metrics candidate (rollback only)";
   const candidate = await readFile(resolve(root, "scripts/verification/front-b-135-draft/admission-feedback-metrics-atomic.sql.txt"));
-  if (createHash("sha256").update(candidate).digest("hex") !== "1318cc5a656153777040885d85ea249b67637e1e5225b08ee2bcaf3fd4a4f729") throw new Error("Combined candidate source differs from reviewed bytes.");
+  if (createHash("sha256").update(candidate).digest("hex") !== "aca4ef373aec1ad3c2ddce859d412a5454e1cb06f457e395fdab5fbada6cacff") throw new Error("Combined candidate source differs from reviewed bytes.");
   const source = candidate.toString("utf8").replaceAll("\r\n", "\n"), guard = /^DO \$scratch_guard\$ BEGIN RAISE EXCEPTION 'UNREVIEWED SCRATCH SQL: DO NOT APPLY'; END \$scratch_guard\$;$/gm;
   const begin = /^BEGIN;$/gm, commit = /^COMMIT;$/gm;
   if ([guard, begin, commit].some(pattern => [...source.matchAll(pattern)].length !== 1)) throw new Error("Combined candidate transaction boundary refused.");
   const before = await db.query("select pg_get_functiondef('app_private.session_active(uuid,uuid)'::regprocedure) as identity, pg_get_constraintdef((select oid from pg_constraint where conrelid='public.domain_events'::regclass and conname='domain_events_entity_type_check')) as event_constraint");
-  const inMemory = source.replace(guard, "").replace(commit, "ROLLBACK;");
-  await db.exec(inMemory);
+  const inMemory = source.replace(guard, "").replace(commit, "");
+  try {
+    await db.exec(inMemory);
+    const user="10000000-0000-4000-8000-000000000001", session="20000000-0000-4000-8000-000000000001", another="20000000-0000-4000-8000-000000000002", intent="30000000-0000-4000-8000-000000000001", request="40000000-0000-4000-8000-000000000001", retry="40000000-0000-4000-8000-000000000002", hash="a".repeat(64);
+    await db.query("insert into auth.users(id,email,email_confirmed_at) values($1,'synthetic@example.invalid',now())",[user]);
+    await db.query("insert into auth.sessions(id,user_id) values($1,$2),($3,$2)",[session,user,another]);
+    // The identity and admission triggers provision these rows in the fixture.
+    const provisioned=(await db.query("select a.origin,a.state,m.status,m.must_change_password from app_private.user_admission a join public.user_moderation m on m.user_id=a.user_id where a.user_id=$1",[user])).rows[0];
+    if(provisioned?.origin!=="unclassified" || provisioned.state!=="pending" || provisioned.status!=="active" || provisioned.must_change_password!==false)throw Error("Synthetic identity was not provisioned as expected.");
+    await db.exec("insert into app_private.signup_settings(singleton,enabled) values(true,true)");
+    await db.query("insert into app_private.signup_intents(id,user_id,subject_hash,state,terms_version,privacy_version,expires_at,origin,origin_consent_version,origin_consented_at) values($1,$2,$3,'bound','v1','v2',now()+interval '1 hour','{\"utm_source\":\"synthetic\"}'::jsonb,'signup-origin-v1',now())",[intent,user,hash]);
+    const reserve=(s,r,allow,version)=>db.query("select public.signup_fence_reserve($1,$2,$3,$4,$5,'v1','v2',$6,$7) as result",[user,s,intent,hash,r,allow,version]);
+    const first=(await reserve(session,request,true,"signup-origin-v1")).rows[0].result;
+    if(first?.status!=="acquired" || first.requestId!==request)throw Error("Reservation failed.");
+    if((await reserve(session,retry,true,"signup-origin-v1")).rows[0].result?.status!=="pending")throw Error("Reserved fence resumed.");
+    const args=[user,session,intent,hash,request,first.generation];
+    if((await db.query("select public.signup_fence_start($1,$2,$3,$4,$5,$6) as ok",args)).rows[0].ok!==true)throw Error("Fence start failed.");
+    if((await reserve(session,retry,true,"signup-origin-v1")).rows[0].result?.status!=="pending")throw Error("In-flight fence resumed.");
+    if((await db.query("select public.signup_fence_ack($1,$2,$3,$4,$5,$6) as ok",args)).rows[0].ok!==true)throw Error("Acknowledgement failed.");
+    if((await reserve(another,retry,true,"signup-origin-v1")).rows[0].result?.status!=="pending")throw Error("Different session resumed.");
+    await db.query("select public.signup_fence_withdraw($1,$2)",[user,session]);
+    const recovered=(await reserve(session,retry,false,null)).rows[0].result;
+    if(recovered?.status!=="acknowledged" || recovered.requestId!==request || recovered.generation!==first.generation)throw Error("Acknowledged fence was not recovered.");
+    if((await db.query("select public.signup_fence_finish($1,$2,$3,$4,$5,$6,'v1','v2','signup-origin-v1') as ok",args)).rows[0].ok!==true)throw Error("Resume finish failed.");
+    const result=(await db.query("select state,(select count(*)::int from app_private.signup_origins where user_id=$1) as origins from app_private.user_admission where user_id=$1",[user])).rows[0];
+    if(result?.state!=="admitted" || result.origins!==0)throw Error("Resume did not preserve origin withdrawal.");
+  } finally { await db.exec("ROLLBACK;"); }
   const after = await db.query("select pg_get_functiondef('app_private.session_active(uuid,uuid)'::regprocedure) as identity, pg_get_constraintdef((select oid from pg_constraint where conrelid='public.domain_events'::regclass and conname='domain_events_entity_type_check')) as event_constraint, to_regclass('app_private.user_admission') is null as admission_absent, to_regclass('app_private.signup_completion_fences_draft') is null as fence_absent, to_regprocedure('public.signup_fence_reserve(uuid,uuid,uuid,text,uuid,text,text,boolean,text)') is null as wrapper_absent, to_regclass('app_private.feedback_requests') is null as feedback_absent, to_regclass('app_private.feedback_barriers_draft') is null as feedback_barrier_absent, to_regprocedure('public.feedback_barrier_submit(uuid,uuid,uuid,text,text)') is null as feedback_wrapper_absent, to_regprocedure('public.signup_metrics(uuid,uuid,date,date,text,text)') is null as metrics_absent");
   if (after.rows.length !== 1 || before.rows.length !== 1 || typeof before.rows[0].identity !== "string" || typeof before.rows[0].event_constraint !== "string" || before.rows[0].identity !== after.rows[0].identity || before.rows[0].event_constraint !== after.rows[0].event_constraint || after.rows[0].admission_absent !== true || after.rows[0].fence_absent !== true || after.rows[0].wrapper_absent !== true || after.rows[0].feedback_absent !== true || after.rows[0].feedback_barrier_absent !== true || after.rows[0].feedback_wrapper_absent !== true || after.rows[0].metrics_absent !== true) throw new Error("Combined candidate rollback was not confirmed.");
   process.stdout.write("PASS guarded signup, feedback and metrics candidate in disposable memory, rolled back; no Auth or concurrency proof\n");

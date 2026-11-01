@@ -36,10 +36,11 @@ export interface SignupCompletionPorts {
 export type SignupCompletionResult = { status: "completed" | "invalid" | "password-invalid" | "rate-limited" | "needs-verification" | "pending-reconciliation" | "unavailable" };
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const pending=():SignupCompletionResult=>({status:"pending-reconciliation"});
-function acquired(value:unknown,requestId:string):string|null {
+function reservation(value:unknown,requestId:string):{status:"acquired"|"acknowledged";requestId:string;generation:string}|null {
   if (!value || typeof value!=="object" || Array.isArray(value)) return null;
   const result=value as Record<string,unknown>;
-  return Object.keys(result).sort().join(",")==="generation,requestId,status" && result.status==="acquired" && result.requestId===requestId && typeof result.generation==="string" && UUID.test(result.generation) ? result.generation : null;
+  if (Object.keys(result).sort().join(",")!=="generation,requestId,status" || (result.status!=="acquired" && result.status!=="acknowledged") || typeof result.requestId!=="string" || !UUID.test(result.requestId) || (result.status==="acquired" && result.requestId!==requestId) || typeof result.generation!=="string" || !UUID.test(result.generation)) return null;
+  return {status:result.status,requestId:result.requestId,generation:result.generation};
 }
 
 /** Explicit POST. This service is not safe to enable without the documented gates. */
@@ -79,10 +80,18 @@ export async function completePublicSignup(ports: SignupCompletionPorts, input: 
     const acceptOrigin=intent.originPending && checkpoint.originPending && input.acceptedOrigin===true;
     const requestId=ports.newRequestId();if(typeof requestId!=="string" || !UUID.test(requestId)) return {status:"unavailable"};
     const scope={userId:identity.userId,sessionId:identity.sessionId,intentId:intent.intentId,subjectHash:hash,requestId};
-    let generation:string|null;
-    try {generation=acquired(await ports.reserveCompletion({...scope,terms:intent.termsVersion,privacy:intent.privacyVersion,acceptOrigin,originVersion:acceptOrigin?SIGNUP_ORIGIN_CONSENT_VERSION:null}),requestId);} catch {return pending();}
-    if(!generation)return pending();
-    const fence:CompletionFence={...scope,generation};
+    let result:ReturnType<typeof reservation>;
+    try {result=reservation(await ports.reserveCompletion({...scope,terms:intent.termsVersion,privacy:intent.privacyVersion,acceptOrigin,originVersion:acceptOrigin?SIGNUP_ORIGIN_CONSENT_VERSION:null}),requestId);} catch {return pending();}
+    if(!result)return pending();
+    const fence:CompletionFence={...scope,requestId:result.requestId,generation:result.generation};
+    // Only a durable acknowledgement for this same session can resume. It
+    // already contains proof of the original provider response; never call Auth.
+    if(result.status==="acknowledged") {
+      try {
+        if(await ports.finishCompletion(fence,{terms:current.terms,privacy:current.privacy,originVersion:SIGNUP_ORIGIN_CONSENT_VERSION})!==true)return pending();
+        await ports.clearCheckpoint();return {status:"completed"};
+      } catch {return pending();}
+    }
     try {if(await ports.startCompletion(fence)!==true)return pending();}catch{return pending();}
     const uncertain=async()=>{try{await ports.markUncertain(fence);}catch{/* auth_in_flight remains fenced */}return pending();};
     let outcome:"updated"|"rejected"|"unknown";

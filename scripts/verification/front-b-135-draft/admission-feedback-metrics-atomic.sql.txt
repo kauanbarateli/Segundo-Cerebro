@@ -3,7 +3,7 @@
 BEGIN;
 DO $scratch_guard$ BEGIN RAISE EXCEPTION 'UNREVIEWED SCRATCH SQL: DO NOT APPLY'; END $scratch_guard$;
 
--- ADMISSION SOURCE SHA256 bcf4da212db7fc310df9b72df252fab226b6cde6ea9c2b1f3715740f73c151fd
+-- ADMISSION SOURCE SHA256 05e23676647891da04db4f1c528b6f1429f870ea43b668735c2e784d303e75d1
 
 -- BEGIN REVIEWED COMPONENT admission (sha256 7f74cad88fa6e4bff01dd7bcf37e3de5eb94c581f6e11ade372e8c7e82b1946c)
 -- DRAFT ONLY. No public signup, promotion, remote application or release is authorized.
@@ -456,7 +456,7 @@ language sql stable security definer set search_path='' as $$
 $$;
 -- END REVIEWED COMPONENT admission
 
--- BEGIN REVIEWED COMPONENT reservation (sha256 98ee128612c8320bfac98777a12d4b991d6b80315063039be1600b2474837d22)
+-- BEGIN PROPOSED COMPONENT reservation (sha256 636cf99c36b0b5f8dc7b715bf84e952eab4dc596daf25d241731cc8759a4e0bd)
 -- UNREVIEWED SCRATCH CANDIDATE. Not a migration. Never apply to a hosted database.
 -- The diagnostic harness removes only this exact guard in an in-memory fixture.
 
@@ -521,7 +521,7 @@ REVOKE ALL ON FUNCTION app_private.draft_completion_context(uuid,uuid,uuid,text,
 
 CREATE FUNCTION app_private.draft_reserve_completion(p_user uuid,p_session uuid,p_intent uuid,p_subject_hash text,p_request uuid,p_terms text,p_privacy text,p_accept_origin boolean,p_origin_version text)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
-DECLARE i app_private.signup_intents; v_generation uuid; v_effective boolean;
+DECLARE i app_private.signup_intents; f app_private.signup_completion_fences_draft; v_generation uuid; v_effective boolean;
 BEGIN
  IF p_request IS NULL OR p_terms IS NULL OR p_privacy IS NULL OR p_accept_origin IS NULL THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
  PERFORM app_private.draft_completion_context(p_user,p_session,p_intent,p_subject_hash,true,true);
@@ -533,7 +533,15 @@ BEGIN
  END IF;
  -- A losing request cannot alter the winning decision here. Withdrawal is a
  -- separate explicitly authorized monotonic operation below.
- IF EXISTS(SELECT 1 FROM app_private.signup_completion_fences_draft WHERE user_id=p_user) THEN RETURN pg_catalog.jsonb_build_object('status','pending'); END IF;
+ SELECT * INTO f FROM app_private.signup_completion_fences_draft WHERE user_id=p_user FOR UPDATE;
+ IF FOUND THEN
+  -- Only a committed password acknowledgement owned by this verified session
+  -- can resume. The finish function rechecks the live proof and consent.
+  IF f.intent_id=p_intent AND f.owner_session_id=p_session AND f.phase='password_acknowledged' THEN
+   RETURN pg_catalog.jsonb_build_object('status','acknowledged','requestId',f.request_id,'generation',f.generation);
+  END IF;
+  RETURN pg_catalog.jsonb_build_object('status','pending');
+ END IF;
  IF NOT v_effective AND i.origin IS NOT NULL THEN
   UPDATE app_private.signup_intents SET origin=NULL,origin_consent_version=NULL,origin_consented_at=NULL WHERE id=p_intent;
  END IF;
@@ -589,7 +597,7 @@ END $$;
 REVOKE ALL ON FUNCTION app_private.draft_reserve_completion(uuid,uuid,uuid,text,uuid,text,text,boolean,text),app_private.draft_start_completion(uuid,uuid,uuid,text,uuid,uuid),app_private.draft_mark_uncertain(uuid,uuid,uuid,text,uuid,uuid),app_private.draft_ack_completion(uuid,uuid,uuid,text,uuid,uuid),app_private.draft_withdraw_pending_origin(uuid,uuid,uuid,text) FROM PUBLIC,anon,authenticated,service_role;
 -- Private functions only: no public wrappers are exposed in this draft.
 GRANT EXECUTE ON FUNCTION app_private.draft_reserve_completion(uuid,uuid,uuid,text,uuid,text,text,boolean,text),app_private.draft_start_completion(uuid,uuid,uuid,text,uuid,uuid),app_private.draft_mark_uncertain(uuid,uuid,uuid,text,uuid,uuid),app_private.draft_ack_completion(uuid,uuid,uuid,text,uuid,uuid),app_private.draft_withdraw_pending_origin(uuid,uuid,uuid,text) TO service_role;
--- END REVIEWED COMPONENT reservation
+-- END PROPOSED COMPONENT reservation
 
 -- BEGIN REVIEWED COMPONENT transactional (sha256 6009cee4b32db17c1504e4019f202f732b523bf331dc6ed71229cfaeeafcda05)
 -- UNREVIEWED SCRATCH ONLY. Not a migration. Do not apply on any persistent DB.

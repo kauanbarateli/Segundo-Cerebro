@@ -57,4 +57,13 @@ describe("adaptador candidato de conclusão de cadastro", () => {
     expect(await completePublicSignup(createSignupCompletionPorts(config, jar), input, legal)).toEqual({ status: "pending-reconciliation" });
     expect(mocks.updateUser).not.toHaveBeenCalled();
   });
+  it("retoma somente uma confirmação prévia sem chamar Auth outra vez", async () => {
+    const previousRequest = "50000000-0000-4000-8000-000000000001";
+    mocks.fence.mockImplementation(async (_config, name) => name === "signup_fence_confirm" ? false : name === "signup_fence_reserve" ? { status: "acknowledged", requestId: previousRequest, generation } : name === "signup_fence_finish");
+    const { jar } = cookies();
+    expect(await completePublicSignup(createSignupCompletionPorts(config, jar), input, legal)).toEqual({ status: "completed" });
+    expect(mocks.fence.mock.calls.map(call => call[1])).toEqual(["signup_fence_confirm", "signup_fence_reserve", "signup_fence_finish"]);
+    expect(mocks.fence.mock.calls.at(-1)?.[2]).toMatchObject({ p_request: previousRequest, p_generation: generation, p_session: sessionId });
+    expect(mocks.updateUser).not.toHaveBeenCalled();
+  });
 });
