@@ -14,7 +14,9 @@ const item = { id, category: "suggestion", text: historyText, status: "received"
 const history = { ok: true, result: { items: [item], next: null } };
 const ack = (body: Payload) => ({ ok: true, result: { status: "submitted", clientId: body.clientId, feedbackId: id } });
 let bundle: string;
-test.use({ serviceWorkers: "block" });
+// This scenario needs actual focus/visibility transitions; Chromium headless shell does not supply them.
+// The Chromium channel uses the full browser in headless mode and also supports headed CI.
+test.use({ serviceWorkers: "block", channel: "chromium" });
 
 test.beforeEach(async ({}, info) => {
   // The headed diagnostic must not silently run a headless project.
