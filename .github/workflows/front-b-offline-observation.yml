@@ -1,0 +1,54 @@
+name: Observação PostgreSQL 17 isolada da Frente B
+
+on:
+  push:
+    branches:
+      - codex/front-b-observacao-pg17
+    paths:
+      - '.github/workflows/front-b-offline-observation.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: front-b-offline-pg17-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  offline-observation:
+    if: github.repository == 'kauanbarateli/Segundo-Cerebro'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .nvmrc
+      - name: Dependências fixadas
+        run: npm ci
+      - name: Contratos puros
+        run: node --test tests/scripts/front-b-offline-observation.test.mjs tests/scripts/front-b-offline-deviations.test.mjs
+      # Diagnostic evidence only; never a migration release gate.
+      - name: Diagnóstico sintético da pré-condição 028
+        run: |
+          env -i PATH="$PATH" HOME="$RUNNER_TEMP" LANG=C.UTF-8 LC_ALL=C.UTF-8 TZ=UTC SC_FRONT_B_028_DIAGNOSTIC=1 node scripts/verification/front-b-offline-observation/028-precondition-diagnostic.mjs --execute
+      - name: Diagnóstico sintético de conta legada
+        run: |
+          env -i PATH="$PATH" HOME="$RUNNER_TEMP" LANG=C.UTF-8 LC_ALL=C.UTF-8 TZ=UTC SC_FRONT_B_LEGACY_DIAGNOSTIC=1 node scripts/verification/front-b-offline-observation/028-legacy-account-diagnostic.mjs --execute
+
+      - name: Observação sintética sem rede
+        run: |
+          env -i \
+            PATH="$PATH" \
+            RUNNER_TEMP="$RUNNER_TEMP" \
+            GITHUB_SHA="$GITHUB_SHA" \
+            LANG="C.UTF-8" \
+            LC_ALL="C.UTF-8" \
+            TZ="UTC" \
+            CI="true" \
+            GITHUB_ACTIONS="true" \
+            SC_AUTH_LOCAL_CI_RUN="1" \
+            SC_FRONT_B_OFFLINE_OBSERVATION="1" \
+            node scripts/verification/front-b-offline-observation/offline-runner.mjs --execute

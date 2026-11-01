@@ -40,6 +40,7 @@
       "codex/b07-retencao-origem": false,
       "codex/b08-integracao-frentes": false,
       "codex/frente-b-migrations-locais": false,
+      "codex/front-b-observacao-pg17": false,
       "codex/reconciliacao-banco-20261031": false,
       "codex/fix-auditoria-173": false
     }
