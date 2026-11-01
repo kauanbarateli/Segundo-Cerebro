@@ -1,5 +1,7 @@
 # Qualificação de catálogo e job em memória — não operacional
 
+A adaptação para o prune coordenado ainda não foi executada; os resultados históricos abaixo não a comprovam.
+
 `qualification-memory.test.mjs` cria **exclusivamente** `new PGlite('memory://')`, confirma a propriedade da instância e não recebe parâmetros para escolher banco, URL, credenciais ou destino. O diretório de trabalho deve ser a raiz do checkout, usada somente para ler arquivos locais com SHA-256 fixo e carregar dependências instaladas. Não abre conexão Supabase, não cria job real e não executa o registro protegido nem remove seu guard. O script lê e confere esse guard e o rollback. A definição de `signup_prune` da candidata fixada é instalada e invocada somente num banco **em memória**, sobre dados sintéticos; tabelas cron e histórico são simulados.
 
 Da raiz do repositório, depois de instalar as dependências já fixadas:
@@ -18,6 +20,6 @@ O próprio teste prova que nomes `current_user='postgres'` e `current_database()
 
 Antes de uma eventual qualificação hospedada, uma ferramenta separada, revisada e autorizada deve obter por API de gerenciamento autenticada os metadados do projeto e de conexão, comparar o `project_ref` explicitamente aprovado, associar a sessão SQL ao endpoint obtido via TLS validado e tratar de forma específica poolers/nomes compartilhados. A prova desse vínculo e do controle de identidade é **pendente**: se não for possível demonstrá-lo, interromper. Não registrar tokens, strings de conexão ou dados pessoais. Em seguida, por transação somente leitura na conexão identificada, revisar ledger/catálogos, PT409, função/ACLs, transitividade de papéis, job e estado de observabilidade. Verificar permissões do leitor e concorrência de DDL; uma leitura pontual não bloqueia alterações privilegiadas nem prova que a função posterior será a mesma.
 
-Registro inativo, verificação pós-commit, ativação e execução são atos distintos com gates próprios. O conflito de `signup_prune` com a cerca de conclusão/expiração descrito no README principal permanece um bloqueio de integração. A função fixada aqui é a antiga e **não** foi qualificada para executar junto da cerca. Não instalar jobs, aplicar SQL ou abrir cadastro com base neste teste.
+Registro inativo, verificação pós-commit, ativação e execução são atos distintos com gates próprios. O conflito de `signup_prune` com a cerca de conclusão/expiração descrito no README principal permanece um bloqueio de integração. O teste foi adaptado ao prune coordenado guardado, mas essa versão ainda não foi executada nem qualificada para a cerca. Não instalar jobs, aplicar SQL ou abrir cadastro com base neste teste.
 
 O job em cinco minutos e a exclusão em lotes não garantem remoção pontual ao fim de 12 meses; existência de sucesso no histórico não demonstra que foram removidas as linhas elegíveis. `DELETE` não prova apagamento imediato em versões MVCC, WAL ou backups. Validar política e alertas antes de qualquer liberação.

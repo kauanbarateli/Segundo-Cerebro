@@ -21,7 +21,7 @@ begin
   and p.prosecdef and not p.proisstrict and not p.proretset and not p.proleakproof
   and p.provolatile='v' and p.proparallel='u' and l.lanname='plpgsql'
   and p.proconfig=ARRAY['search_path=""']::text[]
-  and pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(pg_catalog.replace(p.prosrc,E'\r\n',E'\n'),'UTF8')),'hex')='8a0c0c2b6871d750d83596649b59f424204b1bcac0d6192a998c7bfff04ef641'
+  and pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(pg_catalog.replace(p.prosrc,E'\r\n',E'\n'),'UTF8')),'hex')='cbd79d7ec1fbb93605616e7aa742c8b20ec741e098b7058b244f559add32d726'
   and pg_catalog.has_function_privilege(pg_catalog.to_regrole('anon'),p.oid,'EXECUTE') is false
   and pg_catalog.has_function_privilege(pg_catalog.to_regrole('authenticated'),p.oid,'EXECUTE') is false
   and pg_catalog.has_function_privilege(pg_catalog.to_regrole('service_role'),p.oid,'EXECUTE') is true

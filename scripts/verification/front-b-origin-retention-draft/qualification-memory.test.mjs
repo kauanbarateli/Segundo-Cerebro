@@ -17,18 +17,20 @@ const read=path=>readFile(new URL(path,repo));
 const digest=bytes=>createHash('sha256').update(bytes).digest('hex');
 const sources=[
  ['supabase/operations/candidates/20261101020254_public_admission_gate.sql','e125759742d7fa1513f7d42ad04ee13c1a6c8894b98478261d1217381f93f519'],
- ['scripts/verification/front-b-origin-retention-draft/signup-origin-retention-health.sql.txt','15439584420923ad3100d8ab8f2df2d159c06caaaf6348a6871b908ceac3454c'],
- ['scripts/verification/front-b-origin-retention-draft/signup-origin-cron-registration.sql.txt','8dea203961f6a7a39dded763fb8d842611aeb49fb410a14fe8c4d4c66124230b'],
+ ['scripts/verification/front-b-origin-retention-draft/signup-origin-retention-health.sql.txt','d9297e0505a839891e39dc51c7bfd61780da19e31c7abc6471885720ac794fca'],
+ ['scripts/verification/front-b-origin-retention-draft/signup-origin-cron-registration.sql.txt','5a630babf127ec9be31a6fad9950a4d4aa0fc2d1b349dfd38b2f7e7959452583'],
  ['supabase/operations/inspect-service-role-memberships-labeled-v1.sql','bddf4a770845a60c4f60e5fd4ab26b85c6be366fe19218ec37113149c23bec81'],
+ ['scripts/verification/front-b-135-draft/prune.sql.txt','5c7e1c827596025b15b538d4f792deb1ae8acd6d37c16c6d7f716e10e46ac29f'],
 ];
 const bytes=await Promise.all(sources.map(async([path,sha])=>{const source=await read(path);assert.equal(digest(source),sha,'REVIEWED_SOURCE_DRIFT');return source;}));
-const [candidate,health,registration,membership]=bytes.map(value=>value.toString('utf8'));
+const [candidate,health,registration,membership,coordinated]=bytes.map(value=>value.toString('utf8'));
 assert.match(registration,/begin;\s*do \$draft_only\$ begin raise exception 'DRAFT_ONLY:/i);
 assert.match(registration,/rollback;\s*$/i);
 assert.match(health,/begin transaction read only;/i);assert.match(health,/rollback;\s*$/i);
 assert.match(candidate,/values\(p_user,i\.origin,i\.origin_consent_version,now\(\),now\(\)\+interval '12 months'\)/i);
-const definition=candidate.match(/create function app_private\.signup_prune\(\) returns jsonb language plpgsql security definer set search_path='' as \$\$[\s\S]*?\$\$;/);
-assert(definition);assert.equal((candidate.match(/create function app_private\.signup_prune\(\)/g)??[]).length,1);
+assert.match(coordinated,/BEGIN;\s*DO \$scratch_guard\$ BEGIN RAISE EXCEPTION 'UNREVIEWED SCRATCH SQL: DO NOT APPLY'; END \$scratch_guard\$;/);
+const definition=coordinated.match(/CREATE OR REPLACE FUNCTION app_private\.signup_prune\(\) RETURNS jsonb[\s\S]*?AS \$\$[\s\S]*?\$\$;/);
+assert(definition);assert.equal((coordinated.match(/CREATE OR REPLACE FUNCTION app_private\.signup_prune\(\)/g)??[]).length,1);
 
 test('fixed PGlite memory fixture qualifies catalog and job drift, never a hosted destination',{timeout:60000},async()=>{
  const db=new PGlite('memory://');
@@ -36,7 +38,8 @@ test('fixed PGlite memory fixture qualifies catalog and job drift, never a hoste
   await db.waitReady;assert.equal(db.dataDir,'memory://');
   await db.exec(`create role anon nologin;create role authenticated nologin;create role service_role nologin;create role alternate_owner nologin;create role test_inherited login;
     create schema app_private;create schema cron;
-    create table app_private.signup_intents(id uuid,state text,expires_at timestamptz,subject_hash text,consumed_at timestamptz);
+    create table app_private.signup_intents(id uuid,user_id uuid,state text,expires_at timestamptz,subject_hash text,consumed_at timestamptz,origin jsonb,origin_consent_version text,origin_consented_at timestamptz);
+    create table app_private.signup_completion_fences_draft(user_id uuid,intent_id uuid,origin_expired boolean,updated_at timestamptz);
     create table app_private.signup_origins(user_id uuid,expires_at timestamptz);
     create table cron.job(jobid bigint,jobname text,username text,database text,schedule text,command text,active boolean);
     create table cron.job_run_details(jobid bigint,runid bigint,status text,start_time timestamptz,end_time timestamptz,command text,username text,database text);`);
@@ -60,10 +63,10 @@ test('fixed PGlite memory fixture qualifies catalog and job drift, never a hoste
   result=await observation();assert.equal(result.qualified_active_count,1);assert.equal(result.expired_origins,1);
   await db.exec("insert into app_private.signup_origins select md5(g::text)::uuid,now()-interval '1 second' from generate_series(1,500) g;insert into app_private.signup_origins values ('00000000-0000-4000-8000-000000000002',now()+interval '1 hour')");
   const prune=async()=>(await db.query('select app_private.signup_prune() as result')).rows[0].result;
-  assert.deepEqual(await prune(),{expiredRemoved:0,consumedScrubbed:0,originsRemoved:500});
+  assert.deepEqual(await prune(),{expiredRemoved:0,consumedScrubbed:0,originsRemoved:500,fencedExamined:0,expiredOriginsCleared:0});
   assert.equal((await observation()).expired_origins,1);
-  assert.deepEqual(await prune(),{expiredRemoved:0,consumedScrubbed:0,originsRemoved:1});
-  assert.deepEqual(await prune(),{expiredRemoved:0,consumedScrubbed:0,originsRemoved:0});
+  assert.deepEqual(await prune(),{expiredRemoved:0,consumedScrubbed:0,originsRemoved:1,fencedExamined:0,expiredOriginsCleared:0});
+  assert.deepEqual(await prune(),{expiredRemoved:0,consumedScrubbed:0,originsRemoved:0,fencedExamined:0,expiredOriginsCleared:0});
   assert.equal((await db.query('select count(*)::int as n from app_private.signup_origins')).rows[0].n,1);
   assert.equal((await db.query("select exists(select 1 from app_private.signup_origins where user_id='00000000-0000-4000-8000-000000000002') as preserved")).rows[0].preserved,true);
   await db.exec("update cron.job set command='unreviewed'");
