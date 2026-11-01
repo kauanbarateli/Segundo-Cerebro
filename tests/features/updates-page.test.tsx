@@ -8,7 +8,7 @@ vi.mock("@/lib/auth/config", () => ({ readAuthConfiguration: () => ({ mode: "sup
 vi.mock("@/lib/access/front-b-capabilities-server", () => ({ frontBCapabilities: capabilities.frontB }));
 import UpdatesPage from "../../src/app/(workspace)/atualizacoes/page";
 import { UpdatesBoard } from "../../src/components/features/atualizacoes/updates-board";
-import { updateEvidenceHref } from "../../src/components/features/atualizacoes/content";
+import { updateEvidenceHref, validateUpdateEntries, type UpdateItem } from "../../src/components/features/atualizacoes/content";
 
 describe("atualizações autenticadas", () => {
   beforeEach(() => { guards.requireUser.mockReset(); capabilities.frontB.mockReturnValue({ schema: false }); });
@@ -53,5 +53,18 @@ describe("atualizações autenticadas", () => {
     for (const evidence of ["", "javascript:alert(1)", "//example.org/"]) {
       expect(() => renderToStaticMarkup(<UpdatesBoard entries={[{ id: "u1", title: "Entrega", summary: "Conteúdo", state: "released", updatedAt: "2026-10-31", order: 1, evidence }]} />)).toThrow("Atualização lançada exige um link de entrega válido.");
     }
+  });
+
+  it("valida datas reais e identificadores editoriais antes de renderizar", () => {
+    const entry: UpdateItem = { id: "u1", title: "Planejamento", summary: "Em preparação.", state: "planned", updatedAt: "2028-02-29", order: 1 };
+    expect(renderToStaticMarkup(<UpdatesBoard entries={[entry]} />)).toContain("29 de fev. de 2028");
+    for (const updatedAt of ["2026-13-40", "2026-02-29", "2026-04-31", "2026-1-01", "0000-01-01"]) {
+      expect(() => validateUpdateEntries([{ ...entry, updatedAt }])).toThrow("Atualização exige uma data válida.");
+    }
+    expect(() => validateUpdateEntries([entry, { ...entry }])).toThrow("Atualização exige identificador único e válido.");
+    expect(() => validateUpdateEntries([{ ...entry, id: " " }])).toThrow("Atualização exige identificador único e válido.");
+    expect(() => validateUpdateEntries([{ ...entry, order: Number.NaN }])).toThrow("Atualização exige etapa e ordem válidas.");
+    expect(() => validateUpdateEntries([{ ...entry, state: "unknown" } as unknown as UpdateItem])).toThrow("Atualização exige etapa e ordem válidas.");
+    expect(() => validateUpdateEntries([{ ...entry, title: " " }])).toThrow("Atualização exige título e resumo.");
   });
 });
