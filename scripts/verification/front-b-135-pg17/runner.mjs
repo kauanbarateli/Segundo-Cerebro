@@ -33,7 +33,7 @@ const SUPPORT_PINS=Object.freeze([
  [BASE+'cleanup.test.mjs','8ed8aebf5635913c5653d29a427cd570e7513988481469fabd53593e1ffd1ccc'],
  [BASE+'offline-contract.test.mjs','9a044453c2a82033fc5dcc6afca527a3bfb7865aec49b76a4d113caae61a8dc8'],
  ['.nvmrc','68ca3fba3b7e864770cb61aeb306d4bd4354b68ab4dd38450860c5d823e42a53'],
- ['.github/workflows/front-b-135-pg17-races.yml','67cbffb9ba0c12fdcd0d24bed96a77cd0b9af9dc1879ec63a53d8696b1c1c822']
+ ['.github/workflows/front-b-135-pg17-races.yml','c6fd17f5ec523d19297f7d2d20fb1ae7ded7af3525eb4699614e5224ce7ddce5']
 ]);
 const SHA=/^[a-f0-9]{40}$/,ID=/^[a-f0-9]{64}$/,digest=b=>createHash('sha256').update(b).digest('hex');
 const SAFE_PATH='/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',REF='refs/heads/codex/front-b-135-pg17-races';
