@@ -7,7 +7,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { CLI_VERSION, requireCiRunner, assertTempDescendant, assertNoEnvironmentFiles, loadCanonicalMigrations, loadHistorical026Migrations, renderLocalConfig, decodeLocalStatus, localPsqlEnvironment, runBoundedProcess, DATABASE_PREFLIGHT, assertDatabasePreflight, LOCAL_INFRASTRUCTURE_FIXTURE } from "./auth-local-ci.mjs";
 import { ADMIN_NATIVE_CASES, assembleAdminNativePacket } from "../../tests/e2e-auth-local/admin-native-backend-contract.mjs";
 import { runAdminLocalCase } from "../../tests/e2e-auth-local/admin-native-backend-local-case.mjs";
-import { ADMIN_LOCAL_INFRA_CHECKS, ADMIN_LOCAL_CODES, ADMIN_LOCAL_LIMITATIONS, ADMIN_LOCAL_SOURCE_PATHS, ADMIN_LOCAL_DEPENDENCY_PATHS, ADMIN_LOCAL_SDK_VERSIONS, validateAdminLocalCiReport } from "../../tests/e2e-auth-local/admin-native-backend-local-ci-contract.mjs";
+import { ADMIN_LOCAL_INFRA_CHECKS, ADMIN_LOCAL_CODES, ADMIN_LOCAL_LIMITATIONS, ADMIN_LOCAL_SOURCE_PATHS, ADMIN_LOCAL_HISTORICAL_READER_PIN, ADMIN_LOCAL_DEPENDENCY_PATHS, ADMIN_LOCAL_SDK_VERSIONS, validateAdminLocalCiReport } from "../../tests/e2e-auth-local/admin-native-backend-local-ci-contract.mjs";
 const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/, SHA = /^[a-f0-9]{40}$/, NS = /^sc-admin-native-[a-f0-9]{32}$/, PROJECT = /^sc-auth-ci-[a-f0-9]{24}$/, SYSTEM = /^[0-9]{16,20}$/;
 const fail = code => { throw new Error(code); };
@@ -129,7 +129,7 @@ export function verifyAdminTslibScope(path, bytes, rootPackage, rootPin) {
 }
 export async function collectAdminSources(run, expectedSha) {
   const sha = (await run("git", ["rev-parse", "HEAD"], 15000)).stdout.trim(); if (!SHA.test(sha) || expectedSha !== undefined && sha !== expectedSha) fail("SOURCE_REFUSED");
-  const sourceHashes = []; for (const path of ADMIN_LOCAL_SOURCE_PATHS) { const bytes = await canonical(path), blob = (await run("git", ["show", "HEAD:" + path], 15000)).stdout; if (typeof blob !== "string" || !bytes.equals(Buffer.from(blob))) fail("SOURCE_REFUSED"); sourceHashes.push({ path, sha256: hash(bytes), bytes: bytes.length }); }
+  const sourceHashes = []; for (const path of ADMIN_LOCAL_SOURCE_PATHS) { const bytes = await canonical(path), blob = (await run("git", ["show", "HEAD:" + path], 15000)).stdout; if (typeof blob !== "string" || !bytes.equals(Buffer.from(blob)) || path === ADMIN_LOCAL_HISTORICAL_READER_PIN.path && (bytes.length !== ADMIN_LOCAL_HISTORICAL_READER_PIN.bytes || hash(bytes) !== ADMIN_LOCAL_HISTORICAL_READER_PIN.sha256)) fail("SOURCE_REFUSED"); sourceHashes.push({ path, sha256: hash(bytes), bytes: bytes.length }); }
   const lock = JSON.parse((await canonical("package-lock.json")).toString("utf8")), dependencyHashes = [];
   for (const path of ADMIN_LOCAL_DEPENDENCY_PATHS) {
     const bytes = await canonical(path); let folder = dirname(resolve(ROOT, path)), verified = false;
@@ -146,8 +146,8 @@ export async function collectAdminSources(run, expectedSha) {
     if (!verified) fail("SOURCE_REFUSED"); dependencyHashes.push({ path, sha256: hash(bytes), bytes: bytes.length });
   }
   for (const [name, version] of Object.entries(ADMIN_LOCAL_SDK_VERSIONS)) if (JSON.parse(await readFile(resolve(ROOT, "node_modules", name, "package.json"), "utf8")).version !== version || lock.packages["node_modules/" + name]?.version !== version) fail("SOURCE_REFUSED");
-  // CURRENT27: 101 Sources are derived from the closed overlay; SDK45 remains unchanged.
-  if (sourceHashes.length !== 101 || dependencyHashes.length !== 45) fail("SOURCE_REFUSED"); return { sourceSha: sha, sourceHashes, dependencyHashes };
+  // CURRENT27: 102 Sources are derived from the closed overlay; SDK45 remains unchanged.
+  if (sourceHashes.length !== 102 || dependencyHashes.length !== 45) fail("SOURCE_REFUSED"); return { sourceSha: sha, sourceHashes, dependencyHashes };
 }
 const portFailures = new WeakMap();
 /** Only failures created by this probe can carry its closed observation. */

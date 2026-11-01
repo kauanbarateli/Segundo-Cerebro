@@ -6,6 +6,7 @@ export const ADMIN_LOCAL_CODES: readonly ["PASSED", "NOT_RUN", "ENVIRONMENT_REFU
 export const ADMIN_LOCAL_LIMITATIONS: readonly ["hostedSupabaseVerified", "originalFactoriesVerified", "nextHandlersVerified", "browserContextsVerified", "forcedFirstEntryGuiVerified", "automaticIssueAcceptance"];
 export const ADMIN_LOCAL_NEW_PATHS: readonly string[];
 export const ADMIN_LOCAL_SOURCE_PATHS: readonly string[];
+export const ADMIN_LOCAL_HISTORICAL_READER_PIN: Readonly<{path:string;bytes:number;sha256:string}>;
 export const ADMIN_LOCAL_DEPENDENCY_PATHS: readonly string[];
 export const ADMIN_LOCAL_SDK_VERSIONS: Readonly<{ "@supabase/supabase-js": "2.117.2"; "server-only": "0.0.1" }>;
 export type AdminLocalCode = typeof ADMIN_LOCAL_CODES[number];

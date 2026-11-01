@@ -1,32 +1,40 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
 import { createCatalogueFixture } from "./helpers/catalogue-fixture.mjs";
 import { assertReleaseReport } from "../../scripts/operations/release-checks.mjs";
-import { readCurrent27CanonicalMigrations } from "../helpers/canonical-release-source.mjs";
+import { readHistorical027FromReviewedFrontB } from "../helpers/canonical-front-b-source.mjs";
+import { withStagedFrontB30 } from "./helpers/staged-front-b30-sequence.mjs";
 
-const REVIEWED_RELEASE_CHECKS = 2512;
-const exactGate = report => report.version === 1 && report.ok === true && report.checks === REVIEWED_RELEASE_CHECKS && report.deviations.length === 0;
+const HISTORICAL_027_CHECKS = 2512;
+const exactGate = report => report.version === 1 && report.ok === true && report.checks === HISTORICAL_027_CHECKS && report.deviations.length === 0;
 const MIGRATION = "20261010010955_close_public_sequence_defaults.sql";
 const source = path => readFile(new URL("../../" + path, import.meta.url), "utf8");
 
-test("016 closes the legacy public sequence default without changing existing ACLs, other schemas or owners", async () => {
- const migrations = await readCurrent27CanonicalMigrations();
+async function exerciseHistoricalSequenceDefaults(reviewRoot) {
+ // Qualify the entire reviewed tree before using the 027 prefix. This test
+ // remains historical and is not a release gate for later migrations.
+ const migrations = await readHistorical027FromReviewedFrontB(reviewRoot);
  const db = await createCatalogueFixture();
  try {
   const files = migrations.map(row => row.file); assert.equal(files.length, 27);
   assert.ok(files.includes(MIGRATION));
   for (const row of migrations.filter(row => row.file < MIGRATION)) await db.exec(row.source.toString("utf8"));
-  // Keep the current release catalogue's later dependencies present while
+  // Keep the historical 027 catalogue's later dependencies present while
   // leaving 016 unapplied until the ACL drift and repair are exercised below.
   for (const row of migrations.filter(row => row.file > MIGRATION)) await db.exec(row.source.toString("utf8"));
-  const catalogue = await source("supabase/tests/release-catalog.sql");
+  const catalogueBytes = await readFile(new URL("../fixtures/schema-release-027/release-catalog.sql", import.meta.url));
+  assert.equal(catalogueBytes.length, 207834);
+  assert.equal(createHash("sha256").update(catalogueBytes).digest("hex"), "19b5f158dfd2003fa89285df99f4ab2e0287ee411b07b9a6b0bc7e6fb82f6e9e");
+  const catalogue = catalogueBytes.toString("utf8");
   const assertion = await source("supabase/tests/sequence-defaults.sql");
   async function report() {
    const rows = (await db.exec(catalogue)).flatMap(value => value.rows);
    return assertReleaseReport(rows.map(row => row.jsonb_build_object).find(value => value?.version === 1));
   }
-  const baseline = await report();assert.equal(baseline.ok, true);assert.equal(baseline.checks, REVIEWED_RELEASE_CHECKS);assert.deepEqual(baseline.deviations, []);assert.equal(exactGate(baseline), true);assert.equal(exactGate(assertReleaseReport({ ...baseline, checks: 1720 })), false, "HIST026 count cannot satisfy the CURRENT27 release gate");
+  const baseline = await report();assert.equal(baseline.ok, true);assert.equal(baseline.checks, HISTORICAL_027_CHECKS);assert.deepEqual(baseline.deviations, []);assert.equal(exactGate(baseline), true);assert.equal(exactGate(assertReleaseReport({ ...baseline, checks: 1720 })), false, "HIST026 count cannot satisfy the historical 027 gate");
   // Match the hosted finding: each of these four grantees has all three
   // sequence privileges (12 ACL entries); postgres is deliberately retained.
   await db.exec(`
@@ -107,4 +115,12 @@ test("016 closes the legacy public sequence default without changing existing AC
   const { rows: residues } = await db.query("select (select count(*) from auth.users)::integer as users,(select count(*) from app_private.upload_reservations)::integer as reservations,(select count(*) from public.drive_files)::integer as files,(select count(*) from public.domain_events)::integer as events");
   assert.deepEqual(residues, [{ users: 0, reservations: 0, files: 0, events: 0 }]);
  } finally { await db.close(); }
+}
+
+test("016 closes the legacy public sequence default with reviewed 27 sources", async () => {
+ await exerciseHistoricalSequenceDefaults(fileURLToPath(new URL("../../", import.meta.url)));
+});
+
+test("016 closes the legacy public sequence default with reviewed draft 30 sources", async t => {
+ await withStagedFrontB30(t, exerciseHistoricalSequenceDefaults);
 });
