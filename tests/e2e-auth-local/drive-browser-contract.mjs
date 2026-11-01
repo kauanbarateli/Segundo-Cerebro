@@ -22,7 +22,8 @@ export const DRIVE_INFRA_KEYS = Object.freeze(["pg17","instanceBound","container
 // Shared AuthFrame now imports AuthThemeSwitcher; only this Git path is added.
 // D-032/doc18 route closure after removing the offered Drive UI. HIST026 stays
 // historical; this inventory never qualifies execution or CURRENT27 coverage.
-export const DRIVE_SOURCE_COUNTS = Object.freeze({git:292,dependencies:50});
+// Frente A (fase 1): +9 shell imports (header quick capture, its capture helpers and optional destinations).
+export const DRIVE_SOURCE_COUNTS = Object.freeze({git:301,dependencies:50});
 // Public c781efe Git sources reached from uploads/route.ts:8, then helper:3.
 // Closed provenance metadata; it neither enables Drive nor proves hosted use.
 export const DRIVE_UPLOAD_AVAILABILITY_SOURCES = Object.freeze([
