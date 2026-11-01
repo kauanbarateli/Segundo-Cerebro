@@ -47,7 +47,7 @@ export const DRIVE_FRONT_AB_SOURCES = Object.freeze([
   Object.freeze({path:"src/lib/navigation/optional-destinations.ts",bytes:1975,sha256:"8b1fa3518080d1a0f663f674eb9ec30769b0a10db2d7536276e16e4cb16b4cd3"}),
   Object.freeze({path:"src/core/acquisition/signup-origin.ts",bytes:1446,sha256:"1a58e683e03290ce6616891301c5e82f3a5eff21eba2ef56c2835c3a054b2483"}),
   Object.freeze({path:"src/lib/auth/signup-checkpoint.ts",bytes:2699,sha256:"3628fb20ffbbdc50c89969f7043fe02887255c7ffdb5ee1c90710638af1318bc"}),
-  Object.freeze({path:"src/lib/auth/signup-completion-service.ts",bytes:7835,sha256:"0a5cf8a203d4d4176f99c4a088a04c17b9a5996dfc2257c778f19ab80248e4f3"}),
+  Object.freeze({path:"src/lib/auth/signup-completion-service.ts",bytes:8646,sha256:"4c649a6fbceea56b17c0ad371075450749664c47fdfe3cece666b82a7c6323c3"}),
   Object.freeze({path:"src/lib/auth/signup-fence-wire.ts",bytes:2273,sha256:"e5ae60b5d33344c608b26ab1cb371bf06b99c0d313aa11b972a8aa4d4f3e2abd"}),
   Object.freeze({path:"src/lib/feedback/reconciliation-gate.ts",bytes:181,sha256:"becf5b085c6a07f7512c9a01f92c3ab79346a4588ecd7e63c95d54d96c26e51c"}),
 ]);
