@@ -389,10 +389,9 @@ test.describe("apresentação pública /conheca", () => {
     const exibida = () => page.locator(".conheca-hero__tela img").evaluateAll((lista) => lista.filter((imagem) => imagem.checkVisibility()).map((imagem) => decodeURIComponent((imagem as HTMLImageElement).currentSrc)));
     await expect.poll(exibida).toEqual([expect.stringContaining("inicio-escuro")]);
 
-    const tema = page.getByLabel("Tema");
-    await tema.selectOption("light");
+    await page.getByRole("button", { name: "Ativar tema claro" }).click();
     await expect.poll(exibida).toEqual([expect.not.stringContaining("escuro")]);
-    await tema.selectOption("dark");
+    await page.getByRole("button", { name: "Ativar tema escuro" }).click();
     await expect.poll(exibida).toEqual([expect.stringContaining("inicio-escuro")]);
   });
 
