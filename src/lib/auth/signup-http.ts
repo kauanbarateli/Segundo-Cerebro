@@ -42,6 +42,7 @@ type SignupRpcArguments = {
   signup_intent_create: { p_binding_hash: string; p_subject_hash: string; p_terms: string; p_privacy: string; p_expires: string; p_origin: SignupRpcOrigin | null; p_origin_version: string | null };
   signup_find_bound_intent: Actor & { p_subject_hash: string };
   signup_recover_verified_intent: Actor & { p_subject_hash: string; p_terms: string; p_privacy: string };
+  signup_rebind_verified_ack: Actor & { p_subject_hash: string; p_terms: string; p_privacy: string };
   signup_discard_pending_origin: BoundIntent;
   signup_attest_password_reset: BoundIntent;
   signup_complete: BoundIntent & { p_terms: string; p_privacy: string; p_accept_origin: boolean; p_origin_version: string | null };
@@ -60,7 +61,7 @@ async function postRpc(config: SupabaseAuthConfig, name: string, body: object): 
 }
 
 export async function signupRpc<Name extends SignupRpcName>(config: SupabaseAuthConfig, name: Name, body: SignupRpcArguments[Name]): Promise<unknown> {
-  if (!["signup_intent_create", "signup_find_bound_intent", "signup_recover_verified_intent", "signup_discard_pending_origin", "signup_attest_password_reset", "signup_complete"].includes(name) || !signupEnabled(config)) return signupUnavailable();
+  if (!["signup_intent_create", "signup_find_bound_intent", "signup_recover_verified_intent", "signup_rebind_verified_ack", "signup_discard_pending_origin", "signup_attest_password_reset", "signup_complete"].includes(name) || !signupEnabled(config)) return signupUnavailable();
   return postRpc(config, name, body);
 }
 

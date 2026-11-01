@@ -24,7 +24,7 @@ export const DRIVE_INFRA_KEYS = Object.freeze(["pg17","instanceBound","container
 // historical; this inventory never qualifies execution or CURRENT27 coverage.
 // Frentes A/B and signup fence added sixteen reviewed transitive sources; no Drive route was enabled.
 // The historical canonical reader adds one reviewed transitive helper only.
-export const DRIVE_SOURCE_COUNTS = Object.freeze({git:309,dependencies:50});
+export const DRIVE_SOURCE_COUNTS = Object.freeze({git:310,dependencies:50});
 export const DRIVE_HISTORICAL_READER_SOURCE = Object.freeze({path:"tests/helpers/canonical-front-b-source.mjs",bytes:6638,sha256:"fcdbeb291832d3025d3551d42e47fb8b20ecbf1b7fe294990b6be25d41202040"});
 // Public c781efe Git sources reached from uploads/route.ts:8, then helper:3.
 // Closed provenance metadata; it neither enables Drive nor proves hosted use.
@@ -43,12 +43,13 @@ export const DRIVE_FRONT_AB_SOURCES = Object.freeze([
   Object.freeze({path:"src/components/features/capturar/requests.ts",bytes:1457,sha256:"1a62a6ebe5880086da36a52f2216164f5cfc981c0f2f41860e92db57466d0e18"}),
   Object.freeze({path:"src/components/features/capturar/use-image-attachments.ts",bytes:2924,sha256:"351fe757215ed69ef2000e765e313a5c80ef1ff5b0352d4f816da860c6ecbcea"}),
   Object.freeze({path:"src/lib/access/front-b-capabilities-server.ts",bytes:752,sha256:"5525cafb6a68b6bf2861155eed795f50a93a84cc10139a29d7bc519262d07a9b"}),
-  Object.freeze({path:"src/lib/auth/signup-http.ts",bytes:4878,sha256:"3629ba06c25ec2a709de5c0df3051f308cf3300678f601fbc48d6c946d6ad2d4"}),
+  Object.freeze({path:"src/lib/auth/signup-http.ts",bytes:5010,sha256:"aee3c47bb962f60a48a410c92a2fd8a4d65c600e8415f89517136b824b62b3ab"}),
   Object.freeze({path:"src/lib/navigation/optional-destinations.ts",bytes:1975,sha256:"8b1fa3518080d1a0f663f674eb9ec30769b0a10db2d7536276e16e4cb16b4cd3"}),
   Object.freeze({path:"src/core/acquisition/signup-origin.ts",bytes:1446,sha256:"1a58e683e03290ce6616891301c5e82f3a5eff21eba2ef56c2835c3a054b2483"}),
   Object.freeze({path:"src/lib/auth/signup-checkpoint.ts",bytes:2699,sha256:"3628fb20ffbbdc50c89969f7043fe02887255c7ffdb5ee1c90710638af1318bc"}),
   Object.freeze({path:"src/lib/auth/signup-completion-service.ts",bytes:8646,sha256:"4c649a6fbceea56b17c0ad371075450749664c47fdfe3cece666b82a7c6323c3"}),
-  Object.freeze({path:"src/lib/auth/signup-fence-wire.ts",bytes:2273,sha256:"e5ae60b5d33344c608b26ab1cb371bf06b99c0d313aa11b972a8aa4d4f3e2abd"}),
+  Object.freeze({path:"src/lib/auth/signup-fence-wire.ts",bytes:2481,sha256:"d1847d592f4b76eb18506323988ee04eb9fc06f5e28bfe0fd73b809612224059"}),
+  Object.freeze({path:"src/lib/supabase/database.front-b-qa028.ts",bytes:3969,sha256:"53bcc3e4dc1ae54c137b281deebc394ef74249042b307120e7f10b5898f5f8ea"}),
   Object.freeze({path:"src/lib/feedback/reconciliation-gate.ts",bytes:181,sha256:"becf5b085c6a07f7512c9a01f92c3ab79346a4588ecd7e63c95d54d96c26e51c"}),
 ]);
 export function driveRefuse(code){const e=new Error(DRIVE_CODES.includes(code)?code:"BROWSER_REFUSED");e.name="DriveBrowserFailure";e.stack=e.name+": "+e.message;throw e;}

@@ -38,6 +38,12 @@ with function_health as (
         max(r.end_time) filter(where r.status='failed') as last_failure_at
  from cron.job_run_details r join qualifying_jobs j on j.jobid=r.jobid
   and r.command=j.command and r.username=j.username and r.database=j.database
+), expired_intent_state as (
+ select i.expires_at, i.origin is not null as has_origin,
+  exists(select 1 from app_private.signup_completion_fences_draft f
+   where f.intent_id=i.id or (i.user_id is not null and f.user_id=i.user_id)) as has_fence
+ from app_private.signup_intents i
+ where i.state in ('pending','bound') and i.expires_at<=now()
 )
 select jsonb_build_object(
  'checked_at',now(),
@@ -50,8 +56,11 @@ select jsonb_build_object(
  'latest_run_status',(select case when status in ('starting','connecting','sending','running','succeeded','failed') then status else 'other' end from latest),
  'latest_run_started_at',(select start_time from latest),
  'latest_run_ended_at',(select end_time from latest),
- 'expired_intents',(select count(*) from app_private.signup_intents where state in ('pending','bound') and expires_at<=now()),
- 'oldest_intent_deadline',(select min(expires_at) from app_private.signup_intents where state in ('pending','bound') and expires_at<=now()),
+ 'expired_intents',(select count(*) from expired_intent_state),
+ 'oldest_intent_deadline',(select min(expires_at) from expired_intent_state),
+ 'actionable_expired_intents',(select count(*) from expired_intent_state where has_origin or not has_fence),
+ 'oldest_actionable_intent_deadline',(select min(expires_at) from expired_intent_state where has_origin or not has_fence),
+ 'protected_fences_without_origin',(select count(*) from expired_intent_state where has_fence and not has_origin),
  'pending_scrubs',(select count(*) from app_private.signup_intents where state='consumed' and subject_hash is not null and consumed_at<=now()-interval '24 hours'),
  'oldest_scrub_deadline',(select min(consumed_at+interval '24 hours') from app_private.signup_intents where state='consumed' and subject_hash is not null and consumed_at<=now()-interval '24 hours'),
  'expired_origins',(select count(*) from app_private.signup_origins where expires_at<=now()),

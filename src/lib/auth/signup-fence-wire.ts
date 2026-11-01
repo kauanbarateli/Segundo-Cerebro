@@ -1,16 +1,17 @@
 import type { CompletionFence, CurrentVersions, ReservationInput } from "./signup-completion-service";
+import type { Qa028NullableRpcArgs, Qa028PublicFunctions } from "../supabase/database.front-b-qa028";
 
 /** Draft wire mapping only; never supplies passwords or UTM content. */
 type Actor = { p_user:string; p_session:string };
 type Scoped = Actor & { p_intent:string; p_subject_hash:string; p_request:string; p_generation:string };
 export type FenceArgs = {
-  signup_fence_reserve: Omit<Scoped,"p_generation"> & {p_terms:string;p_privacy:string;p_accept_origin:boolean;p_origin_version:string|null};
-  signup_fence_start: Scoped;
-  signup_fence_uncertain: Scoped;
-  signup_fence_ack: Scoped;
-  signup_fence_finish: Scoped & {p_current_terms:string;p_current_privacy:string;p_current_origin:string};
-  signup_fence_confirm: Actor & {p_intent:string};
-  signup_fence_withdraw: Actor;
+  signup_fence_reserve: Qa028NullableRpcArgs["signup_fence_reserve"];
+  signup_fence_start: Qa028PublicFunctions["signup_fence_start"]["Args"];
+  signup_fence_uncertain: Qa028PublicFunctions["signup_fence_uncertain"]["Args"];
+  signup_fence_ack: Qa028PublicFunctions["signup_fence_ack"]["Args"];
+  signup_fence_finish: Qa028PublicFunctions["signup_fence_finish"]["Args"];
+  signup_fence_confirm: Qa028PublicFunctions["signup_fence_confirm"]["Args"];
+  signup_fence_withdraw: Qa028PublicFunctions["signup_fence_withdraw"]["Args"];
 };
 export type FenceTransport=<K extends keyof FenceArgs>(name:K, args:FenceArgs[K])=>Promise<unknown>;
 const scope=(f:CompletionFence):Scoped=>({p_user:f.userId,p_session:f.sessionId,p_intent:f.intentId,p_subject_hash:f.subjectHash,p_request:f.requestId,p_generation:f.generation});

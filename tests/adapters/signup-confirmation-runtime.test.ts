@@ -25,7 +25,7 @@ describe("adaptador de confirmação de cadastro", () => {
     mocks.enabled.mockReturnValue(true); mocks.rpc.mockResolvedValue({ data: { allowed: true }, error: null });
     mocks.verifyOtp.mockResolvedValue({ error: null }); mocks.getUser.mockResolvedValue({ data: { user: { id: userId, email: "a@example.invalid", email_confirmed_at: "2026-10-31T12:00:00Z", is_anonymous: false } }, error: null });
     mocks.getClaims.mockResolvedValue({ data: { claims: { sub: userId, session_id: sessionId } }, error: null });
-    mocks.signupRpc.mockResolvedValue({ intentId, termsVersion: "v1", privacyVersion: "v2", state: "bound", originPending: false }); mocks.signOut.mockResolvedValue({ error: null });
+    mocks.signupRpc.mockImplementation(async (_config, name) => name === "signup_rebind_verified_ack" ? null : { intentId, termsVersion: "v1", privacyVersion: "v2", state: "bound", originPending: false }); mocks.signOut.mockResolvedValue({ error: null });
   });
   afterEach(() => { vi.clearAllMocks(); });
   it("verifica somente OTP de cadastro e escreve checkpoint protegido", async () => {
@@ -43,10 +43,29 @@ describe("adaptador de confirmação de cadastro", () => {
     expect(mocks.verifyOtp).not.toHaveBeenCalled(); expect(set).not.toHaveBeenCalled();
   });
   it("pede recuperação privada de intenção após OTP válido quando o vínculo expirou", async () => {
-    mocks.signupRpc.mockResolvedValueOnce(null).mockResolvedValueOnce({ intentId, termsVersion: "v1", privacyVersion: "v2", state: "bound", originPending: false });
+    mocks.signupRpc.mockResolvedValueOnce(null).mockResolvedValueOnce(null).mockResolvedValueOnce({ intentId, termsVersion: "v1", privacyVersion: "v2", state: "bound", originPending: false });
     const { jar } = cookies();
     expect(await verifySignupConfirmation(createSignupConfirmationPorts(config, jar), token, legal)).toEqual({ status: "ready" });
-    expect(mocks.signupRpc).toHaveBeenNthCalledWith(2, config, "signup_recover_verified_intent", expect.objectContaining({ p_user: userId, p_session: sessionId, p_terms: "v1", p_privacy: "v2" }));
+    expect(mocks.signupRpc).toHaveBeenNthCalledWith(2, config, "signup_rebind_verified_ack", expect.objectContaining({ p_user: userId, p_session: sessionId, p_terms: "v1", p_privacy: "v2" }));
+    expect(mocks.signupRpc).toHaveBeenNthCalledWith(3, config, "signup_recover_verified_intent", expect.objectContaining({ p_user: userId, p_session: sessionId, p_terms: "v1", p_privacy: "v2" }));
+  });
+  it("retoma prova reconhecida somente depois da verificação OTP, sem recuperar outra intenção", async () => {
+    const intent = { intentId, termsVersion: "v1", privacyVersion: "v2", state: "bound", originPending: true };
+    mocks.signupRpc.mockResolvedValue(intent);
+    const { jar, set } = cookies();
+    expect(await verifySignupConfirmation(createSignupConfirmationPorts(config, jar), token, legal)).toEqual({ status: "ready" });
+    expect(mocks.signupRpc.mock.calls.map(call => call[1])).toEqual(["signup_find_bound_intent", "signup_rebind_verified_ack"]);
+    expect(mocks.verifyOtp.mock.invocationCallOrder[0]).toBeLessThan(mocks.signupRpc.mock.invocationCallOrder[1]);
+    const entry = set.mock.calls.find(call => call[0] === SIGNUP_CHECKPOINT_COOKIE)!;
+    expect(verifySignupCheckpoint(entry[1], config.stateSecret, Date.now())).toMatchObject({ userId, sessionId, intentId, originPending: true });
+  });
+  it("não contorna uma recusa da cerca e limpa a sessão provisória", async () => {
+    mocks.signupRpc.mockImplementation(async (_config, name) => { if (name === "signup_rebind_verified_ack") throw Error("fence refused"); return { intentId, termsVersion: "v1", privacyVersion: "v2", state: "bound", originPending: false }; });
+    const { jar, set } = cookies();
+    expect(await verifySignupConfirmation(createSignupConfirmationPorts(config, jar), token, legal)).toEqual({ status: "unavailable" });
+    expect(mocks.signupRpc.mock.calls.map(call => call[1])).toEqual(["signup_find_bound_intent", "signup_rebind_verified_ack"]);
+    expect(mocks.signOut).toHaveBeenCalledWith({ scope: "local" });
+    expect(set).not.toHaveBeenCalledWith(SIGNUP_CHECKPOINT_COOKIE, expect.anything(), expect.not.objectContaining({ maxAge: 0 }));
   });
   it("usa OTP de recuperação apenas no canal fixo de continuação", async () => {
     const { jar } = cookies();

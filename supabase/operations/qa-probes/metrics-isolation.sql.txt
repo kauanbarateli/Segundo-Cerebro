@@ -1,0 +1,95 @@
+-- Guarded QA-only evidence; never execute this file without separate review.
+DO $qa_guard$ BEGIN RAISE EXCEPTION 'QA PROBE REQUIRES EXPLICIT REVIEW'; END $qa_guard$;
+-- PROPOSTA PARA REVISÃO; NÃO EXECUTADA.
+-- Alvo exclusivo: projeto de homologação twrydxsdemaykgvdlpyd.
+-- Confirmar project_ref no canal autenticado: nome do banco e role não identificam QA.
+-- A RPC calcula também um estoque de contas reais: o JSON fica apenas em variável
+-- interna e jamais deve ser exibido, registrado ou enviado ao cliente.
+-- A prova usa sessões sintéticas; não cobre GoTrue, JWT, HTTP nem concorrência.
+-- Se uma interrupção deixar a conexão aberta, finalizar com ROLLBACK nela.
+-- Executar somente o arquivo completo, nunca trechos individuais.
+
+BEGIN;
+SET LOCAL lock_timeout = '2s';
+SET LOCAL statement_timeout = '20s';
+SET LOCAL idle_in_transaction_session_timeout = '30s';
+SET LOCAL qa_metrics.result = 'FAIL';
+
+DO $test$
+DECLARE
+  user_master uuid := pg_catalog.gen_random_uuid();
+  user_common uuid := pg_catalog.gen_random_uuid();
+  session_master uuid := pg_catalog.gen_random_uuid();
+  session_common uuid := pg_catalog.gen_random_uuid();
+  email_master text := 'qa-metrics-' || user_master::text || '@example.invalid';
+  email_common text := 'qa-metrics-' || user_common::text || '@example.invalid';
+  response jsonb;
+  rejected boolean;
+  changed integer;
+BEGIN
+  -- Exceções revertem a subtransação; ROLLBACK desfaz o restante.
+  BEGIN
+    IF current_user <> 'postgres' THEN RAISE EXCEPTION 'Executor recusado'; END IF;
+    LOCK TABLE auth.users, auth.sessions, app_private.user_admission,
+      public.profiles, public.user_preferences, public.user_roles,
+      public.user_moderation, public.domain_events IN ROW EXCLUSIVE MODE;
+    IF user_master = user_common OR session_master = session_common
+      OR EXISTS (SELECT 1 FROM auth.users WHERE id IN (user_master,user_common) OR email IN (email_master,email_common))
+      OR EXISTS (SELECT 1 FROM auth.sessions WHERE id IN (session_master,session_common))
+      OR EXISTS (SELECT 1 FROM app_private.admin_operations WHERE target_user_id IN (user_master,user_common))
+      OR EXISTS (SELECT 1 FROM app_private.user_admission
+                 WHERE origin='public' AND state='admitted'
+                   AND admitted_at >= '2500-01-01 00:00:00+00'::timestamptz
+                   AND admitted_at < '2500-01-02 00:00:00+00'::timestamptz)
+      THEN RAISE EXCEPTION 'Colisão de fixture ou período ocupado'; END IF;
+
+    INSERT INTO auth.users(id,aud,role,email,email_confirmed_at,is_anonymous,raw_user_meta_data,raw_app_meta_data)
+    VALUES (user_master,'authenticated','authenticated',email_master,pg_catalog.now(),false,'{}'::jsonb,'{}'::jsonb),
+           (user_common,'authenticated','authenticated',email_common,pg_catalog.now(),false,'{}'::jsonb,'{}'::jsonb);
+    INSERT INTO auth.sessions(id,user_id,created_at,updated_at)
+    VALUES (session_master,user_master,pg_catalog.now(),pg_catalog.now()),
+           (session_common,user_common,pg_catalog.now(),pg_catalog.now());
+    -- Promoção e admissão ocorrem somente para os IDs criados nesta transação.
+    UPDATE public.user_roles SET role='master' WHERE user_id=user_master AND role='user';
+    GET DIAGNOSTICS changed = ROW_COUNT;
+    IF changed <> 1 THEN RAISE EXCEPTION 'Master sintético recusado'; END IF;
+    UPDATE app_private.user_admission SET origin='legacy',state='admitted',admitted_at=pg_catalog.now()
+      WHERE user_id=user_master AND origin='unclassified' AND state='pending';
+    GET DIAGNOSTICS changed = ROW_COUNT;
+    IF changed <> 1 THEN RAISE EXCEPTION 'Admissão Master recusada'; END IF;
+    UPDATE app_private.user_admission SET origin='public',state='admitted',admitted_at='2500-01-01 12:00:00+00'::timestamptz
+      WHERE user_id=user_common AND origin='unclassified' AND state='pending';
+    GET DIAGNOSTICS changed = ROW_COUNT;
+    IF changed <> 1 THEN RAISE EXCEPTION 'Admissão sintética recusada'; END IF;
+
+    PERFORM pg_catalog.set_config('role','service_role',true);
+    response := public.signup_metrics(user_master,session_master,DATE '2500-01-01',DATE '2500-01-01','UTC','day');
+    -- O período havia sido verificado vazio; apenas a identidade sintética B entra.
+    -- Nenhuma parte do JSON, inclusive stock, é retornada ou registrada.
+    IF response->>'totalPublic' IS DISTINCT FROM '1' OR response->>'zone' IS DISTINCT FROM 'UTC'
+      OR response->>'bucket' IS DISTINCT FROM 'day'
+      OR response->'series'->0->>'count' IS DISTINCT FROM '1'
+      THEN RAISE EXCEPTION 'Resposta de métricas recusada'; END IF;
+
+    rejected := false;
+    BEGIN
+      PERFORM public.signup_metrics(user_common,session_common,DATE '2500-01-01',DATE '2500-01-01','UTC','day');
+    EXCEPTION WHEN insufficient_privilege THEN rejected := true;
+    END;
+    IF NOT rejected THEN RAISE EXCEPTION 'Conta comum teve acesso'; END IF;
+
+    rejected := false;
+    BEGIN
+      PERFORM public.signup_metrics(user_master,session_common,DATE '2500-01-01',DATE '2500-01-01','UTC','day');
+    EXCEPTION WHEN insufficient_privilege THEN rejected := true;
+    END;
+    IF NOT rejected THEN RAISE EXCEPTION 'Sessão trocada teve acesso'; END IF;
+
+    PERFORM pg_catalog.set_config('qa_metrics.result','PASS',true);
+  EXCEPTION WHEN OTHERS THEN
+    PERFORM pg_catalog.set_config('qa_metrics.result','FAIL',true);
+  END;
+END $test$;
+
+SELECT pg_catalog.current_setting('qa_metrics.result') AS resultado;
+ROLLBACK;

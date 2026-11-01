@@ -48,7 +48,11 @@ export function createSignupConfirmationPorts(config: SupabaseAuthConfig, jar: A
       return parseIntent(result);
     },
     async recoverVerifiedIntent(userId, sessionId, hash, terms, privacy) {
-      return parseIntent(await signupRpc(config, "signup_recover_verified_intent", { p_user: userId, p_session: sessionId, p_subject_hash: hash, p_terms: terms, p_privacy: privacy }));
+      const args = { p_user: userId, p_session: sessionId, p_subject_hash: hash, p_terms: terms, p_privacy: privacy };
+      // Only called after a fresh OTP. The candidate returns null when no fence
+      // exists, and fails closed for every unacknowledged or unrevoked attempt.
+      const rebound = await signupRpc(config, "signup_rebind_verified_ack", args);
+      return parseIntent(rebound === null ? await signupRpc(config, "signup_recover_verified_intent", args) : rebound);
     },
     async putCheckpoint(value) {
       if (!signupEnabled(config)) return signupUnavailable();
