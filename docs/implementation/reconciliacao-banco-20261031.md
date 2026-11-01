@@ -30,6 +30,8 @@ Em leitura, o mesmo catálogo canônico retornou 2.512 verificações e a mesma 
 
 Após a reconfirmação do endpoint QA, o ensaio isolado [qa-additive-probe-134.sql](../../supabase/tests/qa-additive-probe-134.sql) criou uma tabela de teste dentro de transação revertida, ativou RLS e retirou grants públicos. O resultado foi `rls=true`, `anon_read=false`, `authenticated_read=false` e `existing_onboarding=true`. Uma consulta posterior confirmou a ausência da tabela; o ledger manteve as mesmas 27 entradas. Este ensaio não aplica uma migration real e não substitui o teste da futura alteração, a prova de HTTP ou o backup.
 
+O [registro conectado anterior em QA](retomada-aceites-20261029.md) documenta o mesmo patch PT409 instalado e respostas HTTP `409 CONFLICT` em operações de onboarding com revisão antiga, em 496–642 ms. As contas de teste foram posteriormente removidas. É evidência histórica no mesmo ambiente, e não uma nova execução ou prova da futura implementação de cadastro; a confirmação atual do fingerprint do patch liga apenas o corpo e os privilégios àquele contrato.
+
 O comando operacional `node scripts/operations/release-checks.mjs diagnose-patch` executa as duas consultas somente de leitura e acrescenta a classificação ao relatório de metadados. São consultas em transações separadas: a classificação é diagnóstico, não prova de instantâneo atômico. Mesmo quando o patch é reconhecido, o resultado bruto e o código de saída do catálogo permanecem falhos; outros desvios não são aceitos por esse diagnóstico. O comando `check` conserva seu contrato anterior.
 
 ## Restante para conclusão
@@ -37,7 +39,7 @@ O comando operacional `node scripts/operations/release-checks.mjs diagnose-patch
 1. Projeto, ledger e catálogo foram reconfirmados nos dois ambientes por leitura; ainda falta confirmar backup/recuperação sem consultar dados pessoais.
 2. O catálogo comparou os objetos cobertos e os registros acima explicam o canal histórico; documentar por migration as dependências não cobertas pelo catálogo e produzir procedimento revisado que preserve a incerteza de recibos antigos.
 3. A classificação separada do patch está disponível e foi conferida em leitura. Em PGlite, `node --test tests/scripts/onboarding-conflict-verifier.test.mjs` confirmou o patch, a tradução de SQLSTATE `40001` para `PT409` sem expor a mensagem interna e a recusa do wrapper canônico, corpo alterado e grant indevido. O comando `diagnose-patch` mantém o catálogo bruto e sua saída de falha; validar também os consumidores derivados e o HTTP em QA.
-4. O mecanismo aditivo reversível foi ensaiado em QA; ainda é necessário testar a migration real quando existir e provar o conflito HTTP 409, os fluxos Admin/onboarding e isolamento, com recuperação e reversão documentadas.
+4. O mecanismo aditivo reversível foi ensaiado em QA e existe prova histórica de HTTP 409; ainda é necessário testar a migration real quando existir e revalidar os fluxos Admin/onboarding e isolamento para o novo candidato, com recuperação e reversão documentadas.
 5. Só considerar reconciliado quando houver evidência suficiente de ledger e objetos, QA e procedimento revisado. O teste local desta página não equivale a esses aceites.
 
 Nenhuma alteração de banco, ledger, dados, Auth ou Storage foi realizada para esta evidência.
