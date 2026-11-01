@@ -22,6 +22,8 @@ As evidências explicam o mecanismo da diferença e sustentam o catálogo final 
 
 Na conferência complementar, os SHA-256 das 27 fontes canônicas, com normalização CRLF/LF, coincidiram com os 27 hashes da tabela histórica da auditoria. A correspondência comprova a estabilidade das fontes locais entre as duas análises; não transforma os hashes locais em recibos de execução no servidor.
 
+O [mapa por migration](reconciliacao-migrations-mapa-20261031.md) relaciona cada arquivo e hash local à versão observada em QA e ao registro disponível em produção. Os efeitos cobertos pelo catálogo foram comparados em conjunto, inclusive substituições posteriores; não se infere que o catálogo ateste efeitos transitórios ou recibos históricos ausentes.
+
 ## Comparação atual em QA
 
 Após autenticação da conexão dedicada, a URL retornada identificou `twrydxsdemaykgvdlpyd`. O ledger de QA contém 27 entradas com nomes `m001` a `m027` e versões atribuídas no momento da instalação; os mapeamentos históricos estão em [homologacao-twry-20261022.md](homologacao-twry-20261022.md). Não confundir esses números de versão com os nomes de arquivo canônicos.
@@ -37,7 +39,7 @@ O comando operacional `node scripts/operations/release-checks.mjs diagnose-patch
 ## Restante para conclusão
 
 1. Projeto, ledger e catálogo foram reconfirmados nos dois ambientes por leitura. Em 31/10/2026 o mantenedor decidiu que backup e recuperação não bloqueiam esta etapa; a pendência não foi validada e está na [#158](https://github.com/kauanbarateli/Segundo-Cerebro/issues/158), vinculada à #42.
-2. O catálogo comparou os objetos cobertos e os registros acima explicam o canal histórico; documentar por migration as dependências não cobertas pelo catálogo e produzir procedimento revisado que preserve a incerteza de recibos antigos.
+2. O catálogo comparou os objetos cobertos e os registros acima explicam o canal histórico; o mapa registra cada migration e preserva a incerteza dos recibos antigos. Para cada candidato futuro, revisar dependências e efeitos não cobertos pelo catálogo antes de qualquer aplicação; não preencher o ledger histórico artificialmente.
 3. A classificação separada do patch está disponível e foi conferida em leitura. Em PGlite, `node --test tests/scripts/onboarding-conflict-verifier.test.mjs` confirmou o patch, a tradução de SQLSTATE `40001` para `PT409` sem expor a mensagem interna e a recusa do wrapper canônico, corpo alterado e grant indevido. O comando `diagnose-patch` mantém o catálogo bruto e sua saída de falha; validar também os consumidores derivados e o HTTP em QA.
 4. O mecanismo aditivo reversível foi ensaiado em QA e existe prova histórica de HTTP 409; ainda é necessário testar a migration real quando existir e revalidar os fluxos Admin/onboarding e isolamento para o novo candidato, com recuperação e reversão documentadas.
 5. Só considerar reconciliado quando houver evidência suficiente de ledger e objetos, QA e procedimento revisado. O teste local desta página não equivale a esses aceites.
