@@ -1,7 +1,7 @@
 /** Browser/React interaction only. Auth, HTTP and persistence are synthetic;
  * no Supabase, real account, database, hosted environment or delivery claim.
  * Context routing blocks unexpected HTTP(S), not process-wide network or WebSockets. */
-import { expect, test, type BrowserContext, type Page, type Request } from "@playwright/test";
+import { expect, test, type BrowserContext, type CDPSession, type Page, type Request } from "@playwright/test";
 import { resolve } from "node:path";
 import { rolldown } from "rolldown";
 
@@ -131,6 +131,7 @@ async function mount(page: Page, mode: Mode) {
 function clean(trace: Awaited<ReturnType<typeof mount>>["trace"]) { expect(trace.unexpected).toEqual([]); expect(trace.errors).toEqual([]); }
 
 type FocusEventSample = { event: string; target: string; visibility: string; focused: boolean; trusted: boolean };
+const focusSessions = new WeakMap<Page, CDPSession>();
 async function evidence(page: Page): Promise<FocusEventSample[]> {
   return page.evaluate(() => (globalThis as unknown as { __feedbackFocusEvidence: FocusEventSample[] }).__feedbackFocusEvidence);
 }
@@ -141,10 +142,22 @@ async function awaitLoss(page: Page, from: number): Promise<number> {
   ))).toBe(true);
   return (await evidence(page)).length;
 }
+async function disablePlaywrightFocusEmulation(context: BrowserContext, page: Page) {
+  // Playwright enables this CDP override on each Chromium page. Disable it
+  // rather than synthesizing focus/visibility events, then assert real events.
+  // A missing/failed CDP command must fail the test, never skip this safeguard.
+  const session = await context.newCDPSession(page);
+  await session.send("Emulation.setFocusEmulationEnabled", { enabled: false });
+  focusSessions.set(page, session);
+}
 async function controlPage(context: BrowserContext, page: Page): Promise<{ other: Page; checkpoint: number }> {
+  await disablePlaywrightFocusEmulation(context, page);
+  await page.bringToFront();
+  await expect.poll(() => page.evaluate(() => document.hasFocus() && document.visibilityState === "visible")).toBe(true);
   const before = (await evidence(page)).length;
   const other = await context.newPage();
   await other.goto(origin + "/focus-control");
+  await disablePlaywrightFocusEmulation(context, other);
   await focusControl(other);
   return { other, checkpoint: await awaitLoss(page, before) };
 }
