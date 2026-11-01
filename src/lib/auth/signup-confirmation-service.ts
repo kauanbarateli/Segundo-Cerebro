@@ -21,6 +21,24 @@ export interface SignupConfirmationPorts {
 export type SignupConfirmationResult = { status: "ready" | "invalid" | "rate-limited" | "unavailable" };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/** Only a trusted caller that has just verified a purpose-bound OTP may call this. */
+export async function continueVerifiedSignup(ports: SignupConfirmationPorts, identity: {userId:string;sessionId:string;email:string}, legal: {terms:string;privacy:string}): Promise<SignupConfirmationResult> {
+    if (!UUID.test(identity.userId) || !UUID.test(identity.sessionId) || typeof identity.email !== "string" || /[\u0000-\u001f\u007f-\u009f<>]/u.test(identity.email)) return { status: "invalid" };
+    const email = identity.email.trim().toLowerCase();
+    if (!validEmail(email)) return { status: "invalid" };
+    const hash = ports.subjectHash(email);
+    if (!/^[a-f0-9]{64}$/.test(hash)) return { status: "unavailable" };
+    const existing = await ports.findBoundIntent(identity.userId, identity.sessionId, hash);
+    if (!legal.terms || !legal.privacy) return { status: "invalid" };
+    if (existing && existing.state !== "bound") return { status: "invalid" };
+    const intent = await ports.recoverVerifiedIntent(identity.userId, identity.sessionId, hash, legal.terms, legal.privacy);
+    if (!intent || intent.state !== "bound" || !UUID.test(intent.intentId) || intent.termsVersion !== legal.terms || intent.privacyVersion !== legal.privacy) return { status: "invalid" };
+    const now = ports.now();
+    if (!Number.isSafeInteger(now) || now < 0 || !Number.isSafeInteger(now + 600_000)) return { status: "unavailable" };
+    await ports.putCheckpoint({ userId: identity.userId, sessionId: identity.sessionId, intentId: intent.intentId, issuedAt: now, expiresAt: now + 600_000, passwordConfirmed: false, originPending: intent.originPending });
+    return { status: "ready" };
+}
+
 /** Invoke only on an explicit same-origin POST, never while rendering a GET. */
 export async function verifySignupConfirmation(ports: SignupConfirmationPorts, tokenHash: unknown, legal: { terms: string; privacy: string }): Promise<SignupConfirmationResult> {
   if (typeof tokenHash !== "string" || !/^[A-Za-z0-9_-]{32,256}$/.test(tokenHash)) return { status: "invalid" };
@@ -30,22 +48,8 @@ export async function verifySignupConfirmation(ports: SignupConfirmationPorts, t
     if (!(await ports.limitToken(tokenHash)).allowed) return { status: "rate-limited" };
     verificationStarted = true;
     const identity = await ports.verifyEmailProof(tokenHash);
-    if (!identity || !UUID.test(identity.userId) || !UUID.test(identity.sessionId) || typeof identity.email !== "string" || /[\u0000-\u001f\u007f-\u009f<>]/u.test(identity.email)) return { status: "invalid" };
-    const email = identity.email.trim().toLowerCase();
-    if (!validEmail(email)) return { status: "invalid" };
-    const hash = ports.subjectHash(email);
-    if (!/^[a-f0-9]{64}$/.test(hash)) return { status: "unavailable" };
-    const existing = await ports.findBoundIntent(identity.userId, identity.sessionId, hash);
-    if (!legal.terms || !legal.privacy) return { status: "invalid" };
-    if (existing && existing.state !== "bound") return { status: "invalid" };
-    // Recheck the durable fence after every new email proof, even while the
-    // existing intent is live. Recovery must never rebind an in-flight fence.
-    const intent = await ports.recoverVerifiedIntent(identity.userId, identity.sessionId, hash, legal.terms, legal.privacy);
-    if (!intent || intent.state !== "bound" || !UUID.test(intent.intentId) || !legal.terms || !legal.privacy || intent.termsVersion !== legal.terms || intent.privacyVersion !== legal.privacy) return { status: "invalid" };
-    const now = ports.now();
-    if (!Number.isSafeInteger(now) || now < 0 || !Number.isSafeInteger(now + 600_000)) return { status: "unavailable" };
-    await ports.putCheckpoint({ userId: identity.userId, sessionId: identity.sessionId, intentId: intent.intentId, issuedAt: now, expiresAt: now + 600_000, passwordConfirmed: false, originPending: intent.originPending });
-    return { status: "ready" };
+    if (!identity) return { status: "invalid" };
+    return await continueVerifiedSignup(ports,identity,legal);
   } catch { return { status: "unavailable" }; }
   };
   const result = await perform();

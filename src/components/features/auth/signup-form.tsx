@@ -25,8 +25,8 @@ export function SignupForm({ termsVersion, privacyVersion, initialMessage, initi
     inFlight.current = true; setBusy(true); setReply(null); setShowInitial(false);
     let submitted = false;
     try {
-      // Set the HttpOnly attempt secret before the password POST. The endpoint
-      // preserves any existing attempt so refresh/recovery do not invalidate it.
+      // Rotate the HttpOnly attempt secret before a new password POST. Older
+      // links continue via OTP plus the password-reset fence.
       const preparation = await fetch("/auth/preparar-cadastro", { method:"GET", cache:"no-store", redirect:"error", referrerPolicy:"no-referrer", signal:AbortSignal.timeout(10_000) });
       if (!preparation.ok) { setReply("unavailable"); return; }
       submitted = true;

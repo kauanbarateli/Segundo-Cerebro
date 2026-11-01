@@ -26,6 +26,19 @@ it does not make a new signup attempt immediately available. Do not rotate or
 delete a possibly live attempt automatically; implement and qualify a bounded
 multi-attempt or other safe reconciliation design before opening signup.
 
+**Cross-browser uncertainty blocker:** the current uniqueness constraint is on
+the browser hash, not on the email-subject hash. Two browsers can prepare
+different intents for the same email and issue two signup requests even while
+the first provider outcome is unknown. A multi-cookie rotation alone does not
+fix that race. An indefinitely retained per-subject fence could prevent a
+second call, but could also be used to deny signup for somebody else's email;
+expiring it does not prove an in-flight Auth request cannot finish later. An
+acceptable release design must establish an authoritative provider outcome or a
+reviewed idempotency/serialization contract, define abuse and retention
+handling, and test races across sessions. The available Supabase docs do not
+establish an idempotency key for this signup call. Rate limits and timeouts are
+not proof of cancellation. The release gate remains closed.
+
 The confirmation channel checks that the original browser cookie matches a
 live bound intent **before** verifying the token. Another device without that
 cookie uses the existing fenced workflow: verify OTP and require a fresh

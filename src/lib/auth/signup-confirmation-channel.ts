@@ -70,7 +70,7 @@ export async function submitSignupEmailLink(request: NextRequest, purpose: Purpo
     // existing password-after-OTP fence; never treat the stale cookie as proof.
     if(result.status==="other-browser") return passwordFallback();
     store.set(cookieName(purpose), "", secureCookieOptions(config.secureCookies, { maxAge: 0 }));
-    const response = signupRedirect(config, result.status === "completed" ? "/onboarding" : "/cadastro?status=repeat");
+    const response = signupRedirect(config, result.status === "completed" ? "/onboarding" : result.status === "password-required" ? "/cadastro/definir-senha" : "/cadastro?status=repeat");
     // Do not clear on failure: the original browser must be able to request a
     // fresh OTP if the preceding Auth or admission response was lost.
     if(result.status==="completed") response.cookies.set(SIGNUP_BROWSER_COOKIE,"",secureCookieOptions(config.secureCookies,{maxAge:0}));

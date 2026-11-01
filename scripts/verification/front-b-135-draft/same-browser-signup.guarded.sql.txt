@@ -56,7 +56,7 @@ END $$;
 -- Only the server can look up a high-entropy cookie hash. A pending intent
 -- does not qualify: the Auth INSERT must already have bound it to a new user.
 CREATE FUNCTION app_private.signup_browser_find(p_browser text) RETURNS jsonb LANGUAGE sql SECURITY DEFINER SET search_path='' AS $$
- SELECT pg_catalog.jsonb_build_object('intentId',a.intent_id,'originPending',CASE WHEN i.state='consumed' THEN a.accept_origin ELSE i.origin IS NOT NULL END) FROM app_private.signup_browser_attempts a
+ SELECT pg_catalog.jsonb_build_object('intentId',a.intent_id,'userId',i.user_id,'originPending',CASE WHEN i.state='consumed' THEN a.accept_origin ELSE i.origin IS NOT NULL END) FROM app_private.signup_browser_attempts a
  JOIN app_private.signup_intents i ON i.id=a.intent_id
  WHERE a.browser_hash=p_browser AND a.expires_at>pg_catalog.clock_timestamp()
   AND i.state IN ('bound','consumed') AND i.user_id IS NOT NULL

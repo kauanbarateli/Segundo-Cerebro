@@ -6,11 +6,17 @@ import { isTrustedHostedDatabaseOrigin } from "@/lib/auth/database-origin-server
 export const signupUnavailable = () => { throw new Error("Signup unavailable."); };
 // Hard gate: only a reviewed code change after the SQL/provider/cutover gates may remove this.
 const TRANSACTIONAL_SIGNUP_RELEASED: boolean = true;
+// Separate release guard: QA/provider version, configuration and duplicate
+// races require qualification. This is not an automatic drift detector.
+const SIGNUP_DUPLICATE_CONTRACT_QUALIFIED: boolean = false;
 export function signupFenceDeployed(config: SupabaseAuthConfig): boolean {
   return TRANSACTIONAL_SIGNUP_RELEASED && isTrustedHostedDatabaseOrigin(config);
 }
 export function signupEnabled(config: SupabaseAuthConfig): boolean {
   return signupFenceDeployed(config) && process.env.PUBLIC_SIGNUP_ENABLED === "true";
+}
+export function signupSameBrowserEnabled(config:SupabaseAuthConfig):boolean {
+  return SIGNUP_DUPLICATE_CONTRACT_QUALIFIED && signupEnabled(config);
 }
 async function boundedJson(response: Response): Promise<unknown> {
   const reader = response.body?.getReader();

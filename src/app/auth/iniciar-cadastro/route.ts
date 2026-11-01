@@ -5,7 +5,7 @@ import { sameOrigin } from "@/lib/auth/policy";
 import { signupRedirect } from "@/lib/auth/signup-channel";
 import { readSignupBrowserCookie } from "@/lib/auth/signup-browser-secret";
 import { readSignupForm } from "@/lib/auth/signup-form-body";
-import { signupEnabled } from "@/lib/auth/signup-http";
+import { signupSameBrowserEnabled } from "@/lib/auth/signup-http";
 import { createSameBrowserStartPorts } from "@/lib/auth/signup-same-browser-runtime";
 import { startSameBrowserSignup } from "@/lib/auth/signup-same-browser-start";
 import { LEGAL_DOCUMENTS } from "@/lib/legal/documents";
@@ -21,7 +21,7 @@ function resultResponse(request: NextRequest, config: Parameters<typeof signupRe
 export async function POST(request: NextRequest) {
   try {
     const config = readAuthConfiguration();
-    if (config.mode !== "supabase" || !signupEnabled(config)) return new NextResponse(null, { status: 503, headers: noStoreHeaders() });
+    if (config.mode !== "supabase" || !signupSameBrowserEnabled(config)) return new NextResponse(null, { status: 503, headers: noStoreHeaders() });
     if (!sameOrigin(request.headers.get("origin"), config.appOrigin)) return new NextResponse(null, { status: 403, headers: noStoreHeaders() });
     const form = await readSignupForm(request, fields);
     if (!form) return resultResponse(request, config, "invalid");

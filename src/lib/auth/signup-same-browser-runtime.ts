@@ -5,6 +5,7 @@ import { AUTH_COOKIE_NAME } from "./cookie-policy";
 import { signupBrowserSecretHash } from "./signup-browser-secret";
 import { createSignupRequestPorts } from "./signup-runtime";
 import { createSignupConfirmationPorts } from "./signup-confirmation-runtime";
+import { continueVerifiedSignup } from "./signup-confirmation-service";
 import { signupRpc, signupUnavailable } from "./signup-http";
 import type { SameBrowserStartPorts } from "./signup-same-browser-start";
 import type { SameBrowserSignupPorts } from "./signup-same-browser-service";
@@ -29,7 +30,8 @@ export function createSameBrowserConfirmationPorts(config:SupabaseAuthConfig,jar
  return {
   canBegin:base.canBegin,browserHash:secret=>signupBrowserSecretHash(secret,config.stateSecret),limitToken:base.limitToken,
   verifyEmailProof:base.verifyEmailProof,subjectHash:base.subjectHash,clearProvisionalSession:base.clearProvisionalSession,
-  async findAttempt(hash) {const value=await signupRpc(config,"signup_browser_find",{p_browser:hash});if(value===null)return null;if(!value || typeof value!=="object" || Array.isArray(value) || Object.keys(value).sort().join(",")!=="intentId,originPending")return signupUnavailable();const data=value as Record<string,unknown>;if(typeof data.intentId!=="string" || !UUID.test(data.intentId) || typeof data.originPending!=="boolean")return signupUnavailable();return {intentId:data.intentId,originPending:data.originPending};},
+  async findAttempt(hash) {const value=await signupRpc(config,"signup_browser_find",{p_browser:hash});if(value===null)return null;if(!value || typeof value!=="object" || Array.isArray(value) || Object.keys(value).sort().join(",")!=="intentId,originPending,userId")return signupUnavailable();const data=value as Record<string,unknown>;if(typeof data.intentId!=="string" || !UUID.test(data.intentId) || typeof data.userId!=="string" || !UUID.test(data.userId) || typeof data.originPending!=="boolean")return signupUnavailable();return {intentId:data.intentId,userId:data.userId,originPending:data.originPending};},
+  async continueVerified(identity,legal){return (await continueVerifiedSignup(base,identity,legal)).status==="ready";},
   async admit(value) {return signupRpc(config,"signup_browser_admit",{p_user:value.userId,p_session:value.sessionId,p_intent:value.intentId,p_subject:value.subjectHash,p_browser:value.browserHash,p_terms:value.terms,p_privacy:value.privacy,p_accept_origin:value.acceptOrigin,p_origin_version:value.originVersion});},
  };
 }
