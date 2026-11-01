@@ -38,9 +38,9 @@ const declaredDifferences = [
     reason: "C applies the approved layout Codex (D-033, issue #46): grouped 232/76px sidebar, 76px topbar and new page hierarchy. P→C geometry/style deltas are recorded, not a shared contract; functional assertions remain per tree." },
 ] as const;
 const copyMatrix = {
-  ".shell-demo-label": { B: "Conta conectada · dados de exemplo", P: "Conta conectada", C: "Conta conectada" },
+  ".shell-demo-label": { B: "Conta conectada · dados de exemplo", P: "Conta conectada", C: "(removido: estado fixo, não ação)" },
   ".shell-status": { B: "Conta conectada · Os dados dos módulos são exemplos e não são salvos na sua conta.",
-    P: "Capturar e Tarefas são salvos na sua conta. As demais áreas ainda usam exemplos.", C: "Seus registros são salvos na sua conta." },
+    P: "Capturar e Tarefas são salvos na sua conta. As demais áreas ainda usam exemplos.", C: "(removido: estado fixo, não ação)" },
   ".capture-mode small": { B: "Demonstração · notas na sessão", P: "Notas salvas na sua conta", C: "Notas salvas na sua conta" },
   ".capture-location [role=status]": { B: "Salva nesta sessão", P: "Salva na sua conta", C: "Salva na sua conta" },
   ".tasks-toolbar > div > .tasks-note": { B: "Dia de exemplo: 23/09/2026. Alterações valem nesta sessão.",
@@ -121,7 +121,9 @@ async function start(page: Page, fixture: Fixture, tree: VisualTree, scene: Scen
   await page.evaluate(async () => { await document.fonts.load("16px Issue22VisualGeist"); await document.fonts.ready; });
   await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
   for (const [selector, values] of Object.entries(copyMatrix)) if (!selector.startsWith(".capture-") && !selector.startsWith(".tasks-")) {
-    await expect(page.locator(selector)).toHaveText(values[tree]);
+    // Connected C no longer repeats a fixed "Conta conectada"/"salvos na sua conta" state; only action feedback remains.
+    if (tree === "C" && selector.startsWith(".shell-")) await expect(page.locator(selector)).toHaveCount(0);
+    else await expect(page.locator(selector)).toHaveText(values[tree]);
   }
   // Layout Codex (D-033/#46) moved search into the sidebar and Atividade into the topbar in C.
   if (tree === "C") {
