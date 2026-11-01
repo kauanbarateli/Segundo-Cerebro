@@ -7,7 +7,7 @@ import {execFileSync} from 'node:child_process';
 const BASE='scripts/verification/front-b-135-pg17/',ROOT=resolve(process.cwd());
 const AUTH_PINS=[
  ['scripts/verification/auth-local-ci.mjs','bc1c2b27124ba05bd896fd72c5f8144fa85f0703db7eb641b3b9887f3591136b'],
- ['tests/e2e-auth-local/identity-data-api-contract.mjs','75f0adde06c81d9a3a068ac9873a6eb09eff41952c1b02a3cfe1a9341e9f4aa'],
+ ['tests/e2e-auth-local/identity-data-api-contract.mjs','75f0adde06c81d9a3a068ac9873a6eeb09eff41952c1b02a3cfe1a9341e9f4aa'],
  ['tests/e2e-auth-local/capture-task-persistence-contract.mjs','f28aa8e3ae0f37821ab6e7b2ccbc13fc0b50fadd9c39c9b599ae8dd2917b6009'],
  ['tests/e2e-auth-local/qualified-chromium.mjs','70097633fa0a16a196e84e4cf0dd6b8908c78578be40ba09a553df515998cd2b'],
  ['tests/e2e-auth-local/browser-process-environment.mjs','ffe33d1ec57378b04d18c180dd6601589cf4f3f82721d92be53ca1aa31d82a99'],
@@ -26,7 +26,7 @@ const LOCAL_PINS=Object.freeze({
  'reservation.sql.txt':'2ed365eb0943c25d3463b7a8578268d47e1813c39cadcacf3b3eac35094b42bc'
 });
 const SUPPORT_PINS=Object.freeze([
- [BASE+'runner.test.mjs','0fe875930d1bd5cae8ed105dd304f11e5f4c2189702b371ace0b5a0475118eda'],
+ [BASE+'runner.test.mjs','55303f3fc6710a043accc5786f58a76e56ef27a003544bad914c5f5c04e02b68'],
  [BASE+'session.test.mjs','0d5abd786b5011ded73d60a1b25c365413df6516e7a598bc9064a99dd2ff15cc'],
  [BASE+'race.test.mjs','abc65232de672d573755e2c9b8a9dfbfc31833b33c6829cfa7511795bcbf6233'],
  [BASE+'qualify.test.mjs','34bf3c2caac26f380ceec8ac85eddebe691063880ab028ddcbf322ed1e3eec6d'],
