@@ -1,5 +1,4 @@
 import "server-only";
-import type { SignupOrigin } from "../../core/acquisition/signup-origin";
 import type { SupabaseAuthConfig } from "./config";
 import { isTrustedHostedDatabaseOrigin } from "./database-origin-server";
 
@@ -32,8 +31,9 @@ async function boundedJson(response: Response): Promise<unknown> {
  */
 type Actor = { p_user: string; p_session: string };
 type BoundIntent = Actor & { p_intent: string; p_subject_hash: string };
+type SignupRpcOrigin = Readonly<Partial<Record<"utm_source" | "utm_medium" | "utm_campaign" | "utm_term" | "utm_content", string>>>;
 type SignupRpcArguments = {
-  signup_intent_create: { p_binding_hash: string; p_subject_hash: string; p_terms: string; p_privacy: string; p_expires: string; p_origin: SignupOrigin | null; p_origin_version: string | null };
+  signup_intent_create: { p_binding_hash: string; p_subject_hash: string; p_terms: string; p_privacy: string; p_expires: string; p_origin: SignupRpcOrigin | null; p_origin_version: string | null };
   signup_find_bound_intent: Actor & { p_subject_hash: string };
   signup_recover_verified_intent: Actor & { p_subject_hash: string; p_terms: string; p_privacy: string };
   signup_discard_pending_origin: BoundIntent;
