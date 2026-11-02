@@ -21,15 +21,19 @@ test('a única dependência runtime nova é vinculada aos inventários históric
  qualify(AVATAR_SOURCE_PATHS,'c4e69785fb6b395f4b15f2f9679ed7399eef98bcc55372ab15116ce7ad846efd','a5daff443981a3ec6420aff2e2ae947d5b8bcbbbbcd8d3725b52c6fa38ef1e4e');
 });
 test('fechamentos recusam omissão, substituição e reordenação sem alterar 026/027',async()=>{
- const recovery=[...new Set([...ADMIN_LOCAL_SOURCE_PATHS,...await deriveRecoverySourcePaths()])].sort();// Before 15733dd: full closure 392def35fb49f651980b54e2b5c7e43ebeefffcc2458de34eaee7d606321fc9d;
+ // doc21 dock: Shell imports added after these pins; prior closures are proven without them.
+ const dock3=['src/components/layout/desktop-dock.css','src/components/layout/desktop-dock.tsx','src/lib/navigation/desktop-navigation-preference.ts'],dock5=[...dock3,'src/components/features/configuracoes/desktop-navigation-setting.css','src/components/features/configuracoes/desktop-navigation-setting.tsx'];
+ const recoveryWithDock=[...new Set([...ADMIN_LOCAL_SOURCE_PATHS,...await deriveRecoverySourcePaths()])].sort(),recovery=recoveryWithDock.filter(x=>!dock3.includes(x));assert.equal(recoveryWithDock.length,recovery.length+3);assert.equal(hash(recoveryWithDock),'4221c723d81a355203357739472f64e345d82ca51163d8e4dad836366fec9f8e');// Before 15733dd: full closure 392def35fb49f651980b54e2b5c7e43ebeefffcc2458de34eaee7d606321fc9d;
  // without the helper 26a3009686bcd0ee155f57172de323287013fcc892641b323abe76c53b2a160d.
  assert.equal(hash(recovery),'149d6e0f6e6570cb3a7561ff77ca00ee049993d17c7096b8ac7b9684b4e61edd');const priorRecovery=priorV2(recovery);
  qualifyProvisional(priorRecovery,'6f59490bcb61a18a132c0b25e5f7c8748e651e94f943d0fabfb59d8272e10e91','7c79d9e7a8b10ed37f8a465dcd51ecaa04bd63c298f7f1fb7b972bf685b35cef');
  qualifyQa(priorRecovery.filter(x=>x!==provisional),'2eed7a351da5eb4b790b5bba2ae72cd47b9d746405290817e7d61a0b45912f1b','687b2f71585166ed34fbf23a0838c8532edabb4cc99fce46f434df1dc07fc62a','349478ca75e06db8ed4d8b0fd2fcfe42e0d317a8ff038a83cbf34abc784350df','eb023efd938cef79d9cfd21a7c3e2ff26e15984db88eb6a1318e0a21c0d8c814');
- assert.doesNotThrow(()=>assertRecoverySourcePaths(recovery));for(const changed of [recovery.filter(x=>x!==name),[...recovery].reverse(),[...recovery.filter(x=>x!==name),'tests/helpers/foreign.mjs'].sort()])assert.throws(()=>assertRecoverySourcePaths(changed),{message:'SOURCE_REFUSED'});
+ assert.doesNotThrow(()=>assertRecoverySourcePaths(recoveryWithDock));for(const changed of [recovery,recoveryWithDock.filter(x=>x!==name),[...recoveryWithDock].reverse(),[...recoveryWithDock.filter(x=>x!==name),'tests/helpers/foreign.mjs'].sort()])assert.throws(()=>assertRecoverySourcePaths(changed),{message:'SOURCE_REFUSED'});
  const finance=await current27SourceClosure(fileURLToPath(new URL('../../',import.meta.url)));assert.deepEqual(finance,CURRENT27_EXPECTED_SOURCES);qualify(finance,'88921c32009028ee89ab3b70577ff55671a0678265464a02510eb6113ff0924f','bb6fa457547a0f67f70d9e87713019a3c92a1d91139f357068e7f91accef4147');
  for(const changed of [finance.filter(x=>x!==name),[...finance].reverse(),[...finance.filter(x=>x!==name),'tests/helpers/foreign.mjs'].sort()])assert.throws(()=>assertCurrent27SourceSet(changed),{code:'SOURCE_REFUSED'});
- const browser=await deriveAdminBrowserSourcePaths(),drive=[...new Set([...ADMIN_LOCAL_SOURCE_PATHS,...await deriveDriveSourcePaths()])].sort();assertAdminBrowserSourcePaths(browser);assertDriveSourcePaths(drive);
+ const browserWithDock=await deriveAdminBrowserSourcePaths(),driveWithDock=[...new Set([...ADMIN_LOCAL_SOURCE_PATHS,...await deriveDriveSourcePaths()])].sort();assertAdminBrowserSourcePaths(browserWithDock);assertDriveSourcePaths(driveWithDock);
+ const browser=browserWithDock.filter(x=>!dock5.includes(x)),drive=driveWithDock.filter(x=>!dock3.includes(x));assert.equal(browserWithDock.length,browser.length+5);assert.equal(driveWithDock.length,drive.length+3);
+ assert.equal(hash(browserWithDock),'c528806c8413ebb4cf7e80140a37f7cb13feb30cb5144e1d9a98f36e5049ab1c');assert.equal(hash(driveWithDock),'7ea581b5372e637273c4631386df91979f707890c2eb0e5211847a7111c7ac71');
  // Before the inventory changes: browser 35a7214fe9431c6c3e67f119fa270afdaf3d97f669c4c8fa0cd63c713c167e3a;
  // Drive 5631da45e3401d538bef4e704574f9abf4382be3c7b97db8336a5e913d1ee2a1.
  const priorBrowser=priorV2(browser),oldBrowser=[...priorBrowser,'src/components/features/configuracoes/signup-origin-setting.css','src/components/features/configuracoes/signup-origin-setting.tsx'].sort();

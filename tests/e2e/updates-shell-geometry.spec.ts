@@ -28,7 +28,7 @@ test.beforeAll(async()=>{
  },load(id:string){if(id==='\0shell-css')return 'export {};';if(id.startsWith('\0shell:'))return modules[id.slice(7)];}};
  const server=await rolldown({input:resolve('tests/e2e/fixtures/updates-shell-geometry-ssr.tsx'),platform:'node',tsconfig:false,resolve:{alias:{'@':resolve('src')}},transform:{jsx:'react-jsx',define:{'process.env.NODE_ENV':'"production"'}},external:['react','react/jsx-runtime','react-dom/server'],plugins:[plugin]});
  try{const result=await server.generate({format:'cjs',codeSplitting:false}),chunk=result.output[0];if(result.output.length!==1||chunk?.type!=='chunk'||chunk.dynamicImports.length)throw Error('closed SSR bundle required');const m={exports:{} as {renderShell?:(updates?:boolean)=>string}};new Function('require','module','exports',chunk.code)(require,m,m.exports);if(typeof m.exports.renderShell!=='function')throw Error('missing render');html=m.exports.renderShell();htmlWithoutUpdates=m.exports.renderShell(false);}finally{await server.close();}
- const files=['design-system/tokens/tokens.css','src/components/ui/aliases.css','src/components/ui/button.css','src/components/theme/theme-toggle.css','src/components/layout/workspace-shell.css'];
+ const files=['design-system/tokens/tokens.css','src/components/ui/aliases.css','src/components/ui/button.css','src/components/theme/theme-toggle.css','src/components/layout/workspace-shell.css','src/components/layout/desktop-dock.css'];
  css='*{box-sizing:border-box}body{margin:0}svg{flex-shrink:0}'+(await Promise.all(files.map(f=>readFile(f,'utf8')))).join('\n');
 });
 for(const width of [320,390])test(`shell conectado SSR ${width}px: ações sem sobreposição e foco`,async({browser})=>{
