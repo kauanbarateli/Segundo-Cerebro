@@ -58,7 +58,7 @@ export async function deriveAdminBrowserSourcePaths() {
   return Object.freeze([...paths].sort());
 }
 export function assertAdminBrowserSourcePaths(paths) {
-  if(!Array.isArray(paths)||paths.length!==ADMIN_BROWSER_SOURCE_COUNTS.git||paths.some(path=>typeof path!=="string")||hash(Buffer.from(paths.join("\n")+"\n"))!=="80a56792536f74cb645801b1d1cc80ec995e499b5ddae674023a5867c4aeed33")fail("SOURCE_REFUSED");
+  if(!Array.isArray(paths)||paths.length!==ADMIN_BROWSER_SOURCE_COUNTS.git||paths.some(path=>typeof path!=="string")||hash(Buffer.from(paths.join("\n")+"\n"))!=="0a67af0fb65bf5519f8246b1d8295321c515d2c4db8dcffa5fc975e6178d7eb1")fail("SOURCE_REFUSED");
 }
 export async function collectAdminBrowserSources(run, sha) {
   const original = await collectAdminSources(run,sha), paths = new Set([...original.sourceHashes.map(r => r.path), ...await deriveAdminBrowserSourcePaths()]);

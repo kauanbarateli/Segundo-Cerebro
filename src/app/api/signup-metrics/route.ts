@@ -33,7 +33,8 @@ export async function GET(request: Request) {
   const bytes=new Uint8Array(length); let offset=0; for(const chunk of chunks) {bytes.set(chunk,offset); offset+=chunk.byteLength;}
   const result=parseCatalogSignupMetrics(JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes)) as unknown,query);
   if(!result) throw new Error('Unavailable.');
-  return NextResponse.json({ok:true,originDistribution:'catalog',result},{headers});
+  const {start,end,zone,bucket,totalPublic,stock,series}=result;
+  return NextResponse.json({ok:true,result:{start,end,zone,bucket,totalPublic,stock,series}},{headers});
  } catch(error) {
   const status=error instanceof RequestFault ? error.status : error instanceof AuthGuardError ? error.code==='unauthenticated'?401:error.code==='forbidden'?403:503 : 503;
   return NextResponse.json({ok:false,message:status===400?'Revise o período informado.':status===409?'A conta mudou. Atualize a página.':'Não foi possível carregar as métricas.'},{status,headers});

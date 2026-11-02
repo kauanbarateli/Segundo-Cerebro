@@ -13,7 +13,7 @@ describe('métricas privadas',()=>{
  beforeEach(()=>{vi.clearAllMocks();vi.stubGlobal('fetch',fake.fetch);fake.identity.mockResolvedValue({userId,sessionId,mustChangePassword:false,role:'master',entitlements:{}});fake.fetch.mockResolvedValue(new Response(JSON.stringify(result),{headers:{'Content-Type':'application/json'}}));});
  it('autoriza Master, usa ator da sessão e retorna somente agregados',async()=>{
   const response=await GET(request()); expect(response.status).toBe(200); expect(response.headers.get('cache-control')).toContain('no-store');
-  expect(await response.json()).toEqual({ok:true,originDistribution:'catalog',result});
+  expect(await response.json()).toEqual({ok:true,result:{start:result.start,end:result.end,zone:result.zone,bucket:result.bucket,totalPublic:result.totalPublic,stock:result.stock,series:result.series}});
   expect(JSON.parse(fake.fetch.mock.calls[0]![1].body)).toMatchObject({p_actor:userId,p_session:sessionId,p_start:'2026-10-01'});
  });
  it('recusa valores livres e versões divergentes sem devolvê-los',async()=>{
@@ -27,11 +27,13 @@ describe('métricas privadas',()=>{
    expect((await GET(request())).status).toBe(503);
   }
  });
- it('retorna apenas códigos aprovados e a ausência mesmo abaixo de cinco',async()=>{
+ it('não envia ao navegador as distribuições nem os códigos de origem',async()=>{
   const other=[{kind:'not-informed',value:null,count:6}],source=[{kind:'value',value:'google',count:5},{kind:'not-informed',value:null,count:1}];
   const supplied={...result,totalPublic:6,series:[{period:'2026-10-01',count:6}],distributions:{utm_source:source,utm_medium:other,utm_campaign:other,utm_term:other,utm_content:other}};
   fake.fetch.mockResolvedValueOnce(new Response(JSON.stringify(supplied),{headers:{'Content-Type':'application/json'}}));
-  const response=await GET(request());expect(response.status).toBe(200);expect(await response.json()).toEqual({ok:true,originDistribution:'catalog',result:supplied});
+  const response=await GET(request());expect(response.status).toBe(200);
+  const body=await response.json();expect(body).toEqual({ok:true,result:{start:supplied.start,end:supplied.end,zone:supplied.zone,bucket:supplied.bucket,totalPublic:supplied.totalPublic,stock:supplied.stock,series:supplied.series}});
+  expect(JSON.stringify(body)).not.toMatch(/utm_|google|distributions|dictionaryVersion|originDistribution/);
  });
  it('nega anônimo, usuário comum, veto e troca de conta antes de consultar',async()=>{
   fake.identity.mockResolvedValueOnce(null);expect((await GET(request())).status).toBe(401);

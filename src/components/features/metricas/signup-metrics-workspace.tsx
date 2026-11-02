@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
-import { METRIC_DIMENSIONS, catalogOriginLabel, parseMetricQuery, parseCatalogSignupMetrics, type MetricQuery, type SignupMetrics } from '@/core/acquisition/signup-metrics';
+import { parseMetricQuery, parseSignupMetricsSummary, type MetricQuery, type SignupMetricsSummary } from '@/core/acquisition/signup-metrics';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import './signup-metrics-workspace.css';
@@ -14,7 +14,7 @@ function defaultQuery(): MetricQuery {
 }
 const displayDate=(date:string)=>new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'short',timeZone:'UTC'}).format(new Date(`${date}T00:00:00Z`));
 export function SignupMetricsWorkspace({userId}:{userId:string}) {
- const [draft,setDraft]=useState<MetricQuery>(defaultQuery), [data,setData]=useState<SignupMetrics|null>(null), [loading,setLoading]=useState(true), [error,setError]=useState('');
+ const [draft,setDraft]=useState<MetricQuery>(defaultQuery), [data,setData]=useState<SignupMetricsSummary|null>(null), [loading,setLoading]=useState(true), [error,setError]=useState('');
  const [owner,setOwner]=useState(userId);
  const [identityClosed,setIdentityClosed]=useState(false);
  const generation=useRef(0), closed=useRef(false), currentQuery=useRef<MetricQuery>(defaultQuery());
@@ -29,7 +29,7 @@ export function SignupMetricsWorkspace({userId}:{userId:string}) {
    if([401,403,409].includes(response.status)){if(id===generation.current)closeIdentity();return;}
    const body:unknown=await response.json();
    const envelope=body && typeof body==='object' && !Array.isArray(body) ? body as Record<string,unknown> : null;
-   const result=envelope && Object.keys(envelope).sort().join(',')==='ok,originDistribution,result' && envelope.ok===true && envelope.originDistribution==='catalog' ? parseCatalogSignupMetrics(envelope.result,query):null;
+   const result=envelope && Object.keys(envelope).sort().join(',')==='ok,result' && envelope.ok===true ? parseSignupMetricsSummary(envelope.result,query):null;
    if(!response.ok || !result) throw new Error('unavailable');
    if(id===generation.current) {if(verifying){closed.current=false;setIdentityClosed(false);}setData(result);}
   } catch { if(id===generation.current) setError('Não foi possível carregar as métricas. Tente novamente.'); }
@@ -66,12 +66,6 @@ export function SignupMetricsWorkspace({userId}:{userId:string}) {
    <div className="signup-metrics__summary"><section><p>Cadastros públicos no período</p><strong>{data.totalPublic.toLocaleString('pt-BR')}</strong></section><section><p>Contas existentes agora</p><strong>{data.stock.total.toLocaleString('pt-BR')}</strong><small>Legadas {data.stock.legacy} · Admin {data.stock.admin} · Públicas {data.stock.public} · Não classificadas {data.stock.unclassified}</small></section></div>
    <section className="signup-metrics__panel" aria-labelledby="metrics-series-title"><h2 id="metrics-series-title">Cadastros ao longo do tempo</h2>
     {data.totalPublic===0 ? <p>Nenhum cadastro público concluído neste período.</p> : <ol className="signup-metrics__series">{data.series.map(row=><li key={row.period}><span>{displayDate(row.period)}</span><span className="signup-metrics__bar"><i style={{width:`${row.count/max*100}%`}} /></span><strong>{row.count}</strong></li>)}</ol>}
-   </section>
-   <section className="signup-metrics__panel" aria-labelledby="metrics-origin-title">
-    <h2 id="metrics-origin-title">Origem informada</h2>
-    <p>Valores não reconhecidos e grupos menores que cinco aparecem em Outros. Sem origem ou consentimento, o cadastro aparece como Não informada.</p>
-    {METRIC_DIMENSIONS.map(dimension=><div key={dimension}><h3>{({utm_source:'Origem',utm_medium:'Mídia',utm_campaign:'Campanha',utm_term:'Termo',utm_content:'Conteúdo'} as const)[dimension]}</h3>{data.distributions[dimension].length===0 ? <p>Nenhum cadastro no período.</p> : <ul className="signup-metrics__origins">{data.distributions[dimension].map(row=><li key={row.kind+':'+(row.value??'')}><span>{catalogOriginLabel(dimension,row)}</span><strong>{row.count.toLocaleString('pt-BR')}</strong></li>)}</ul>}</div>)}
-    <p>Contagens por períodos sobrepostos podem revelar informações. Use os resultados com cuidado.</p>
    </section>
   </>}
  </div>;

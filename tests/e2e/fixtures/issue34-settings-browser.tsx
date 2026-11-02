@@ -39,11 +39,11 @@ export function NavigationLink({ href = "#", onClick, children, prefetch, ...pro
   // Product internal anchors are ordinary native <a>, not a replaced control.
   return <a {...props} href={href} onClick={event => { onClick?.(event); if (!event.defaultPrevented && event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) { event.preventDefault(); navigate(href); } }}>{children}</a>;
 }
-function Surface({originAvailable=false}:{originAvailable?:boolean}) {
+function Surface() {
   const app = useDemoApplication();
-  return <WorkspaceShell><div className="foundation-page" data-application-mode={app.mode}><h1>Configurações</h1><SettingsWorkspace originAvailable={originAvailable} /></div></WorkspaceShell>;
+  return <WorkspaceShell><div className="foundation-page" data-application-mode={app.mode}><h1>Configurações</h1><SettingsWorkspace /></div></WorkspaceShell>;
 }
-Object.assign(globalThis, { __startIssue34SettingsSql: (userId: string, policy: AccessPolicy, valuesHidden: boolean, originAvailable = false) => {
+Object.assign(globalThis, { __startIssue34SettingsSql: (userId: string, policy: AccessPolicy, valuesHidden: boolean) => {
   const element = document.getElementById("issue34-settings-sql"); if (!element || policy.isAdmin || policy.entitlements.calendario !== false) throw new Error("Ordinary settings fixture/disabled calendar policy required.");
-  createRoot(element).render(<NavigationProvider><ThemeProvider><InstallProvider><ToastProvider><DemoAccessProvider serverPolicy={policy}><DemoApplicationProvider serverUserId={userId} accountValuesHidden={valuesHidden}><Surface originAvailable={originAvailable} /></DemoApplicationProvider></DemoAccessProvider></ToastProvider></InstallProvider></ThemeProvider></NavigationProvider>);
+  createRoot(element).render(<NavigationProvider><ThemeProvider><InstallProvider><ToastProvider><DemoAccessProvider serverPolicy={policy}><DemoApplicationProvider serverUserId={userId} accountValuesHidden={valuesHidden}><Surface /></DemoApplicationProvider></DemoAccessProvider></ToastProvider></InstallProvider></ThemeProvider></NavigationProvider>);
 } });

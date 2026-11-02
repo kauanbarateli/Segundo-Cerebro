@@ -28,6 +28,7 @@ const frenteARemovedPaths=["src/components/features/calendario/calendar-agenda.t
 const doc18AddedPaths=["src/components/editor/document-reader.tsx","src/components/features/cofre/vault-secret-field.tsx","src/components/features/configuracoes/preference-draft.ts","src/components/features/projetos/task-refusal.ts","src/components/editor/document-link.ts"];
 const doc18UnreachableDrivePaths=["src/components/features/drive/drive-client.ts","src/components/features/drive/drive-connected-workspace.tsx","src/components/features/drive/drive-workspace.tsx","src/components/features/drive/drive.css","src/components/features/drive/projections.ts"];
 const frontABAddedPaths=["src/components/features/capturar/capture-settings.tsx","src/components/features/capturar/image-preview.tsx","src/components/features/capturar/quick-capture.tsx","src/components/features/capturar/use-image-attachments.ts","src/components/features/configuracoes/signup-origin-setting.css","src/components/features/configuracoes/signup-origin-setting.tsx","src/lib/access/front-b-capabilities-server.ts","src/lib/auth/signup-http.ts","src/lib/navigation/optional-destinations.ts"];
+const removedOriginPaths=["src/components/features/configuracoes/signup-origin-setting.css","src/components/features/configuracoes/signup-origin-setting.tsx"];
 const signupFenceAddedPaths=["src/core/acquisition/signup-origin.ts","src/lib/auth/signup-checkpoint.ts","src/lib/auth/signup-completion-service.ts","src/lib/auth/signup-fence-wire.ts","src/lib/feedback/reconciliation-gate.ts"];
 const frontABUnreachablePaths=["src/components/features/calendario/calendar-agenda.tsx","src/components/features/calendario/calendar-month.tsx","src/components/pwa/install-help.tsx","src/components/pwa/pwa.css"];
 const protocolUnavailable={identity:"unavailable",order:"unavailable",terminal:"unavailable",publicTerminal:"unavailable",managerEntry:"unavailable",sessionRegistered:"unavailable"};
@@ -433,7 +434,7 @@ test("Admin actual request events feed POST proof; login keeps destination/UI/se
   assert.match(spec,/catch \{ if\(observed\(\)\) state\.unknown\(\)/);
   for(const code of ADMIN_AUTH_CHECKPOINTS)assert.match(spec,new RegExp('checkpoint\\(state,"'+code+'"'));
 });
-test("complete556+61 collector includes doc18, Goals image host, Finance series, onboarding, Kanban, effect contract, SSR decoder and original JPEG with text-only Git stdout",async()=>{
+test("complete554+61 collector includes doc18, Goals image host, Finance series, onboarding, Kanban, effect contract, SSR decoder and original JPEG with text-only Git stdout",async()=>{
   const image="src/components/layout/illustrative-avatar.jpg",bytes=await readFile(new URL(image,root));
   assert.equal(bytes.equals(Buffer.from(bytes.toString("utf8"))),false);
   const oid=createHash("sha1").update("blob "+bytes.length+"\0").update(bytes).digest("hex");
@@ -461,11 +462,11 @@ test("complete556+61 collector includes doc18, Goals image host, Finance series,
     await assert.rejects(collectAdminBrowserSources(gitTextSeam(path),sourceSha),{message:"SOURCE_REFUSED"},path);
   }
   for(const path of doc18UnreachableDrivePaths){assert.equal(derived.includes(path),false,path);assert.equal(collected.sourceHashes.some(row=>row.path===path),false,path);}
-  for(const path of frontABAddedPaths){assert.equal(derived.includes(path),true,path);const bytes=await readFile(new URL(path,root));assert.deepEqual(collected.sourceHashes.filter(row=>row.path===path),[{path,sha256:createHash("sha256").update(bytes).digest("hex"),bytes:bytes.length}],path);}
+  for(const path of frontABAddedPaths.filter(p=>!removedOriginPaths.includes(p))){assert.equal(derived.includes(path),true,path);const bytes=await readFile(new URL(path,root));assert.deepEqual(collected.sourceHashes.filter(row=>row.path===path),[{path,sha256:createHash("sha256").update(bytes).digest("hex"),bytes:bytes.length}],path);}
   for(const path of signupFenceAddedPaths){assert.equal(derived.includes(path),true,path);const bytes=await readFile(new URL(path,root));assert.deepEqual(collected.sourceHashes.filter(row=>row.path===path),[{path,sha256:createHash("sha256").update(bytes).digest("hex"),bytes:bytes.length}],path);}
   for(const path of frontABUnreachablePaths){assert.equal(derived.includes(path),false,path);assert.equal(collected.sourceHashes.some(row=>row.path===path),false,path);}
   await assert.rejects(collectAdminBrowserSources(gitTextSeam("src/lib/access/front-b-capabilities-server.ts"),sourceSha),{message:"SOURCE_REFUSED"});
-  await assert.rejects(collectAdminBrowserSources(gitTextSeam("src/components/features/configuracoes/signup-origin-setting.tsx"),sourceSha),{message:"SOURCE_REFUSED"});
+  await assert.rejects(collectAdminBrowserSources(gitTextSeam("src/components/features/configuracoes/settings-connected-workspace.tsx"),sourceSha),{message:"SOURCE_REFUSED"});
   await assert.rejects(collectAdminBrowserSources(gitTextSeam(ADMIN_BROWSER_HISTORICAL_READER_SOURCE.path),sourceSha),{message:"SOURCE_REFUSED"});
   assert.equal(derived.includes("src/app/(workspace)/drive/page.tsx"),true);
   assert.equal(ADMIN_BROWSER_NEW_PATHS.length,18);
@@ -612,13 +613,13 @@ test("Next spawn failure remains closed and failed without retaining raw details
 test("source closure derives real imports and preserves all eighteen finite declared paths and guards",async()=>{const paths=await deriveAdminBrowserSourcePaths();assert.equal(paths.length,ADMIN_BROWSER_SOURCE_COUNTS.git);assert.equal(ADMIN_BROWSER_NEW_PATHS.length,18);assert.equal(new Set(paths).size,paths.length);assert.deepEqual(paths,[...paths].sort());for(const p of ADMIN_BROWSER_SOURCE_SEEDS)assert.equal(paths.includes(p),true,p);for(const p of ["src/lib/auth/runtime.ts","src/lib/auth/actions.ts","src/lib/auth/service.ts","src/app/(workspace)/layout.tsx","src/middleware.ts","src/components/features/auth/auth-form.tsx","supabase/migrations/20261010044217_finance_monthly_plan.sql","src/components/features/configuracoes/settings-legal-section.tsx","src/components/ui/legal-links.tsx","src/components/ui/legal-links.css"])assert.equal(paths.includes(p),true,p);assert.equal(paths.some(p=>p.startsWith("node_modules/")||p.includes("..")),false);});
 test("doc18 source closure preserves prior changes, binds the Auth theme import and the Frente A delta",async()=>{
   const paths=await deriveAdminBrowserSourcePaths();
-  assert.equal(ADMIN_BROWSER_SOURCE_COUNTS.git,542-doc18UnreachableDrivePaths.length+doc18AddedPaths.length+authThemeAddedPaths.length+frontABAddedPaths.length-frontABUnreachablePaths.length+signupFenceAddedPaths.length+3);
-  assert.equal(paths.length,556);assert.equal(ADMIN_BROWSER_SOURCE_COUNTS.dependencies,61);
+  assert.equal(ADMIN_BROWSER_SOURCE_COUNTS.git,542-doc18UnreachableDrivePaths.length+doc18AddedPaths.length+authThemeAddedPaths.length+frontABAddedPaths.length-frontABUnreachablePaths.length+signupFenceAddedPaths.length+3-removedOriginPaths.length);
+  assert.equal(paths.length,554);assert.equal(ADMIN_BROWSER_SOURCE_COUNTS.dependencies,61);
   for(const path of [...doc18AddedPaths,...authThemeAddedPaths])assert.equal(paths.includes(path),true,path);
   for(const path of doc18UnreachableDrivePaths)assert.equal(paths.includes(path),false,path);
   for(const path of frenteAAddedPaths)assert.equal(paths.includes(path),true,path);
   for(const path of frenteARemovedPaths)assert.equal(paths.includes(path),false,path);
-  for(const path of frontABAddedPaths)assert.equal(paths.includes(path),true,path);
+  for(const path of frontABAddedPaths)assert.equal(paths.includes(path),!removedOriginPaths.includes(path),path);
   for(const path of signupFenceAddedPaths)assert.equal(paths.includes(path),true,path);
   for(const path of frontABUnreachablePaths)assert.equal(paths.includes(path),false,path);
   assert.equal(paths.includes("tests/e2e/fixtures/auth-sign-in-acknowledgement.tsx"),false);
@@ -626,7 +627,7 @@ test("doc18 source closure preserves prior changes, binds the Auth theme import 
   assert.equal(ADMIN_BROWSER_NEW_PATHS.length,18);
 });
 test("historical reader and five added imports remain pinned, with no same-count replacement",async()=>{
-  const paths=await deriveAdminBrowserSourcePaths(),pin=ADMIN_BROWSER_HISTORICAL_READER_SOURCE,provisional="src/lib/auth/signup-provisional.ts",beforeProvisional=paths.filter(path=>path!==provisional),qaTypes="src/lib/supabase/database.front-b-qa028.ts",beforeQaTypes=beforeProvisional.filter(path=>path!==qaTypes),previous=beforeQaTypes.filter(path=>path!==pin.path);
+  const current=await deriveAdminBrowserSourcePaths(),paths=[...current,...removedOriginPaths].sort(),pin=ADMIN_BROWSER_HISTORICAL_READER_SOURCE,provisional="src/lib/auth/signup-provisional.ts",beforeProvisional=paths.filter(path=>path!==provisional),qaTypes="src/lib/supabase/database.front-b-qa028.ts",beforeQaTypes=beforeProvisional.filter(path=>path!==qaTypes),previous=beforeQaTypes.filter(path=>path!==pin.path);
   assert.equal(paths.filter(path=>path===pin.path).length,1);assert.equal(previous.length,553);
   const digest=values=>createHash("sha256").update(values.join("\n")+"\n").digest("hex");
   assert.equal(digest(previous.filter(path=>!signupFenceAddedPaths.includes(path))),"268eed43002ca0b46bac739049e911a4a023a6e09e795edfa794d8ecbeb0d001");
@@ -634,8 +635,9 @@ test("historical reader and five added imports remain pinned, with no same-count
   assert.equal(digest(beforeQaTypes),"ad93fb418e68102fa814fb6642b46323535e9ef3d1cde9258608e5d00fd733fb");
   assert.equal(paths.filter(path=>path===provisional).length,1);assert.equal(digest(beforeProvisional),"72d05c8f1d4b4ddcd9747dae9fd9043263bf561f1c1b8998b8454fa11b23d6d8");
   assert.equal(digest(paths),"80a56792536f74cb645801b1d1cc80ec995e499b5ddae674023a5867c4aeed33");
-  assert.doesNotThrow(()=>assertAdminBrowserSourcePaths(paths));
-  for(const altered of [beforeProvisional,beforeQaTypes,previous,[...paths].reverse(),[...previous,"tests/helpers/unreviewed.mjs"].sort()])assert.throws(()=>assertAdminBrowserSourcePaths(altered),{message:"SOURCE_REFUSED"});
+  assert.equal(digest(current),"0a67af0fb65bf5519f8246b1d8295321c515d2c4db8dcffa5fc975e6178d7eb1");
+  assert.doesNotThrow(()=>assertAdminBrowserSourcePaths(current));
+  for(const altered of [paths,current.slice(1),[...current].reverse(),[...current.slice(1),"tests/helpers/unreviewed.mjs"].sort()])assert.throws(()=>assertAdminBrowserSourcePaths(altered),{message:"SOURCE_REFUSED"});
   const bytes=await readFile(new URL(pin.path,root));assert.equal(bytes.length,pin.bytes);assert.equal(createHash("sha256").update(bytes).digest("hex"),pin.sha256);
   const file=ts.createSourceFile("local-canonical-sql.ts",await read("tests/helpers/local-canonical-sql.ts"),ts.ScriptTarget.Latest,true,ts.ScriptKind.TS);
   assert.equal(file.statements.some(node=>ts.isImportDeclaration(node)&&ts.isStringLiteral(node.moduleSpecifier)&&node.moduleSpecifier.text==="./canonical-front-b-source.mjs"),true);
