@@ -434,7 +434,7 @@ test("Admin actual request events feed POST proof; login keeps destination/UI/se
   assert.match(spec,/catch \{ if\(observed\(\)\) state\.unknown\(\)/);
   for(const code of ADMIN_AUTH_CHECKPOINTS)assert.match(spec,new RegExp('checkpoint\\(state,"'+code+'"'));
 });
-test("complete554+61 collector includes doc18, Goals image host, Finance series, onboarding, Kanban, effect contract, SSR decoder and original JPEG with text-only Git stdout",async()=>{
+test("complete556+61 collector includes doc18, Goals image host, Finance series, onboarding, Kanban, effect contract, SSR decoder and original JPEG with text-only Git stdout",async()=>{
   const image="src/components/layout/illustrative-avatar.jpg",bytes=await readFile(new URL(image,root));
   assert.equal(bytes.equals(Buffer.from(bytes.toString("utf8"))),false);
   const oid=createHash("sha1").update("blob "+bytes.length+"\0").update(bytes).digest("hex");
@@ -613,8 +613,8 @@ test("Next spawn failure remains closed and failed without retaining raw details
 test("source closure derives real imports and preserves all eighteen finite declared paths and guards",async()=>{const paths=await deriveAdminBrowserSourcePaths();assert.equal(paths.length,ADMIN_BROWSER_SOURCE_COUNTS.git);assert.equal(ADMIN_BROWSER_NEW_PATHS.length,18);assert.equal(new Set(paths).size,paths.length);assert.deepEqual(paths,[...paths].sort());for(const p of ADMIN_BROWSER_SOURCE_SEEDS)assert.equal(paths.includes(p),true,p);for(const p of ["src/lib/auth/runtime.ts","src/lib/auth/actions.ts","src/lib/auth/service.ts","src/app/(workspace)/layout.tsx","src/middleware.ts","src/components/features/auth/auth-form.tsx","supabase/migrations/20261010044217_finance_monthly_plan.sql","src/components/features/configuracoes/settings-legal-section.tsx","src/components/ui/legal-links.tsx","src/components/ui/legal-links.css"])assert.equal(paths.includes(p),true,p);assert.equal(paths.some(p=>p.startsWith("node_modules/")||p.includes("..")),false);});
 test("doc18 source closure preserves prior changes, binds the Auth theme import and the Frente A delta",async()=>{
   const paths=await deriveAdminBrowserSourcePaths();
-  assert.equal(ADMIN_BROWSER_SOURCE_COUNTS.git,542-doc18UnreachableDrivePaths.length+doc18AddedPaths.length+authThemeAddedPaths.length+frontABAddedPaths.length-frontABUnreachablePaths.length+signupFenceAddedPaths.length+3-removedOriginPaths.length);
-  assert.equal(paths.length,554);assert.equal(ADMIN_BROWSER_SOURCE_COUNTS.dependencies,61);
+  assert.equal(ADMIN_BROWSER_SOURCE_COUNTS.git,542-doc18UnreachableDrivePaths.length+doc18AddedPaths.length+authThemeAddedPaths.length+frontABAddedPaths.length-frontABUnreachablePaths.length+signupFenceAddedPaths.length+5-removedOriginPaths.length);
+  assert.equal(paths.length,556);assert.equal(ADMIN_BROWSER_SOURCE_COUNTS.dependencies,61);
   for(const path of [...doc18AddedPaths,...authThemeAddedPaths])assert.equal(paths.includes(path),true,path);
   for(const path of doc18UnreachableDrivePaths)assert.equal(paths.includes(path),false,path);
   for(const path of frenteAAddedPaths)assert.equal(paths.includes(path),true,path);
@@ -627,7 +627,7 @@ test("doc18 source closure preserves prior changes, binds the Auth theme import 
   assert.equal(ADMIN_BROWSER_NEW_PATHS.length,18);
 });
 test("historical reader and five added imports remain pinned, with no same-count replacement",async()=>{
-  const current=await deriveAdminBrowserSourcePaths(),paths=[...current,...removedOriginPaths].sort(),pin=ADMIN_BROWSER_HISTORICAL_READER_SOURCE,provisional="src/lib/auth/signup-provisional.ts",beforeProvisional=paths.filter(path=>path!==provisional),qaTypes="src/lib/supabase/database.front-b-qa028.ts",beforeQaTypes=beforeProvisional.filter(path=>path!==qaTypes),previous=beforeQaTypes.filter(path=>path!==pin.path);
+  const current=await deriveAdminBrowserSourcePaths(),v2Paths=["src/lib/auth/signup-origin-snapshot.ts","src/lib/auth/origin-withdrawal-v2-gate.ts"],prior=current.filter(path=>!v2Paths.includes(path)),paths=[...prior,...removedOriginPaths].sort(),pin=ADMIN_BROWSER_HISTORICAL_READER_SOURCE,provisional="src/lib/auth/signup-provisional.ts",beforeProvisional=paths.filter(path=>path!==provisional),qaTypes="src/lib/supabase/database.front-b-qa028.ts",beforeQaTypes=beforeProvisional.filter(path=>path!==qaTypes),previous=beforeQaTypes.filter(path=>path!==pin.path);
   assert.equal(paths.filter(path=>path===pin.path).length,1);assert.equal(previous.length,553);
   const digest=values=>createHash("sha256").update(values.join("\n")+"\n").digest("hex");
   assert.equal(digest(previous.filter(path=>!signupFenceAddedPaths.includes(path))),"268eed43002ca0b46bac739049e911a4a023a6e09e795edfa794d8ecbeb0d001");
@@ -635,7 +635,7 @@ test("historical reader and five added imports remain pinned, with no same-count
   assert.equal(digest(beforeQaTypes),"ad93fb418e68102fa814fb6642b46323535e9ef3d1cde9258608e5d00fd733fb");
   assert.equal(paths.filter(path=>path===provisional).length,1);assert.equal(digest(beforeProvisional),"72d05c8f1d4b4ddcd9747dae9fd9043263bf561f1c1b8998b8454fa11b23d6d8");
   assert.equal(digest(paths),"80a56792536f74cb645801b1d1cc80ec995e499b5ddae674023a5867c4aeed33");
-  assert.equal(digest(current),"0a67af0fb65bf5519f8246b1d8295321c515d2c4db8dcffa5fc975e6178d7eb1");
+  for(const path of v2Paths)assert.equal(current.filter(p=>p===path).length,1);assert.equal(digest(prior),"0a67af0fb65bf5519f8246b1d8295321c515d2c4db8dcffa5fc975e6178d7eb1");assert.equal(digest(current),"d1cabdfa83d1ed9eaedf20de5060d8febb99d6606b01a23ad94a45cff7903cae");
   assert.doesNotThrow(()=>assertAdminBrowserSourcePaths(current));
   for(const altered of [paths,current.slice(1),[...current].reverse(),[...current.slice(1),"tests/helpers/unreviewed.mjs"].sort()])assert.throws(()=>assertAdminBrowserSourcePaths(altered),{message:"SOURCE_REFUSED"});
   const bytes=await readFile(new URL(pin.path,root));assert.equal(bytes.length,pin.bytes);assert.equal(createHash("sha256").update(bytes).digest("hex"),pin.sha256);

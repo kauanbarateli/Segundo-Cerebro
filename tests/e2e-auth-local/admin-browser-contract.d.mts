@@ -30,7 +30,7 @@ export const ADMIN_BROWSER_LIMITS:Readonly<{browserRequests:1024;ownedSdkRequest
 export const ADMIN_BROWSER_SERIES_SOURCE_PATHS:readonly string[];
 export const ADMIN_BROWSER_GOALS_SOURCE_PATHS:readonly string[];
 /** CURRENT27 DRAFT: keep the strict old literal until the original closure is derived/reviewed. */
-export const ADMIN_BROWSER_SOURCE_COUNTS:Readonly<{git:554;dependencies:61}>;
+export const ADMIN_BROWSER_SOURCE_COUNTS:Readonly<{git:556;dependencies:61}>;
 export const ADMIN_BROWSER_HISTORICAL_READER_SOURCE:Readonly<{path:string;bytes:number;sha256:string}>;
 export const ADMIN_BROWSER_STAGES:Readonly<Record<AdminBrowserKind,readonly string[]>>;
 export const ADMIN_BROWSER_CODES:readonly AdminBrowserCode[];
