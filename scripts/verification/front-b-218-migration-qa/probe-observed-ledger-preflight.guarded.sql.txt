@@ -1,0 +1,23 @@
+-- Somente diagnóstico localmente preparado. NÃO EXECUTAR em QA/prod.
+-- A guarda fatal nunca deve ser removida com base apenas na sonda pontual.
+BEGIN TRANSACTION READ ONLY;
+DO $manual_guard$ BEGIN RAISE EXCEPTION 'STOP: ledger probe preflight remains unqualified'; END $manual_guard$;
+DO $ledger_observation$
+BEGIN
+  IF (SELECT count(*) FROM supabase_migrations.schema_migrations
+      WHERE (version, name) IN (
+        ('20261101172256','m028_front_b_signup_feedback_metrics_qa'),
+        ('20261101234319','m029_front_b_signup_quarantine_038f_qa'),
+        ('20261101234954','m029_front_b_signup_browser_cutover_038f_qa'),
+        ('20261101235120','m029_front_b_signup_thaw_038f_qa')
+      )) <> 4 THEN
+    RAISE EXCEPTION 'STOP: expected ledger rows differ';
+  END IF;
+  IF EXISTS (SELECT 1 FROM supabase_migrations.schema_migrations
+             WHERE version > '20261101235120'
+                OR name = 'sc218_ledger_probe_20261102_5e81f9ab') THEN
+    RAISE EXCEPTION 'STOP: ledger changed or probe row exists';
+  END IF;
+END;
+$ledger_observation$;
+ROLLBACK;
