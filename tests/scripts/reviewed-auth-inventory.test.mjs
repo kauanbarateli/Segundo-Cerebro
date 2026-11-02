@@ -29,8 +29,10 @@ test('fechamentos recusam omissão, substituição e reordenação sem alterar 0
  const browser=await deriveAdminBrowserSourcePaths(),drive=[...new Set([...ADMIN_LOCAL_SOURCE_PATHS,...await deriveDriveSourcePaths()])].sort();assertAdminBrowserSourcePaths(browser);assertDriveSourcePaths(drive);
  // Before the inventory changes: browser 35a7214fe9431c6c3e67f119fa270afdaf3d97f669c4c8fa0cd63c713c167e3a;
  // Drive 5631da45e3401d538bef4e704574f9abf4382be3c7b97db8336a5e913d1ee2a1.
- qualifyProvisional(browser,'80a56792536f74cb645801b1d1cc80ec995e499b5ddae674023a5867c4aeed33','94a1a0ac53e116c645c2020b36ee6a235e17b74c3f6dd53d777986ca26bf3672');
- qualifyQa(browser.filter(x=>x!==provisional),'72d05c8f1d4b4ddcd9747dae9fd9043263bf561f1c1b8998b8454fa11b23d6d8','f62b2423528d2c0daa22f5437de68df776e4229c2a40b990609c9dd1e208cf48','ad93fb418e68102fa814fb6642b46323535e9ef3d1cde9258608e5d00fd733fb','5cbb1a063ccc9cee96a462b1bb7bc12daa3ff4962435b13ef27e84afcf69d0a0');
+ const oldBrowser=[...browser,'src/components/features/configuracoes/signup-origin-setting.css','src/components/features/configuracoes/signup-origin-setting.tsx'].sort();
+ assert.equal(hash(browser),'0a67af0fb65bf5519f8246b1d8295321c515d2c4db8dcffa5fc975e6178d7eb1');
+ qualifyProvisional(oldBrowser,'80a56792536f74cb645801b1d1cc80ec995e499b5ddae674023a5867c4aeed33','94a1a0ac53e116c645c2020b36ee6a235e17b74c3f6dd53d777986ca26bf3672');
+ qualifyQa(oldBrowser.filter(x=>x!==provisional),'72d05c8f1d4b4ddcd9747dae9fd9043263bf561f1c1b8998b8454fa11b23d6d8','f62b2423528d2c0daa22f5437de68df776e4229c2a40b990609c9dd1e208cf48','ad93fb418e68102fa814fb6642b46323535e9ef3d1cde9258608e5d00fd733fb','5cbb1a063ccc9cee96a462b1bb7bc12daa3ff4962435b13ef27e84afcf69d0a0');
  qualifyProvisional(drive,'99c4c804183b730c21a8304dc08ec78c70c8329073dbcc979c71a70de1809c07','075b424ecb186bf55d2f6154170d3ea6a5a5e4d1b31a79582e3e5c7f4b835ea5');
  qualifyQa(drive.filter(x=>x!==provisional),'862efe637538697a5657234debdff3061580b597c6d0fa9757f8cea706d51acb','f1d9ab1d152ee4f10b0e8bc65e1a68f7f5d9db164f3841eb579aca833e0c4a5a','629bfb2a39651b023760d1981a29ea2541bed3610c2fa4a5f5788e0a3ee25a2f','c86edce223d955229084f27cb8637613787d0bf136f1c038440aad6c9fc43fbd');
  assert.ok((await deriveFoundationSources()).includes(name));assert.ok(STORAGE_SOURCE_PATHS.includes(name));

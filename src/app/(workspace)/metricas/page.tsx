@@ -10,5 +10,5 @@ export default async function MetricsPage() {
  let identity;
  try { identity=await requireMaster(); }
  catch(error) { if(error instanceof AuthGuardError && ['forbidden','demo'].includes(error.code)) notFound(); throw error; }
- return <WorkspacePage feature="admin" title="Métricas" subtitle="Cadastros e origens informadas no período."><SignupMetricsWorkspace userId={identity.userId}/></WorkspacePage>;
+ return <WorkspacePage feature="admin" title="Métricas" subtitle="Cadastros no período."><SignupMetricsWorkspace userId={identity.userId}/></WorkspacePage>;
 }

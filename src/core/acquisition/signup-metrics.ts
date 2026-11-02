@@ -11,6 +11,7 @@ export const METRIC_DIMENSIONS = ['utm_source', 'utm_medium', 'utm_campaign', 'u
 export type MetricDimension = (typeof METRIC_DIMENSIONS)[number];
 export type MetricQuery = { start: string; end: string; zone: 'America/Fortaleza' | 'UTC'; bucket: 'day' | 'week' | 'month' };
 export type SignupMetrics = MetricQuery & { totalPublic: number; stock: Record<'total' | 'legacy' | 'admin' | 'public' | 'unclassified', number>; series: {period: string; count: number}[]; distributions: Record<MetricDimension, DisplayOriginCount[]> };
+export type SignupMetricsSummary = Omit<SignupMetrics, 'distributions'>;
 
 function validDate(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -58,6 +59,15 @@ export function parseWithheldSignupMetrics(value: unknown, query: MetricQuery): 
     }
   }
   return metrics;
+}
+
+/** Only counts and series cross the current metrics API boundary. */
+export function parseSignupMetricsSummary(value: unknown, query: MetricQuery): SignupMetricsSummary | null {
+  if (!object(value) || !exact(value,['start','end','zone','bucket','totalPublic','stock','series']) || !count(value.totalPublic)) return null;
+  const distributions = Object.fromEntries(METRIC_DIMENSIONS.map(key => [key, value.totalPublic ? [{kind:'other',value:null,count:value.totalPublic}] : []]));
+  const result = parseWithheldSignupMetrics({...value, distributions}, query);
+  if (!result) return null;
+  return {start:result.start,end:result.end,zone:result.zone,bucket:result.bucket,totalPublic:result.totalPublic,stock:result.stock,series:result.series};
 }
 
 /**

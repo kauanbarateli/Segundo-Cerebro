@@ -26,9 +26,9 @@ const queryOptions = [
   { key: "vault", feature: "cofre" }, { key: "settings", feature: "configuracoes" },
 ] as const;
 
-export function SettingsWorkspace({originAvailable=false}:{originAvailable?:boolean}) {
+export function SettingsWorkspace() {
   const { connected } = useDemoAccess();
-  return connected ? <SettingsConnectedWorkspace originAvailable={originAvailable} /> : <DemoSettingsWorkspace />;
+  return connected ? <SettingsConnectedWorkspace /> : <DemoSettingsWorkspace />;
 }
 function DemoSettingsWorkspace() {
   const query = useDemoQuery("settings"), app = useDemoApplication();
