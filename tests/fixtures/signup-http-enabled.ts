@@ -6,11 +6,17 @@ import { isTrustedHostedDatabaseOrigin } from "@/lib/auth/database-origin-server
 export const signupUnavailable = () => { throw new Error("Signup unavailable."); };
 // Hard gate: only a reviewed code change after the SQL/provider/cutover gates may remove this.
 const TRANSACTIONAL_SIGNUP_RELEASED: boolean = true;
+// Separate release guard: QA/provider version, configuration and duplicate
+// races require qualification. This is not an automatic drift detector.
+const SIGNUP_DUPLICATE_CONTRACT_QUALIFIED: boolean = false;
 export function signupFenceDeployed(config: SupabaseAuthConfig): boolean {
   return TRANSACTIONAL_SIGNUP_RELEASED && isTrustedHostedDatabaseOrigin(config);
 }
 export function signupEnabled(config: SupabaseAuthConfig): boolean {
   return signupFenceDeployed(config) && process.env.PUBLIC_SIGNUP_ENABLED === "true";
+}
+export function signupSameBrowserEnabled(config:SupabaseAuthConfig):boolean {
+  return SIGNUP_DUPLICATE_CONTRACT_QUALIFIED && signupEnabled(config);
 }
 async function boundedJson(response: Response): Promise<unknown> {
   const reader = response.body?.getReader();
@@ -43,6 +49,12 @@ type SignupRpcArguments = {
   signup_find_bound_intent: Actor & { p_subject_hash: string };
   signup_recover_verified_intent: Actor & { p_subject_hash: string; p_terms: string; p_privacy: string };
   signup_rebind_verified_ack: Actor & { p_subject_hash: string; p_terms: string; p_privacy: string };
+  signup_browser_prepare: { p_binding:string; p_browser:string; p_subject:string; p_terms:string; p_privacy:string; p_expires:string; p_origin:SignupRpcOrigin|null; p_origin_version:string|null };
+  signup_browser_find: { p_browser:string };
+  signup_browser_recover_bound: Actor & { p_subject:string; p_terms:string; p_privacy:string };
+  signup_browser_reconsent_probe: Actor & { p_subject:string; p_terms:string; p_privacy:string };
+  signup_browser_renew: Actor & { p_intent:string; p_subject:string; p_terms:string; p_privacy:string; p_keep_origin:boolean; p_origin_version:string; p_proof_expires_at:string };
+  signup_browser_admit: Actor & { p_intent:string; p_subject:string; p_browser:string; p_terms:string; p_privacy:string; p_accept_origin:boolean; p_origin_version:string };
   signup_discard_pending_origin: BoundIntent;
   signup_attest_password_reset: BoundIntent;
   signup_complete: BoundIntent & { p_terms: string; p_privacy: string; p_accept_origin: boolean; p_origin_version: string | null };
@@ -61,7 +73,8 @@ async function postRpc(config: SupabaseAuthConfig, name: string, body: object): 
 }
 
 export async function signupRpc<Name extends SignupRpcName>(config: SupabaseAuthConfig, name: Name, body: SignupRpcArguments[Name]): Promise<unknown> {
-  if (!["signup_intent_create", "signup_find_bound_intent", "signup_recover_verified_intent", "signup_rebind_verified_ack", "signup_discard_pending_origin", "signup_attest_password_reset", "signup_complete"].includes(name) || !signupEnabled(config)) return signupUnavailable();
+  if (!["signup_intent_create", "signup_find_bound_intent", "signup_recover_verified_intent", "signup_rebind_verified_ack", "signup_browser_prepare", "signup_browser_find", "signup_browser_recover_bound", "signup_browser_reconsent_probe", "signup_browser_renew", "signup_browser_admit", "signup_discard_pending_origin", "signup_attest_password_reset", "signup_complete"].includes(name) || !signupEnabled(config)) return signupUnavailable();
+  if (name.startsWith("signup_browser_") && !signupSameBrowserEnabled(config)) return signupUnavailable();
   return postRpc(config, name, body);
 }
 

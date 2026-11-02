@@ -1,0 +1,72 @@
+-- READ-ONLY DRAFT for composed candidate SHA-256
+-- 038f7a9fa96eaebcdee44b8974e41a1b13dd796651ca5d0fe12a56dcec7fb652.
+-- Neither function fingerprint is approved. Cannot qualify a release, activate
+-- jobs or clean data. Any change in the candidate requires review and revalidation.
+-- Requires the same-browser schema; run only on an independently identified,
+-- authorized destination and only after reviewing the final implementation.
+begin transaction read only;
+with expected_functions(signature,expected_hash,expected_result) as (
+ values ('app_private.signup_prune()','REVIEW_REQUIRED','jsonb'),
+        ('app_private.signup_browser_prune(integer)','REVIEW_REQUIRED','integer')
+), function_checks as (
+ select e.signature,case when e.expected_hash !~ '^[a-f0-9]{64}$' then null else coalesce(
+  pg_catalog.pg_get_userbyid(p.proowner)='postgres' and p.prokind='f'
+  and pg_catalog.pg_get_function_result(p.oid)=e.expected_result
+  and p.prosecdef and not p.proisstrict and not p.proretset and not p.proleakproof
+  and p.provolatile='v' and p.proparallel='u' and l.lanname='plpgsql'
+  and p.proconfig=ARRAY['search_path=""']::text[]
+  and pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(pg_catalog.replace(p.prosrc,E'\r\n',E'\n'),'UTF8')),'hex')=e.expected_hash
+  and pg_catalog.has_function_privilege(pg_catalog.to_regrole('anon'),p.oid,'EXECUTE') is false
+  and pg_catalog.has_function_privilege(pg_catalog.to_regrole('authenticated'),p.oid,'EXECUTE') is false
+  and pg_catalog.has_function_privilege(pg_catalog.to_regrole('service_role'),p.oid,'EXECUTE') is true
+  and (select count(*) from pg_catalog.aclexplode(coalesce(p.proacl,pg_catalog.acldefault('f',p.proowner))) a
+       where a.privilege_type='EXECUTE' and not a.is_grantable and a.grantor=p.proowner
+       and a.grantee in (p.proowner,pg_catalog.to_regrole('service_role')::oid))=2
+  and not exists(select 1 from pg_catalog.aclexplode(coalesce(p.proacl,pg_catalog.acldefault('f',p.proowner))) a
+       where a.privilege_type<>'EXECUTE' or a.is_grantable or a.grantor<>p.proowner
+       or a.grantee not in (p.proowner,pg_catalog.to_regrole('service_role')::oid)),false) end as qualified
+ from expected_functions e left join pg_catalog.pg_proc p on p.oid=pg_catalog.to_regprocedure(e.signature)
+  left join pg_catalog.pg_language l on l.oid=p.prolang
+), expired_intents as (
+ select i.expires_at,i.state,i.origin is not null as has_origin,
+  exists(select 1 from app_private.signup_completion_fences_draft f
+   where f.intent_id=i.id or (i.user_id is not null and f.user_id=i.user_id)) as has_fence,
+  exists(select 1 from app_private.signup_browser_attempts a
+   where a.intent_id=i.id and i.state='bound' and a.expires_at>now()-interval '24 hours') as in_browser_grace
+ from app_private.signup_intents i where i.state in ('pending','bound') and i.expires_at<=now()
+), jobs as (
+ select * from cron.job where jobname='sc-signup-origin-retention-v1'
+), qualified_jobs as (
+ select * from jobs where username='postgres' and database=current_database() and schedule='*/5 * * * *'
+  and command='SET statement_timeout = ''20s''; SET lock_timeout = ''250ms''; SELECT app_private.signup_prune();'
+), outcomes as (
+ select max(r.end_time) filter(where r.status='succeeded') as last_success_at,
+        max(r.end_time) filter(where r.status='failed') as last_failure_at
+ from cron.job_run_details r join qualified_jobs j on j.jobid=r.jobid
+  and r.command=j.command and r.username=j.username and r.database=j.database
+)
+select pg_catalog.jsonb_build_object(
+ 'checked_at',now(),
+ 'function_fingerprints_approved',false,
+ 'signup_prune_qualified',(select qualified from function_checks where signature='app_private.signup_prune()'),
+ 'browser_prune_qualified',(select qualified from function_checks where signature='app_private.signup_browser_prune(integer)'),
+ 'job_count',(select count(*) from jobs),
+ 'qualified_job_count',(select count(*) from qualified_jobs),
+ 'qualified_active_count',(select count(*) from qualified_jobs where active),
+ 'signup_prune_last_success_at',(select last_success_at from outcomes),
+ 'signup_prune_last_failure_at',(select last_failure_at from outcomes),
+ 'browser_prune_named_command_jobs',(select count(*) from cron.job where pg_catalog.strpos(command,'app_private.signup_browser_prune')>0),
+ 'expired_intents',(select count(*) from expired_intents),
+ 'actionable_expired_intents',(select count(*) from expired_intents where has_origin or (not has_fence and not in_browser_grace)),
+ 'oldest_actionable_intent_deadline',(select min(expires_at) from expired_intents where has_origin or (not has_fence and not in_browser_grace)),
+ 'browser_grace_intents',(select count(*) from expired_intents where in_browser_grace),
+ 'fenced_without_origin',(select count(*) from expired_intents where has_fence and not has_origin),
+ 'expired_origins',(select count(*) from app_private.signup_origins where expires_at<=now()),
+ 'oldest_origin_deadline',(select min(expires_at) from app_private.signup_origins where expires_at<=now()),
+ 'pending_subject_scrubs',(select count(*) from app_private.signup_intents where state='consumed' and subject_hash is not null and consumed_at<=now()-interval '24 hours'),
+ 'browser_hashes_after_grace',(select count(*) from app_private.signup_browser_attempts where browser_hash is not null and expires_at<=now()-interval '24 hours'),
+ 'browser_hashes_after_grace_unconsumed',(select count(*) from app_private.signup_browser_attempts where browser_hash is not null and consumed_at is null and expires_at<=now()-interval '24 hours'),
+ 'browser_hash_cleanup_candidates',(select count(*) from app_private.signup_browser_attempts a join app_private.signup_intents i on i.id=a.intent_id where a.browser_hash is not null and a.expires_at<=now()-interval '24 hours'),
+ 'oldest_browser_hash_cleanup_deadline',(select min(a.expires_at+interval '24 hours') from app_private.signup_browser_attempts a join app_private.signup_intents i on i.id=a.intent_id where a.browser_hash is not null and a.expires_at<=now()-interval '24 hours')
+) as retention_health;
+rollback;
