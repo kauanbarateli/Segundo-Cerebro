@@ -1,0 +1,332 @@
+[
+  {
+    "schemaname": "public",
+    "tablename": "calendar_accounts",
+    "policyname": "own_read",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "SELECT",
+    "qual": "((user_id = auth.uid()) AND app_private.has_feature('calendario'::text))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "calendar_events",
+    "policyname": "own_read",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "SELECT",
+    "qual": "((user_id = auth.uid()) AND app_private.has_feature('calendario'::text) AND (EXISTS ( SELECT 1\n   FROM (calendar_sources s\n     JOIN calendar_accounts a ON (((a.user_id = s.user_id) AND (a.id = s.account_id))))\n  WHERE ((s.user_id = calendar_events.user_id) AND (s.id = calendar_events.calendar_id) AND s.selected AND (a.status = 'connected'::text)))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "calendar_sources",
+    "policyname": "own_read",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "SELECT",
+    "qual": "((user_id = auth.uid()) AND app_private.has_feature('calendario'::text))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "calendar_sync_runs",
+    "policyname": "own_read",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "SELECT",
+    "qual": "((user_id = auth.uid()) AND app_private.has_feature('calendario'::text))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "capture_file_links",
+    "policyname": "capture_files_owner_read",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "SELECT",
+    "qual": "((user_id = ( SELECT auth.uid() AS uid)) AND ( SELECT app_private.has_feature('capturar'::text) AS has_feature))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "capture_links",
+    "policyname": "own_read",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "SELECT",
+    "qual": "((( SELECT auth.uid() AS uid) = user_id) AND ( SELECT app_private.has_feature('capturar'::text) AS has_feature))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "captures",
+    "policyname": "own_read",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "SELECT",
+    "qual": "((( SELECT auth.uid() AS uid) = user_id) AND ( SELECT app_private.has_feature('capturar'::text) AS has_feature))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "categories",
+    "policyname": "own_read",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "SELECT",
+    "qual": "((( SELECT auth.uid() AS uid) = user_id) AND (( SELECT app_private.has_feature('capturar'::text) AS has_feature) OR ( SELECT app_private.has_feature('tarefas'::text) AS has_feature)))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "domain_events",
+    "policyname": "own_read",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "SELECT",
+    "qual": "((user_id = ( SELECT auth.uid() AS uid)) AND ( SELECT app_private.current_user_active() AS current_user_active) AND app_private.has_feature(app_private.activity_projection_feature(entity_type)) AND ((entity_type <> 'drive_file'::text) OR (COALESCE((after ->> 'kind'::text), (before ->> 'kind'::text)) = 'drive'::text)) AND ((entity_type <> 'project_container'::text) OR app_private.has_feature(\nCASE COALESCE((after ->> 'kind'::text), (before ->> 'kind'::text))\n    WHEN 'capture'::text THEN 'capturar'::text\n    WHEN 'notebook'::text THEN 'conhecimento'::text\n    WHEN 'folder'::text THEN 'drive'::text\n    ELSE NULL::text\nEND)))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "drive_files",
+    "policyname": "files_owner_read",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "SELECT",
+    "qual": "((user_id = ( SELECT auth.uid() AS uid)) AND (purged_at IS NULL) AND (((kind = 'drive'::text) AND ( SELECT app_private.has_feature('drive'::text) AS has_feature)) OR ((kind = 'capture_image'::text) AND ( SELECT app_private.has_feature('capturar'::text) AS has_feature)) OR ((kind = 'avatar'::text) AND ( SELECT app_private.has_feature('configuracoes'::text) AS has_feature)) OR ((kind = 'project_cover'::text) AND ( SELECT app_private.has_feature('projetos'::text) AS has_feature)) OR ((kind = 'habit_image'::text) AND ( SELECT app_private.has_feature('habitos'::text) AS has_feature)) OR ((kind = 'finance_goal_image'::text) AND ( SELECT app_private.has_feature('financeiro'::text) AS has_feature)) OR ((kind = 'home_focus_image'::text) AND ( SELECT app_private.has_feature('inicio'::text) AS has_feature))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "drive_folders",
+    "policyname": "routine_owner_read",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "SELECT",
+    "qual": "((user_id = ( SELECT auth.uid() AS uid)) AND ( SELECT app_private.has_feature('drive'::text) AS has_feature))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "fin_accounts",
+    "policyname": "finance_owner_read",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "SELECT",
+    "qual": "((user_id = ( SELECT auth.uid() AS uid)) AND ( SELECT app_private.current_user_active() AS current_user_active) AND ( SELECT app_private.has_feature('financeiro'::text) AS has_feature))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "fin_budgets",
+    "policyname": "finance_owner_read",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "SELECT",
+    "qual": "((user_id = ( SELECT auth.uid() AS uid)) AND ( SELECT app_private.current_user_active() AS current_user_active) AND ( SELECT app_private.has_feature('financeiro'::text) AS has_feature))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "fin_categories",
+    "policyname": "finance_owner_read",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "SELECT",
+    "qual": "((user_id = ( SELECT auth.uid() AS uid)) AND ( SELECT app_private.current_user_active() AS current_user_active) AND ( SELECT app_private.has_feature('financeiro'::text) AS has_feature))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "fin_tags",
+    "policyname": "finance_owner_read",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "SELECT",
+    "qual": "((user_id = ( SELECT auth.uid() AS uid)) AND ( SELECT app_private.current_user_active() AS current_user_active) AND ( SELECT app_private.has_feature('financeiro'::text) AS has_feature))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "fin_transaction_tags",
+    "policyname": "finance_owner_read",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "SELECT",
+    "qual": "((user_id = ( SELECT auth.uid() AS uid)) AND ( SELECT app_private.current_user_active() AS current_user_active) AND ( SELECT app_private.has_feature('financeiro'::text) AS has_feature))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "fin_transactions",
+    "policyname": "finance_owner_read",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "SELECT",
+    "qual": "((user_id = ( SELECT auth.uid() AS uid)) AND ( SELECT app_private.current_user_active() AS current_user_active) AND ( SELECT app_private.has_feature('financeiro'::text) AS has_feature))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "habit_entries",
+    "policyname": "routine_owner_read",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "SELECT",
+    "qual": "((user_id = ( SELECT auth.uid() AS uid)) AND ( SELECT app_private.has_feature('habitos'::text) AS has_feature))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "habit_pauses",
+    "policyname": "routine_owner_read",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "SELECT",
+    "qual": "((user_id = ( SELECT auth.uid() AS uid)) AND ( SELECT app_private.has_feature('habitos'::text) AS has_feature))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "habits",
+    "policyname": "routine_owner_read",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "SELECT",
+    "qual": "((user_id = ( SELECT auth.uid() AS uid)) AND ( SELECT app_private.has_feature('habitos'::text) AS has_feature))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "knowledge_notebooks",
+    "policyname": "knowledge_owner_read",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "SELECT",
+    "qual": "((user_id = ( SELECT auth.uid() AS uid)) AND ( SELECT app_private.has_feature('conhecimento'::text) AS has_feature))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "knowledge_pages",
+    "policyname": "knowledge_owner_read",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "SELECT",
+    "qual": "((user_id = ( SELECT auth.uid() AS uid)) AND ( SELECT app_private.has_feature('conhecimento'::text) AS has_feature))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "links",
+    "policyname": "knowledge_owner_read",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "SELECT",
+    "qual": "((user_id = ( SELECT auth.uid() AS uid)) AND ( SELECT app_private.has_feature('conhecimento'::text) AS has_feature))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "page_refs",
+    "policyname": "knowledge_owner_read",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "SELECT",
+    "qual": "((user_id = ( SELECT auth.uid() AS uid)) AND ( SELECT app_private.has_feature('conhecimento'::text) AS has_feature))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "profiles",
+    "policyname": "own_read",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "SELECT",
+    "qual": "((( SELECT auth.uid() AS uid) = user_id) AND ( SELECT app_private.current_user_active() AS current_user_active))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "projects",
+    "policyname": "own_read",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "SELECT",
+    "qual": "((( SELECT auth.uid() AS uid) = user_id) AND ( SELECT app_private.has_feature('projetos'::text) AS has_feature))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "tasks",
+    "policyname": "own_read",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "SELECT",
+    "qual": "((( SELECT auth.uid() AS uid) = user_id) AND ( SELECT app_private.has_feature('tarefas'::text) AS has_feature))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "user_entitlements",
+    "policyname": "own_read",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "SELECT",
+    "qual": "((( SELECT auth.uid() AS uid) = user_id) AND ( SELECT app_private.current_user_active() AS current_user_active))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "user_modules",
+    "policyname": "own_read",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "SELECT",
+    "qual": "((( SELECT auth.uid() AS uid) = user_id) AND ( SELECT app_private.current_user_active() AS current_user_active))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "user_preferences",
+    "policyname": "own_read",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "SELECT",
+    "qual": "((( SELECT auth.uid() AS uid) = user_id) AND ( SELECT app_private.current_user_active() AS current_user_active))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "user_roles",
+    "policyname": "own_read",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "SELECT",
+    "qual": "((( SELECT auth.uid() AS uid) = user_id) AND ( SELECT app_private.current_user_active() AS current_user_active))",
+    "with_check": null
+  },
+  {
+    "schemaname": "storage",
+    "tablename": "buckets",
+    "policyname": "second_brain_private_buckets",
+    "permissive": "RESTRICTIVE",
+    "roles": "{anon,authenticated}",
+    "cmd": "ALL",
+    "qual": "(id <> ALL (ARRAY['second-brain-staging'::text, 'second-brain-files'::text]))",
+    "with_check": "(id <> ALL (ARRAY['second-brain-staging'::text, 'second-brain-files'::text]))"
+  },
+  {
+    "schemaname": "storage",
+    "tablename": "objects",
+    "policyname": "second_brain_private_objects",
+    "permissive": "RESTRICTIVE",
+    "roles": "{anon,authenticated}",
+    "cmd": "ALL",
+    "qual": "(bucket_id <> ALL (ARRAY['second-brain-staging'::text, 'second-brain-files'::text]))",
+    "with_check": "(bucket_id <> ALL (ARRAY['second-brain-staging'::text, 'second-brain-files'::text]))"
+  }
+]

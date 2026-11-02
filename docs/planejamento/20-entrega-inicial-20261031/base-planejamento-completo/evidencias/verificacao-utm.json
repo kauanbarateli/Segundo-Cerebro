@@ -1,0 +1,39 @@
+{
+  "date": "2026-10-31",
+  "timezone": "America/Fortaleza",
+  "repository": "kauanbarateli/Segundo-Cerebro",
+  "commit": "bd35288404c493d1b03f7a1a0208f808cc2079a2",
+  "sourceScan": {
+    "areas": [
+      "src",
+      "supabase/migrations",
+      "proposals",
+      "docs/planejamento/16-checkout-asaas-onboarding"
+    ],
+    "finding": "Atribuição encontrada em planejamento e comunicação legal; não encontrado coletor de campanha ou migration UTM no código analisado.",
+    "scope": "Arquivos versionados da main; não prova estado do banco hospedado nem branches externas."
+  },
+  "hostedDatabase": {
+    "targetProject": "rishenjoikgmfubmnfiu",
+    "operation": "READ ONLY metadata audit via newly authenticated local MCP",
+    "attempted": true,
+    "executedConfirmed": true,
+    "status": "CATALOG_INSPECTED_NO_DEDICATED_TRACKING_FOUND",
+    "query": "anexos/auditoria-supabase/catalog-new-features.sql",
+    "resultCount": 0,
+    "otherProjectsQueried": false,
+    "changesPerformed": false,
+    "limitations": "No personal rows or JSON payloads examined; external tracking and generic payloads are outside this catalog search."
+  },
+  "conclusion": "Catalog audit succeeded. No dedicated acquisition/UTM structure located in inspected columns/table names and routine bodies; plan new consented implementation after migration-ledger reconciliation. Historical refusal is resolved for metadata access.",
+  "historicalHostedDatabaseAttempt": {
+    "targetProject": "rishenjoikgmfubmnfiu",
+    "operation": "Consulta somente leitura de information_schema.columns, sem registros de usuários",
+    "attempted": true,
+    "executedConfirmed": false,
+    "result": "MCP error -32600: You do not have permission to perform this action",
+    "status": "NOT_VERIFIED",
+    "otherProjectsQueried": false,
+    "changesPerformed": false
+  }
+}

@@ -1,0 +1,2 @@
+# Preserve the exact historical handoff bytes and its SHA-256 manifest.
+base-planejamento-completo/** -text -whitespace

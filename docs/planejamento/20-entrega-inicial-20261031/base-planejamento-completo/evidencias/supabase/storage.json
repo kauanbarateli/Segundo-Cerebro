@@ -1,0 +1,16 @@
+[
+  {
+    "id": "second-brain-files",
+    "name": "second-brain-files",
+    "public": false,
+    "file_size_limit": 26214400,
+    "allowed_mime_types": null
+  },
+  {
+    "id": "second-brain-staging",
+    "name": "second-brain-staging",
+    "public": false,
+    "file_size_limit": 26214400,
+    "allowed_mime_types": null
+  }
+]
