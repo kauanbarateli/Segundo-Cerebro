@@ -21,8 +21,8 @@ const SAME_BROWSER_PINS=Object.freeze([
  ['scripts/verification/front-b-135-draft/same-browser-composed-v1.guarded.sql.txt','038f7a9fa96eaebcdee44b8974e41a1b13dd796651ca5d0fe12a56dcec7fb652']
 ]);
 const LOCAL_PINS=Object.freeze({
- 'fresh-feedback-cascade.draft.mjs':'1b47983f10c26b46bc72e920a612680178a149b2dbb2611eac8d550c87c585fe',
- 'fresh-feedback-cascade.guarded.sql.txt':'8081d72004ac2884a34f5a93a93f051ea737cd118a9eb8d92be3340a8215f1e8',
+ 'fresh-feedback-cascade.draft.mjs':'27ac13a0815c53590aadf6d1cb20b7af4e09f4e6990e0142c5888a03a09790d2',
+ 'fresh-feedback-cascade.guarded.sql.txt':'7b1ef35061fdfb04512c63c00065b1bc71398be639e0cf3cd425aed71d6951e6',
  'fresh-feedback.draft.mjs':'b0e663ed6442efefd94666f4f1cfa5c39c6cc472c7891fbfb7a6e1c4e9e5884c',
  'fresh-feedback.fixture.sql':'a9c9e5b19ce7758c78c6bba1f152fd8dbef3ec0fa14d9cb9baaeb875316c48b5',
  'fresh-feedback-production.guarded.sql.txt':'25f765a5743512ad16aa3100e1959c9d74c7dee03726156da2af56e478c1ded2',
