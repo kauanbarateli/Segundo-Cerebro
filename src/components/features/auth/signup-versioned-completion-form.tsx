@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { SignupLegal, SignupOriginConfirmation, SignupPassword } from "./signup-fields";
 import { parseSignupOriginSnapshot, type SignupOriginSnapshot } from "@/lib/auth/signup-origin-snapshot";
 
-type State = { status:"loading"|"error" } | { status:"ready"; snapshot:SignupOriginSnapshot };
+type State = { status:"loading" } | { status:"error" } | { status:"ready"; snapshot:SignupOriginSnapshot };
 export function SignupVersionedCompletionForm({userId,passwordConfirmed,termsVersion,privacyVersion}:{userId:string;passwordConfirmed:boolean;termsVersion:string;privacyVersion:string}) {
  const [state,setState]=useState<State>({status:"loading"}),[attempt,setAttempt]=useState(0);
  useEffect(()=>{

@@ -21,7 +21,7 @@ describe("revisão exibida no cadastro",()=>{
  it("bloqueia formulário até leitura validada e envia apenas revisão opaca",async()=>{
   const calls:RequestInit[]=[];const app=fixture(async(_url,init)=>{calls.push(init!);return json({ok:true,result:{status:"active",revision}});});
   let tree=app.render();expect(find(tree,e=>e.type==="form")).toBeUndefined();expect(find(tree,e=>e.type==="noscript")).toBeDefined();await settle();tree=app.render();
-  expect(find(tree,e=>e.type==="input"&&e.props.name==="originRevision")?.props.value).toBe(revision);expect(find(tree,e=>e.type==="origin-confirmation")).toBeDefined();expect(calls[0].headers).toEqual({"x-expected-user-id":userId});app.unmount();
+  expect(find(tree,e=>e.type==="input"&&e.props.name==="originRevision")?.props.value).toBe(revision);expect(find(tree,e=>e.type==="origin-confirmation")).toBeDefined();expect(calls[0]?.headers).toEqual({"x-expected-user-id":userId});app.unmount();
  });
  it("estado ausente não oferece consentimento e resultado inválido não mostra formulário",async()=>{
   for(const result of [{status:"absent",revision:null},{status:"active",revision:"invalid"}]){const app=fixture(async()=>json({ok:true,result}));app.render();await settle();const tree=app.render();
