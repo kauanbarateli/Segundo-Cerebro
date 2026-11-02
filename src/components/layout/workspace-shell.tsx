@@ -18,7 +18,9 @@ import {
   applySidebarState, readSidebarChoice, resolveSidebarState, saveSidebarChoice,
   SIDEBAR_COMPACT_QUERY, SIDEBAR_MOBILE_QUERY,
 } from "@/lib/navigation/sidebar-preference";
+import { currentDesktopNavigation, DESKTOP_DOCK_QUERY, effectiveDesktopNavigation, subscribeDesktopNavigation } from "@/lib/navigation/desktop-navigation-preference";
 import { NavigationIcon } from "./navigation-icon";
+import { DesktopDock } from "./desktop-dock";
 import { ConnectedCommandFeedback } from "./connected-command-feedback";
 import { CommandPalette } from "./command-palette";
 import { AccountAvatar } from "./account-avatar";
@@ -87,6 +89,10 @@ export function WorkspaceShell({ children, avatarId = null, displayName = null, 
   const collapsed = useSyncExternalStore(subscribeSidebar, sidebarCollapsedSnapshot, () => false);
   const compact = useMediaQuery(SIDEBAR_COMPACT_QUERY);
   const mobile = useMediaQuery(SIDEBAR_MOBILE_QUERY);
+  // doc21: the saved choice applies only on an eligible desktop; CSS does the swap.
+  const savedNavigation = useSyncExternalStore(subscribeDesktopNavigation, currentDesktopNavigation, () => "sidebar" as const);
+  const dockEligible = useMediaQuery(DESKTOP_DOCK_QUERY);
+  const navigationMode = effectiveDesktopNavigation(savedNavigation, dockEligible);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [tip, setTip] = useState<{ text: string; left: number; top: number } | null>(null);
@@ -160,6 +166,34 @@ export function WorkspaceShell({ children, avatarId = null, displayName = null, 
   useEffect(() => {
     if (!mobile) setMobileOpen(false);
   }, [mobile]);
+
+  const previousNavigation = useRef(navigationMode);
+  // Chrome blurs a focused control to <body> as soon as CSS hides it, sometimes before this
+  // effect runs; remember the last focused element so the swap can still restore it.
+  const lastFocused = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    const remember = (event: FocusEvent) => { lastFocused.current = event.target instanceof HTMLElement ? event.target : null; };
+    document.addEventListener("focusin", remember);
+    return () => document.removeEventListener("focusin", remember);
+  }, []);
+  useEffect(() => {
+    if (previousNavigation.current === navigationMode) return;
+    previousNavigation.current = navigationMode;
+    // Tips and the account popover anchored to the previous navigation lose their anchor.
+    hideTip();
+    profilePopover.current?.hidePopover();
+    document.querySelectorAll<HTMLElement>(".desktop-dock__overflow:popover-open").forEach((popover) => popover.hidePopover());
+    // Only focus inside the variant that was just hidden moves: to the same destination in the
+    // variant now shown, else to the content. Page load (focus on body) never steals focus.
+    const dockElement = document.querySelector<HTMLElement>("nav.desktop-dock");
+    const [hidden, shown] = navigationMode === "dock" ? [sidebar.current, dockElement] : [dockElement, sidebar.current];
+    const focused = document.activeElement;
+    const active = focused instanceof HTMLElement && focused !== document.body ? focused : lastFocused.current;
+    if (!active || !hidden?.contains(active) || (focused !== document.body && focused !== active)) return;
+    const href = active.getAttribute("href");
+    const twin = href ? shown?.querySelector<HTMLElement>(`a[href="${CSS.escape(href)}"]`) : null;
+    (twin && twin.getClientRects().length > 0 ? twin : main.current)?.focus({ preventScroll: true });
+  }, [navigationMode, hideTip]);
 
   useEffect(() => {
     const list = sidebarScroll.current;
@@ -332,6 +366,7 @@ export function WorkspaceShell({ children, avatarId = null, displayName = null, 
           <div id="shell-profile" ref={profilePopover} popover="auto" className="shell-profile">
             <p className="shell-profile-title">{connected ? "Sua conta" : "Perfil de demonstração"}</p>
             {!connected && <p>Nenhuma conta está conectada.</p>}
+            <Link href="/configuracoes#perfil" className="shell-menu-link shell-menu-profile" onClick={closeProfile}><Icons.User /><span>Meu perfil</span></Link>
             {activityAllowed && <Link href="/atividade" className="shell-menu-link" onClick={closeProfile}><Icons.Activity /><span>Atividade</span></Link>}
             <Link href="/configuracoes" className="shell-menu-link" onClick={closeProfile}><Icons.Settings /><span>Configurações</span></Link>
             <Link href={optional.help.href} className="shell-menu-link" onClick={closeProfile}>{optional.help.kind === "feedback" ? <Icons.Inbox /> : <Icons.Help />}<span>{optional.help.label}</span></Link>
@@ -358,6 +393,7 @@ export function WorkspaceShell({ children, avatarId = null, displayName = null, 
               aria-expanded={overlay} aria-haspopup="dialog" aria-label="Abrir navegação">
               <Icons.Menu />
             </Button>
+            <Link className="shell-top-brand" href="/" aria-label="Segundo Cérebro · Início"><span aria-hidden="true"><Brand variant="symbol" size={32} /></span></Link>
             <span className="shell-breadcrumb-root">Meu espaço</span>
             <Icons.ChevronRight className="shell-breadcrumb-separator" />
             <strong className="shell-breadcrumb-current">{context}</strong>
@@ -371,9 +407,14 @@ export function WorkspaceShell({ children, avatarId = null, displayName = null, 
             {optional.updates && <Link className="shell-icon-link" href={optional.updates.href} aria-label={optional.updates.label} title={optional.updates.label} aria-current={pathname === optional.updates.href ? "page" : undefined}><Icons.Bell /></Link>}
             {activityAllowed && <Link className="shell-icon-link" href="/atividade" aria-label="Atividade" title="Atividade" aria-current={pathname === "/atividade" ? "page" : undefined}><Icons.Activity /></Link>}
             {captureAllowed && <QuickCapture />}
-            <Link className="shell-top-avatar" href="/configuracoes#perfil" aria-label="Abrir meu perfil">
+            <Link className="shell-top-avatar shell-top-avatar--link" href="/configuracoes#perfil" aria-label="Abrir meu perfil">
               <AccountAvatar userId={userId} fileId={connected ? avatarId : null} name={profileName} />
             </Link>
+            {/* Dock mode only: the sidebar is hidden, so the avatar opens the same single account popover. */}
+            <button type="button" className="shell-top-avatar shell-top-account" popoverTarget="shell-profile"
+              aria-label={connected ? "Abrir opções da conta" : "Abrir perfil de demonstração"}>
+              <AccountAvatar userId={userId} fileId={connected ? avatarId : null} name={profileName} />
+            </button>
           </div>
         </header>
 
@@ -383,6 +424,8 @@ export function WorkspaceShell({ children, avatarId = null, displayName = null, 
           {!connected && <span className="shell-status">Demonstração · Alterações guardadas somente nesta visita.</span>}
         </footer>
       </div>
+
+      <DesktopDock navigation={navigation} metricsAvailable={metricsAvailable} pathname={pathname} />
 
       <nav className="shell-bottom" aria-label="Navegação no celular" inert={overlay}>
         {bottomRoutes.map((route) => <BottomLink key={route.feature} route={route} pathname={pathname} />)}
