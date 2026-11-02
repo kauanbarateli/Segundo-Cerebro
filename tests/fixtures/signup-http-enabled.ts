@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseAuthConfig } from "@/lib/auth/config";
 import type { FenceArgs } from "@/lib/auth/signup-fence-wire";
 import { isTrustedHostedDatabaseOrigin } from "@/lib/auth/database-origin-server";
+import { originWithdrawalV2Enabled } from "@/lib/auth/origin-withdrawal-v2-gate";
 
 export const signupUnavailable = () => { throw new Error("Signup unavailable."); };
 // Hard gate: only a reviewed code change after the SQL/provider/cutover gates may remove this.
@@ -9,11 +10,17 @@ const TRANSACTIONAL_SIGNUP_RELEASED: boolean = true;
 // Separate release guard: QA/provider version, configuration and duplicate
 // races require qualification. This is not an automatic drift detector.
 const SIGNUP_DUPLICATE_CONTRACT_QUALIFIED: boolean = false;
+// The pending-signup completion/reservation path has not yet been bound to
+// the consent revision. Do not open signup when versioned withdrawal is on.
+const SIGNUP_ORIGIN_V2_COMPLETION_QUALIFIED: boolean = false;
+export function signupOriginV2AllowsCompletion(): boolean {
+  return !originWithdrawalV2Enabled() || SIGNUP_ORIGIN_V2_COMPLETION_QUALIFIED;
+}
 export function signupFenceDeployed(config: SupabaseAuthConfig): boolean {
   return TRANSACTIONAL_SIGNUP_RELEASED && isTrustedHostedDatabaseOrigin(config);
 }
 export function signupEnabled(config: SupabaseAuthConfig): boolean {
-  return signupFenceDeployed(config) && process.env.PUBLIC_SIGNUP_ENABLED === "true";
+  return signupFenceDeployed(config) && signupOriginV2AllowsCompletion() && process.env.PUBLIC_SIGNUP_ENABLED === "true";
 }
 export function signupSameBrowserEnabled(config:SupabaseAuthConfig):boolean {
   return SIGNUP_DUPLICATE_CONTRACT_QUALIFIED && signupEnabled(config);
@@ -93,6 +100,6 @@ export async function signupOriginV2Rpc<Name extends keyof OriginV2Args>(config:
 
 /** Draft-only transport. No environment variable can turn this on. */
 export async function signupFenceRpc<K extends keyof FenceArgs>(config:SupabaseAuthConfig,name:K,body:FenceArgs[K]):Promise<unknown> {
-  if (!signupFenceDeployed(config) || (name !== "signup_fence_withdraw" && !signupEnabled(config)) || !["signup_fence_reserve","signup_fence_start","signup_fence_uncertain","signup_fence_ack","signup_fence_finish","signup_fence_confirm","signup_fence_withdraw"].includes(name)) return signupUnavailable();
+  if (!signupFenceDeployed(config) || (name !== "signup_fence_withdraw" && !signupEnabled(config)) || !["signup_fence_reserve","signup_fence_reserve_origin_v2","signup_fence_start","signup_fence_uncertain","signup_fence_ack","signup_fence_finish","signup_fence_finish_origin_v2","signup_fence_confirm","signup_fence_withdraw"].includes(name)) return signupUnavailable();
   return postRpc(config,name,body);
 }

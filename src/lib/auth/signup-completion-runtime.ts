@@ -10,6 +10,7 @@ import { createSignupConfirmationPorts, SIGNUP_CHECKPOINT_COOKIE } from "./signu
 import { signupEnabled, signupFenceRpc, signupUnavailable } from "./signup-http";
 import { fencePorts } from "./signup-fence-wire";
 import type { SignupCompletionPorts } from "./signup-completion-service";
+import { originWithdrawalV2Enabled } from "./origin-withdrawal-v2-gate";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -21,6 +22,7 @@ export function createSignupCompletionPorts(config: SupabaseAuthConfig, jar: Aut
   return {
     // signupEnabled contains an unconditional false release gate in this draft.
     reservationEnabled: () => signupEnabled(config),
+    originRevisionMode: originWithdrawalV2Enabled,
     ...fencePorts((name, args) => signupFenceRpc(config, name, args)),
     newRequestId: randomUUID,
     now: Date.now,

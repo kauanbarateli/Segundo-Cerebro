@@ -9,7 +9,6 @@
 .legal-back { display: inline-flex; align-items: center; min-width: var(--target); min-height: var(--target); max-width: 100%; border-radius: var(--radius-sm); font-size: var(--type-corpo); overflow-wrap: anywhere; }
 .legal-intro h1 { margin-block: var(--space-4) var(--space-6); font-size: var(--type-page-title); font-weight: var(--weight-page-title); line-height: var(--leading-page-title); letter-spacing: var(--tracking-page-title); text-wrap: balance; overflow-wrap: anywhere; }
 .legal-summary { font-size: var(--type-corpo-forte); line-height: var(--leading-corpo-forte); }
-.legal-origin-control { display: grid; gap: var(--space-4); justify-items: start; margin-top: var(--space-8); font-size: var(--type-corpo); line-height: var(--leading-corpo); }
 .legal-version { margin-top: var(--space-5); color: var(--ink-muted); font-size: var(--type-dado); line-height: var(--leading-dado); }
 .legal-notice { margin-top: var(--space-6); padding-block: var(--space-4); border-block: 1px solid var(--line); color: var(--ink-muted); font-size: var(--type-corpo); line-height: var(--leading-corpo); }
 .legal-reading-layout { display: grid; grid-template-columns: minmax(0, 15rem) minmax(0, 1fr); align-items: start; gap: var(--space-12); }

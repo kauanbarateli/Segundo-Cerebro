@@ -6,6 +6,7 @@ const userId='10000000-0000-4000-8000-000000000001',sessionId='20000000-0000-400
 const checkpoint={userId,sessionId,intentId,issuedAt:1000,expiresAt:601000,passwordConfirmed:false,originPending:true};
 const identity={userId,sessionId,email:'pessoa@example.invalid'},legal={terms:'v1',privacy:'v2'};
 const input={password:'senha sintética longa',acceptedLegal:true,termsVersion:'v1',privacyVersion:'v2',acceptedOrigin:true};
+const originRevision='60000000-0000-4000-8000-000000000001';
 const gate=()=>{let resolve;return {promise:new Promise(r=>{resolve=r;}),resolve};};
 function fixture({provider=async()=> 'updated',enabled=true,markFail=false,ackFail=false,finishFail=false}={}){
  let state='empty',owner=null,authCalls=0,request=0,reservationInput=null,identityCalls=0,withdrawn=false,finishVersions=null,originRecorded=false;
@@ -27,6 +28,33 @@ function fixture({provider=async()=> 'updated',enabled=true,markFail=false,ackFa
 
 test('disabled runtime is closed before reading identities or calling Auth',async()=>{
  const f=fixture({enabled:false});assert.deepEqual(await completePublicSignup(f.ports,input,legal),{status:'unavailable'});assert.equal(f.identityCalls,0);assert.equal(f.calls,0);
+});
+test('passwordConfirmed no checkpoint não autoriza reserva nem nova chamada Auth',async()=>{
+ const f=fixture();f.ports.readCheckpoint=()=>({...checkpoint,passwordConfirmed:true});let reserved=0;f.ports.reserveCompletion=async()=>{reserved++;return null;};
+ assert.equal((await completePublicSignup(f.ports,input,legal)).status,'pending-reconciliation');assert.equal(reserved,0);assert.equal(f.calls,0);
+});
+test('v2 recusa revisão ausente e nunca chama a retirada legada',async()=>{
+ const f=fixture();let writes=0;f.ports.originRevisionMode=()=>true;f.ports.withdrawCurrent=async()=>{writes++;throw Error('legacy');};f.ports.reserveCompletionV2=async()=>{writes++;return null;};f.ports.finishCompletionV2=async()=>false;
+ assert.equal((await completePublicSignup(f.ports,{...input,acceptedOrigin:false},legal)).status,'unavailable');assert.equal(writes,0);assert.equal(f.calls,0);
+});
+test('v2 usa somente a revisão exibida e recusa decisão ultrapassada antes do Auth',async()=>{
+ const f=fixture();let expected=null,legacy=0;f.ports.originRevisionMode=()=>true;f.ports.withdrawCurrent=async()=>{legacy++;throw Error('legacy');};f.ports.reserveCompletionV2=async(_input,revision)=>{expected=revision;return {status:'stale'};};f.ports.finishCompletionV2=async()=>false;
+ assert.equal((await completePublicSignup(f.ports,{...input,acceptedOrigin:false,originRevision},legal)).status,'origin-changed');assert.equal(expected,originRevision);assert.equal(f.calls,0);assert.equal(legacy,0);
+});
+test('v2 reserva e conclui pela porta versionada, sem chamar retirada antiga',async()=>{
+ const f=fixture(),reserve=f.ports.reserveCompletion,finish=f.ports.finishCompletion;let expected=null,legacy=0;
+ f.ports.originRevisionMode=()=>true;f.ports.withdrawCurrent=async()=>{legacy++;throw Error('legacy');};f.ports.reserveCompletionV2=async(value,revision)=>{expected=revision;return reserve(value);};f.ports.finishCompletionV2=finish;
+ assert.equal((await completePublicSignup(f.ports,{...input,originRevision},legal)).status,'completed');assert.equal(expected,originRevision);assert.equal(f.calls,1);assert.equal(legacy,0);
+});
+test('v2 aceita ausência somente sem checkbox e reserva snapshot ausente',async()=>{
+ const f=fixture(),reserve=f.ports.reserveCompletion;let received='unset';f.ports.originRevisionMode=()=>true;f.ports.reserveCompletionV2=async(value,revision)=>{received=revision;return reserve(value);};f.ports.finishCompletionV2=f.ports.finishCompletion;
+ assert.equal((await completePublicSignup(f.ports,{...input,originRevision:'absent'},legal)).status,'invalid');assert.equal(f.calls,0);
+ assert.equal((await completePublicSignup(f.ports,{...input,acceptedOrigin:false,originRevision:'absent'},legal)).status,'completed');assert.equal(received,null);assert.equal(f.snapshot.acceptOrigin,false);
+});
+test('v2 não declara recusa aplicada se outra aba já concluiu a conta',async()=>{
+ const f=fixture();let called=0;f.ports.originRevisionMode=()=>true;f.ports.reserveCompletionV2=async()=>{called++;return null;};f.ports.finishCompletionV2=async()=>false;f.ports.confirmFinished=async()=>true;f.ports.withdrawCurrent=async()=>{called++;return null;};
+ const result=await completePublicSignup(f.ports,{...input,acceptedOrigin:false,originRevision},legal);
+ assert.equal(result.status,'origin-review-required');assert.equal(f.calls,0);assert.equal(called,0);
 });
 test('two concurrent requests with distinct passwords result in one Auth call',{timeout:5000},async()=>{
  const started=gate(),release=gate(),f=fixture({provider:async()=>{started.resolve();return release.promise;}});
