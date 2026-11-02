@@ -6,7 +6,12 @@ const ctx={nonce:'1'.repeat(32),systemIdentifier:'1234567890123456',user:'100000
 test('only pinned bodies and valid identifiers yield an isolated plan',()=>{
  const p=pendingOriginPlan(ctx,inputs,'finish-first');for(const sql of [p.setup,p.initial,p.prep(rev),p.proof(gen),p.first(rev,gen),p.second(rev,gen),p.wait(100,200),p.final(rev)])assert.ok(requireSqlBytes(Buffer.from(sql)));
  assert.match(p.setup,/CREATE FUNCTION app_private.draft_finish_fenced/);assert.match(p.setup,/signup_fence_reserve_origin_v2/);assert.match(p.setup,/signup_origin_withdraw_v2/);assert.match(p.wait(100,200),/pg_blocking_pids\(200\)/);
+ for(const sql of [p.first(rev,gen),p.second(rev,gen)]){
+  assert.ok(sql.startsWith('begin;'));assert.match(sql,/OFFLINE_INSTANCE_REFUSED/);assert.match(sql,/pg_control_system/);assert.match(sql,/inet_server_addr\(\) is not null/);assert.match(sql,/server_version_num/);
+  assert.ok(sql.includes(ctx.nonce));assert.ok(sql.includes(ctx.systemIdentifier));assert.ok(sql.indexOf('OFFLINE_INSTANCE_REFUSED')<sql.indexOf('set local role service_role'));
+ }
  for(const name of Object.keys(inputs))assert.throws(()=>pendingOriginPlan(ctx,{...inputs,[name]:Buffer.concat([inputs[name],Buffer.from(' ')])},'finish-first'));
+ for(const change of [{nonce:'bad'},{systemIdentifier:'not-a-system-id'}])assert.throws(()=>pendingOriginPlan({...ctx,...change},inputs,'finish-first'));
  for(const f of [()=>p.prep("bad'"),()=>p.proof("bad'"),()=>p.final("bad'"),()=>p.wait(100,100)])assert.throws(f);
 });
 const scenarios={

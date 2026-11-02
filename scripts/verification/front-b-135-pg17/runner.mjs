@@ -21,7 +21,7 @@ const SAME_BROWSER_PINS=Object.freeze([
  ['scripts/verification/front-b-135-draft/same-browser-composed-v1.guarded.sql.txt','038f7a9fa96eaebcdee44b8974e41a1b13dd796651ca5d0fe12a56dcec7fb652']
 ]);
 const LOCAL_PINS=Object.freeze({
- 'pending-origin-race.draft.mjs':'5e7a16c8059efa4faaeab9f5621bc98e9a2c283ab5d51f59278d6b6556dc9a1b',
+ 'pending-origin-race.draft.mjs':'1dc9b5e22161a14fb28a0be7543d8896db5dd689b0a8d04b472447317ffdbe05',
  'pending-origin-v2.guarded.sql.txt':'7d34cef6d839dca2bbc71b37f62cb8818693ba3e06e203989c7e353f0088ac84',
  'origin-218-full-ledger.draft.mjs':'631ab61ad59e54af2e305b377a8a2c4602b82638cb73ec1a83a2f0d40049a1cf',
  'origin-218-quarantine.guarded.sql.txt':'3079f81cb88ca090286e8b664c5102361e3986c6639309514094277bfe21a58d',
@@ -50,7 +50,7 @@ const LOCAL_PINS=Object.freeze({
  'ledger-preflight.readonly.sql.txt':'21f4757e4be28ac872703724051512dd7ae149c5efcebd24128022af4bd2a141'
 });
 const SUPPORT_PINS=Object.freeze([
- [BASE+'pending-origin-race.draft.test.mjs','6fcad70bb27a80325f58fb82b1d1ed59a8a86c2cae2519d5393993d07bef4068'],
+ [BASE+'pending-origin-race.draft.test.mjs','60d75a26b898c54b9c8aec74edbc1de78bb576d5b8387e4a0b666c38b1ce96cb'],
  [BASE+'origin-218-full-ledger.draft.test.mjs','2afdb1127a77ec167fac50eac02daf014682cc15854240295926e5d1aff1b871'],
  [BASE+'runner.test.mjs','5d942e38f8e1972d6727b8c5c7fba2c15aba6f57e2eae26b4bfc37c293a39ea1'],
  [BASE+'origin-218-freeze-exception.draft.test.mjs','434324a5c05876aba211680fd8764a5e04de8bf3310c3e182199a9bc08b58e99'],
