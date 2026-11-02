@@ -1,0 +1,70 @@
+-- INERT candidate for QA review only. Not a migration, CI hook or approval.
+-- Requires the separately installed and reviewed same-browser composition
+-- 038f7a9fa96eaebcdee44b8974e41a1b13dd796651ca5d0fe12a56dcec7fb652.
+-- The QA project must be independently identified through the control plane.
+begin;
+do $draft_only$ begin raise exception 'DRAFT_ONLY: review destination and operation.'; end $draft_only$;
+do $manage$
+declare
+ operation text:=null; -- choose register, activate or pause in a reviewed execution copy
+ job_name constant text:='sc-signup-browser-retention-v1';
+ job_schedule constant text:='1,6,11,16,21,26,31,36,41,46,51,56 * * * *';
+ job_command constant text:='SET statement_timeout = ''20s''; SET lock_timeout = ''250ms''; SELECT app_private.signup_browser_prune(500);';
+ target_id bigint; current_job record; qualified boolean; expected record;
+begin
+ if operation is null or operation not in ('register','activate','pause') then raise exception 'Choose an authorized operation.'; end if;
+ if current_user<>'postgres' or current_database()<>'postgres' then raise exception 'Operational database and role required.' using errcode='42501'; end if;
+ if (operation='register' and pg_catalog.to_regprocedure('cron.schedule(text,text,text)') is null) or pg_catalog.to_regprocedure('cron.alter_job(bigint,text,text,text,text,boolean)') is null then
+  raise exception 'Reviewed pg_cron API required.'; end if;
+ -- Coordinate other reviewed writers of cron.job. This does not bind project
+ -- identity or prevent privileged code from changing dependencies later.
+ lock table cron.job in share row exclusive mode;
+ if operation in ('register','activate') then
+  for expected in select * from (values
+   ('app_private.signup_prune()','jsonb','3d9f5a4a6279fcf97d6e5f3dba8e88932ab2f9f05f35d7e52e0e09afccc99ebe'),
+   ('app_private.signup_browser_prune(integer)','integer','fee23b912de83aae9da642751052ec1d8b1b5cee67e0b792de8d5461f3ef81dc')
+  ) as f(signature,result_type,body_hash) loop
+   select coalesce(bool_and(
+    pg_catalog.pg_get_userbyid(p.proowner)='postgres' and p.prokind='f'
+    and pg_catalog.pg_get_function_result(p.oid)=expected.result_type
+    and p.prosecdef and not p.proisstrict and not p.proretset and not p.proleakproof
+    and p.provolatile='v' and p.proparallel='u' and l.lanname='plpgsql'
+    and p.proconfig=ARRAY['search_path=""']::text[]
+    and pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(pg_catalog.replace(p.prosrc,E'\r\n',E'\n'),'UTF8')),'hex')=expected.body_hash
+    and pg_catalog.has_function_privilege(pg_catalog.to_regrole('anon'),p.oid,'EXECUTE') is false
+    and pg_catalog.has_function_privilege(pg_catalog.to_regrole('authenticated'),p.oid,'EXECUTE') is false
+    and pg_catalog.has_function_privilege(pg_catalog.to_regrole('service_role'),p.oid,'EXECUTE') is true
+    and (select count(*) from pg_catalog.aclexplode(coalesce(p.proacl,pg_catalog.acldefault('f',p.proowner))) a
+     where a.privilege_type='EXECUTE' and not a.is_grantable and a.grantor=p.proowner
+      and a.grantee in (p.proowner,pg_catalog.to_regrole('service_role')::oid))=2
+    and not exists(select 1 from pg_catalog.aclexplode(coalesce(p.proacl,pg_catalog.acldefault('f',p.proowner))) a
+     where a.privilege_type<>'EXECUTE' or a.is_grantable or a.grantor<>p.proowner
+      or a.grantee not in (p.proowner,pg_catalog.to_regrole('service_role')::oid))
+   ),false) into qualified from pg_catalog.pg_proc p join pg_catalog.pg_language l on l.oid=p.prolang
+    where p.oid=pg_catalog.to_regprocedure(expected.signature);
+   if qualified is distinct from true then raise exception 'Retention function differs from reviewed candidate.'; end if;
+  end loop;
+ end if;
+ if (select count(*) from cron.job where jobname=job_name)>1 then raise exception 'Ambiguous job name; no change.'; end if;
+ select * into current_job from cron.job where jobname=job_name;
+ if found then
+  if current_job.username is distinct from current_user or current_job.database is distinct from current_database()
+   or current_job.schedule is distinct from job_schedule or current_job.command is distinct from job_command then raise exception 'Job collision; no change.'; end if;
+  target_id:=current_job.jobid;
+ elsif operation='register' then
+  target_id:=cron.schedule(job_name,job_schedule,job_command);
+  perform cron.alter_job(target_id,active:=false);
+ else raise exception 'Reviewed job not found; no change.';
+ end if;
+ if operation='register' and exists(select 1 from cron.job where jobid=target_id and active) then
+  raise exception 'Existing active job requires separate review.'; end if;
+ if operation='activate' then perform cron.alter_job(target_id,active:=true);
+ elsif operation='pause' then perform cron.alter_job(target_id,active:=false); end if;
+ if (select count(*) from cron.job where jobname=job_name)<>1 or not exists(
+  select 1 from cron.job where jobid=target_id and jobname=job_name and username=current_user
+   and database=current_database() and schedule=job_schedule and command=job_command
+   and active=(operation='activate')) then raise exception 'Job state not confirmed.'; end if;
+end $manage$;
+-- Review and separately authorize any execution copy; never remove these
+-- protections from the versioned artifact. No other job is modified here.
+rollback;

@@ -23,9 +23,13 @@ function exact(v, keys) {
   if (names.length !== keys.length || names.some(k => typeof k !== "string" || !keys.includes(k)) || keys.some(k => !Object.hasOwn(descriptors[k] ?? {}, "value") || !descriptors[k].enumerable)) refuse();
 }
 function checks(v, keys) { exact(v, keys); if (keys.some(k => typeof v[k] !== "boolean")) refuse(); return Object.fromEntries(keys.map(k => [k, v[k]])); }
-// Envelope capacity only: CURRENT27 V5 original/independent sets contain104 Git paths
-// and the one pinned external marker. Shape acceptance is not Source/Git qualification.
-const SOURCE_ROW_LIMIT = 105;
+// Envelope capacity only: 106 reviewed Git paths and one pinned external marker.
+// Shape acceptance is not Source/Git qualification.
+const SOURCE_ROW_LIMIT = 107;
+const ADDITIONAL_SOURCE_PINS = Object.freeze([
+  Object.freeze({path:"tests/helpers/canonical-front-b-source.mjs",bytes:6638,sha256:"fcdbeb291832d3025d3551d42e47fb8b20ecbf1b7fe294990b6be25d41202040"}),
+  Object.freeze({path:"tests/helpers/canonical-front-b-source.d.mts",bytes:910,sha256:"9ed930065e52c4940f14cb58187e9a7fc41aaa7e9bf9325f0e3f15cd956f7d6d"}),
+]);
 function sourceRows(v) {
   if (!Array.isArray(v) || Object.getPrototypeOf(v) !== Array.prototype || v.length > SOURCE_ROW_LIMIT) refuse();
   const descriptors=Object.getOwnPropertyDescriptors(v),keys=Reflect.ownKeys(descriptors);
@@ -61,6 +65,8 @@ function report(v) {
     return { ...row };
   });
   if (new Set(sourceHashes.map(row=>row.path)).size !== sourceHashes.length) refuse();
+  // Extra capacity is reserved only for the complete pair of pinned sources.
+  if (sourceHashes.length > 105 && (sourceHashes.length !== 107 || ADDITIONAL_SOURCE_PINS.some(pin => !sourceHashes.some(row => row.path === pin.path && row.bytes === pin.bytes && row.sha256 === pin.sha256)))) refuse();
   const inner = v.caseReport === null ? null : caseReport(v.caseReport);
   if (inner?.writeOutcomeUncertain && !v.writeOutcomeUncertain || v.writeOutcomeUncertain && (v.checks.domainAbsent || v.checks.authUsersAbsent || v.checks.storageMetadataAbsent)) refuse();
   if (v.status === "passed") {

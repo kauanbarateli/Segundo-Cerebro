@@ -1,0 +1,28 @@
+import { readFileSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { repositoryRoot } from './paths.mjs';
+const root=dirname(fileURLToPath(import.meta.url)), repo=repositoryRoot(root), dest=join(root,'generated');
+const blocks=['parser-rows.template.txt','origin-model.template.txt'].map(name=>readFileSync(join(root,name),'utf8'));
+const input=readFileSync(join(repo,'src/core/acquisition/signup-metrics.ts'),'utf8');
+const inputHash=createHash('sha256').update(input).digest('hex');
+if(inputHash !== 'c0ce91d93ca097e4f8fd34b5f04c5098984607cbb53766038dfb614c947e4c51') throw Error('Model source drift');
+let source="import { ORIGIN_DICTIONARY, ORIGIN_DICTIONARY_VERSION } from './origin-dictionary.generated';\n"+input;
+source=source.replace('export type SignupMetrics = MetricQuery & { totalPublic:', 'export type SignupMetrics = MetricQuery & { dictionaryVersion: string; totalPublic:');
+source=source.replace("['start','end','zone','bucket','totalPublic','stock','series','distributions']) || Object.entries(query)", "['dictionaryVersion','start','end','zone','bucket','totalPublic','stock','series','distributions']) || value.dictionaryVersion !== ORIGIN_DICTIONARY_VERSION || Object.entries(query)");
+const oldExact="const exact = (value: Record<string, unknown>, keys: string[]) => Object.keys(value).sort().join('|') === [...keys].sort().join('|');";
+if(!source.includes(oldExact)) throw Error('Exact-fields implementation drift');
+source=source.replace(oldExact,"const exact = (value: Record<string, unknown>, keys: string[]) => Object.keys(value).length === keys.length && keys.every(key=>Object.hasOwn(value,key));");
+const begin=source.indexOf('    if (!Array.isArray(rows) || rows.length>101'), end=source.indexOf('\n  }\n  return value as SignupMetrics;',begin);
+if(begin<0 || end<0) throw Error('Model structure drift');
+source=source.slice(0,begin)+blocks[0]+source.slice(end);
+const begin2=source.indexOf('/**\n * Reject incomplete or duplicated populations');
+if(begin2<0 || !source.includes('dictionaryVersion !==')) throw Error('Model structure drift');
+source=source.slice(0,begin2)+blocks[1];
+writeFileSync(join(dest,'signup-metrics.ts'),source);
+let ui=readFileSync(join(repo,'src/components/features/metricas/signup-metrics-workspace.tsx'),'utf8');
+const replacements=[['METRIC_DIMENSIONS, parseMetricQuery, parseSignupMetrics,','METRIC_DIMENSIONS, metricOriginLabel, parseMetricQuery, parseSignupMetrics,'],["row.kind==='not-informed'?'Não informada':row.value","row.kind==='not-informed'?'Não informada':metricOriginLabel(dimension,row.value)"],['Grupos com menos de cinco cadastros e resultados além dos 100 maiores aparecem em Outros.','Origens não reconhecidas e grupos reconhecidos com menos de cinco cadastros aparecem em Outros.']];
+for(const [a,b] of replacements) {if(ui.split(a).length!==2) throw Error('UI source drift');ui=ui.replace(a,b);}
+writeFileSync(join(dest,'signup-metrics-workspace.tsx'),ui);
+console.log('Scratch model generated. Input SHA256:',inputHash);

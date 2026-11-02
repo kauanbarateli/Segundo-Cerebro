@@ -1,0 +1,15 @@
+.feedback-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: var(--space-4); }
+.feedback-panel { display: grid; gap: var(--space-3); min-width: 0; padding: var(--space-5); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); }
+.feedback-panel h2 { margin: 0 0 var(--space-2); font-size: var(--type-h3); }
+.feedback-panel label { font-weight: 500; }
+.feedback-panel select, .feedback-panel textarea { width: 100%; min-height: 44px; padding: var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); color: var(--ink); font: inherit; font-size: var(--type-campo); }
+.feedback-panel textarea { resize: vertical; }
+.feedback-panel button { min-height: 44px; padding: var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); cursor: pointer; }
+.feedback-panel button:disabled { opacity: .6; cursor: not-allowed; }
+.feedback-hint, .feedback-list time, .feedback-list span { color: var(--ink-muted); font-size: var(--type-dado); }
+.feedback-hint a { display: inline-flex; align-items: center; min-height: 44px; }
+.feedback-list { display: grid; gap: var(--space-4); list-style: none; margin: 0; padding: 0; }
+.feedback-list li { border-top: 1px solid var(--line); padding-top: var(--space-3); overflow-wrap: anywhere; }
+.feedback-list li span { margin-left: var(--space-3); }
+.feedback-list p { white-space: pre-wrap; }
+@media (max-width: 767px) { .feedback-layout { grid-template-columns: minmax(0, 1fr); } }

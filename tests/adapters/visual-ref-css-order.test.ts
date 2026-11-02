@@ -30,6 +30,13 @@ describe("only C accepts the exact approved landing additions without changing h
       chamada: { fontSize: "clamp(18px, 1.5vw, 22px)", lineHeight: "1.45", fontWeight: "400", letterSpacing: "-0.01em", status: "RECOMENDADO" } } } };
   };
   const reject = (run: () => unknown) => expect(run).toThrow("VISUAL_STABLE_SOURCE_CHANGED");
+  it("qualifies only the exact Frente A landing description for C", () => {
+    const path = "DESIGN.md", hash = "50a267aee63986b33eb733c6587886911a7dcec08a80d63e5db8f3c4b21449c1";
+    expect(qualifyVisualStableSource("C", path, hash)).toBe("frente-a");
+    for (const tree of ["B", "P"] as const) reject(() => qualifyVisualStableSource(tree, path, hash));
+    for (const changed of [hash.toUpperCase(), hash + "0", "0".repeat(64)]) reject(() => qualifyVisualStableSource("C", path, changed));
+    for (const other of [tokensPath, "PRODUCT.md", "src/app/globals.css", "src/components/features/capturar/capture.css", "src/components/features/tarefas/tasks.css"]) reject(() => qualifyVisualStableSource("C", other, hash));
+  });
   it("accepts old hashes for every tree and the two reviewed new hashes only for C", () => {
     for (const tree of ["B", "P", "C"] as const) {
       expect(qualifyVisualStableSource(tree, tokensPath, oldTokensHash)).toBe("baseline");
@@ -49,6 +56,13 @@ describe("only C accepts the exact approved landing additions without changing h
     reject(() => qualifyVisualStableSource("C", "other.md", oldDesignHash));
     reject(() => qualifyVisualStableSource("unknown" as VisualTree, tokensPath, oldTokensHash));
     reject(() => qualifyVisualStableSource("C", "DESIGN.md", "0".repeat(64)));
+  });
+  it("qualifies the reviewed Frente A DESIGN.md blob only in C", () => {
+    const hash = "50a267aee63986b33eb733c6587886911a7dcec08a80d63e5db8f3c4b21449c1";
+    expect(qualifyVisualStableSource("C", "DESIGN.md", hash)).toBe("frente-a");
+    for (const tree of ["B", "P"] as const) reject(() => qualifyVisualStableSource(tree, "DESIGN.md", hash));
+    for (const changed of [hash.toUpperCase(), hash + "0"]) reject(() => qualifyVisualStableSource("C", "DESIGN.md", changed));
+    reject(() => qualifyVisualStableSource("C", "PRODUCT.md", hash));
   });
   it("qualifies the four reviewed doc18 blobs only in C, without replacing historical sources", () => {
     const sources = {

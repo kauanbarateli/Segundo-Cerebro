@@ -1,10 +1,11 @@
 import {expect,test} from '@playwright/test';
 import {selectFinancePeriod} from './helpers/finance-period';
 import {describeVisualFailures,inspectVisualGuards} from './helpers/visual-guards';
+import {chooseTheme} from './helpers/theme';
 
 for(const theme of ['light','dark'] as const)for(const width of [320,390])test(`T053-A: total independente, confirmação de cópia e máscara em ${width}px/${theme}`,async({page},testInfo)=>{
  await page.setViewportSize({width,height:900});await page.emulateMedia({reducedMotion:'reduce',colorScheme:theme});await page.goto('/financeiro?tab=orcamentos&month=2026-09');
- await page.getByLabel('Tema',{exact:true}).selectOption(theme);await expect(page.locator('html')).toHaveAttribute('data-theme',theme);
+ await chooseTheme(page,theme);
  const plan=page.getByRole('region',{name:'Plano do mês',exact:true});
  await expect(plan).toContainText('Limite total não definido');
  const categoryAllocations=page.locator('.finance-budget-allocations');

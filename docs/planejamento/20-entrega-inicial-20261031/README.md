@@ -2,6 +2,16 @@
 
 **Versão 2.0 · 31/10/2026 · Planejamento de execução, sem implementação nesta publicação.**
 
+## Estado reconciliado — 01/11/2026
+
+O plano abaixo registra o recorte de 31/10; esta nota prevalece sobre seus retratos de progresso e ordem ainda pendente. A reconciliação usa a `main` em `2914019aac1c85c43e8d9fec895ae32c79967a86`, com os PRs [#210](https://github.com/kauanbarateli/Segundo-Cerebro/pull/210) e [#212](https://github.com/kauanbarateli/Segundo-Cerebro/pull/212) incorporados. As issues [#134](https://github.com/kauanbarateli/Segundo-Cerebro/issues/134) (reconciliação) e [#139](https://github.com/kauanbarateli/Segundo-Cerebro/issues/139) (Atualizações) foram encerradas; não reiniciar essas entregas a partir dos prompts históricos. Conferir a implementação integrada, os comentários e os bloqueios atuais antes de trabalhar nos demais tickets.
+
+A confirmação real de e-mail do novo cadastro foi adiada pelo mantenedor para [#215](https://github.com/kauanbarateli/Segundo-Cerebro/issues/215), após as correções do MVP. O cadastro público permanece desativado; código incorporado e ensaio exclusivo de QA não comprovam homologação nem autorizam abrir cadastro, remover controles ou promover produção. Backup e recuperação permanecem adiados em [#158](https://github.com/kauanbarateli/Segundo-Cerebro/issues/158). As decisões e gates específicos desses tickets prevalecem sobre providências anteriores deste pacote.
+
+Os 65 arquivos da base v1.2, seus hashes, as evidências e os critérios históricos foram preservados. Nenhuma migration, operação remota de dados ou deploy faz parte desta reconciliação documental. O CI deve ser reavaliado no novo SHA do PR; os resultados do primeiro envio não são transportados como aprovação.
+
+## Recorte original e precedência
+
 Este é o recorte vigente solicitado após a auditoria do Supabase. Primeiro: melhorias visuais e de navegação, cadastro somente por e-mail e senha, acesso gratuito, origem UTM simples, métricas de cadastro, feedback e atualizações. Depois: login Google, escrita no Calendar, ClickUp, ADM separado e exclusão permanente/automática.
 
 **Comece aqui, e não pelo prompt do pacote anterior.** O conteúdo em `base-planejamento-completo/` é a versão 1.2 preservada integralmente para referência e rastreabilidade. Sua ordem de execução, cadastro Google inicial, jornada detalhada UTM, contador de teste e antecipação do ADM são substituídos pelo [recorte atual](01-escopo-e-decisoes.md). Não é uma autorização para executar tudo de uma vez.

@@ -135,10 +135,21 @@ async function freePort(port){await new Promise((done,reject)=>{const server=cre
 async function canonical(path){const file=assertTempDescendant(ROOT,resolve(ROOT,path)),info=await lstat(file);if(!info.isFile()||info.isSymbolicLink()||await realpath(file)!==file)fail("SOURCE_REFUSED");return readFile(file);}
 const HISTORICAL026_CATALOGUE="tests/fixtures/schema-release-026/release-catalog.sql";
 const HISTORICAL026_MANIFEST="tests/fixtures/schema-release-026/manifest.json";
-const FILES=["supabase/tests/release-catalog.sql","tests/e2e-auth-local/qualified-chromium.mjs","tests/e2e-auth-local/browser-process-environment.mjs","package-lock.json","supabase/sql-editor/manifest.json","tests/fixtures/supabase-auth-local/config.toml","scripts/verification/auth-local-ci.mjs","tests/e2e-auth-local/auth-local-lifecycle-contract.mjs","scripts/verification/capture-image-storage-local-ci.mjs","tests/e2e-auth-local/capture-image-storage-local-case.mjs","tests/e2e-auth-local/capture-image-storage-local-ci-contract.mjs","tests/e2e-auth-local/capture-image-storage-support.mjs","tests/e2e-auth-local/capture-image-storage-contract.mjs","tests/e2e-auth-local/capture-image-storage.entry.ts","tests/e2e-auth-local/capture-task-persistence-support.mjs","tests/helpers/local-canonical-sql.ts",...CAPTURE_NATIVE_MODULES,...CAPTURE_IMAGE_MODULES,"tests/helpers/canonical-release-source.mjs","tests/helpers/canonical-release-source.d.mts","scripts/test-local-sql.mjs",HISTORICAL026_CATALOGUE,HISTORICAL026_MANIFEST,...CURRENT27_CANONICAL_REVIEW.flatMap((row,index)=>["supabase/migrations/"+row.file,"supabase/sql-editor/installation/"+String(index+1).padStart(3,"0")+"_"+row.file])];
+const FILES=["supabase/tests/release-catalog.sql","tests/e2e-auth-local/qualified-chromium.mjs","tests/e2e-auth-local/browser-process-environment.mjs","package-lock.json","supabase/sql-editor/manifest.json","tests/fixtures/supabase-auth-local/config.toml","scripts/verification/auth-local-ci.mjs","tests/e2e-auth-local/auth-local-lifecycle-contract.mjs","scripts/verification/capture-image-storage-local-ci.mjs","tests/e2e-auth-local/capture-image-storage-local-case.mjs","tests/e2e-auth-local/capture-image-storage-local-ci-contract.mjs","tests/e2e-auth-local/capture-image-storage-support.mjs","tests/e2e-auth-local/capture-image-storage-contract.mjs","tests/e2e-auth-local/capture-image-storage.entry.ts","tests/e2e-auth-local/capture-task-persistence-support.mjs","tests/helpers/local-canonical-sql.ts",...CAPTURE_NATIVE_MODULES,...CAPTURE_IMAGE_MODULES,"tests/helpers/canonical-release-source.mjs","tests/helpers/canonical-release-source.d.mts","tests/helpers/canonical-front-b-source.mjs","tests/helpers/canonical-front-b-source.d.mts","scripts/test-local-sql.mjs",HISTORICAL026_CATALOGUE,HISTORICAL026_MANIFEST,...CURRENT27_CANONICAL_REVIEW.flatMap((row,index)=>["supabase/migrations/"+row.file,"supabase/sql-editor/installation/"+String(index+1).padStart(3,"0")+"_"+row.file])];
 // Public preparation/Git sources include all CURRENT27 bytes and SQL Editor
 // copies. Only the separately selected historical prefix is applied below.
 export const STORAGE_SOURCE_PATHS=Object.freeze([...new Set(FILES)].sort());
+const HISTORICAL_READER_PINS=Object.freeze([
+  Object.freeze({path:"tests/helpers/canonical-front-b-source.mjs",bytes:6638,sha256:"fcdbeb291832d3025d3551d42e47fb8b20ecbf1b7fe294990b6be25d41202040"}),
+  Object.freeze({path:"tests/helpers/canonical-front-b-source.d.mts",bytes:910,sha256:"9ed930065e52c4940f14cb58187e9a7fc41aaa7e9bf9325f0e3f15cd956f7d6d"}),
+]);
+// This gate applies to the actual collected bytes, in addition to Git identity.
+export function assertStorageHistoricalReaderPins(rows){
+  if(!Array.isArray(rows)||HISTORICAL_READER_PINS.some(pin=>{
+    const matches=rows.filter(row=>row?.path===pin.path);
+    return matches.length!==1||matches[0].bytes!==pin.bytes||matches[0].sha256!==pin.sha256;
+  }))fail("SOURCE_REFUSED");
+}
 export async function collectStorageSources(readRun,sourceSha,migrations){
   if(typeof readRun!=="function"||typeof sourceSha!=="string"||!/^[a-f0-9]{40}$/.test(sourceSha))fail("SOURCE_REFUSED");
   const current=await readCurrent27CanonicalMigrations(ROOT);
@@ -156,6 +167,7 @@ export async function collectStorageSources(readRun,sourceSha,migrations){
     }
     sourceHashes.push({path,sha256:hash(bytes),bytes:bytes.length});
   }
+  assertStorageHistoricalReaderPins(sourceHashes);
   return sourceHashes;
 }
 export async function runCaptureImageStorageLocalCi(environment=process.env,observeResponse){

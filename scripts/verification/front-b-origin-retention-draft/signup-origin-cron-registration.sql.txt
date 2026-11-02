@@ -1,0 +1,57 @@
+-- INERT operations proposal. Not a migration, CI, build or deploy hook.
+-- Registration, activation and monitoring each require the reviewed remote gate.
+begin;
+do $draft_only$ begin raise exception 'DRAFT_ONLY: review destination, function and cron before registration.'; end $draft_only$;
+do $register$
+declare existing record; new_id bigint;
+ reviewed_prune boolean;
+ job_name constant text:='sc-signup-origin-retention-v1';
+ job_schedule constant text:='*/5 * * * *';
+ job_command constant text:='SET statement_timeout = ''20s''; SET lock_timeout = ''250ms''; SELECT app_private.signup_prune();';
+begin
+ if current_user<>'postgres' or current_database()<>'postgres' then raise exception 'Operational database and role required.' using errcode='42501'; end if;
+ if to_regprocedure('app_private.signup_prune()') is null or to_regprocedure('cron.schedule(text,text,text)') is null or to_regprocedure('cron.alter_job(bigint,text,text,text,text,boolean)') is null then
+  raise exception 'Reviewed retention function and pg_cron required.';
+ end if;
+ -- This pins a local draft catalogue, not the identity or full security of a hosted project.
+ select coalesce(bool_and(
+  pg_catalog.pg_get_userbyid(p.proowner)='postgres'
+  and p.prokind='f' and p.pronargs=0 and p.pronargdefaults=0
+  and pg_catalog.pg_get_function_result(p.oid)='jsonb'
+  and p.prosecdef and not p.proisstrict and not p.proretset and not p.proleakproof
+  and p.provolatile='v' and p.proparallel='u' and l.lanname='plpgsql'
+  and p.proconfig=ARRAY['search_path=""']::text[]
+  and pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(pg_catalog.replace(p.prosrc,E'\r\n',E'\n'),'UTF8')),'hex')='cbd79d7ec1fbb93605616e7aa742c8b20ec741e098b7058b244f559add32d726'
+  and pg_catalog.has_function_privilege(pg_catalog.to_regrole('anon'),p.oid,'EXECUTE') is false
+  and pg_catalog.has_function_privilege(pg_catalog.to_regrole('authenticated'),p.oid,'EXECUTE') is false
+  and pg_catalog.has_function_privilege(pg_catalog.to_regrole('service_role'),p.oid,'EXECUTE') is true
+  and (select count(*) from pg_catalog.aclexplode(coalesce(p.proacl,pg_catalog.acldefault('f',p.proowner))) a
+       where a.privilege_type='EXECUTE' and not a.is_grantable and a.grantor=p.proowner
+       and a.grantee in (p.proowner,pg_catalog.to_regrole('service_role')::oid))=2
+  and not exists(select 1 from pg_catalog.aclexplode(coalesce(p.proacl,pg_catalog.acldefault('f',p.proowner))) a
+       where a.privilege_type<>'EXECUTE' or a.is_grantable or a.grantor<>p.proowner
+       or a.grantee not in (p.proowner,pg_catalog.to_regrole('service_role')::oid))
+ ),false) into reviewed_prune
+ from pg_catalog.pg_proc p join pg_catalog.pg_language l on l.oid=p.prolang
+ where p.oid=pg_catalog.to_regprocedure('app_private.signup_prune()');
+ if reviewed_prune is distinct from true then raise exception 'Retention function differs from reviewed draft.' using errcode='23514'; end if;
+ if (select count(*) from cron.job where jobname=job_name)>1 then raise exception 'Ambiguous job name; preserved unchanged.' using errcode='23514'; end if;
+ select * into existing from cron.job where jobname=job_name;
+ if found then
+  if existing.username<>current_user or existing.database<>current_database() or existing.command<>job_command or existing.schedule<>job_schedule then
+   raise exception 'Job collision; preserved unchanged.' using errcode='23514'; end if;
+  if existing.active then raise exception 'Existing active job requires separate review.' using errcode='23514'; end if;
+ else
+  new_id:=cron.schedule(job_name,job_schedule,job_command);
+  perform cron.alter_job(new_id,active:=false);
+ end if;
+ if (select count(*) from cron.job where jobname=job_name)<>1
+  or (select count(*) from cron.job where jobname=job_name and username=current_user
+   and database=current_database() and schedule=job_schedule and command=job_command and active is false)<>1 then
+  raise exception 'Inactive retention job was not confirmed.' using errcode='23514';
+ end if;
+end $register$;
+-- After verifying destination, function, owner and schedule, activate separately.
+-- Monitor job failures and oldest eligible record; each sweep handles <=500 per kind.
+-- This proposal does not install pg_cron, activate a job or clean job history.
+rollback;

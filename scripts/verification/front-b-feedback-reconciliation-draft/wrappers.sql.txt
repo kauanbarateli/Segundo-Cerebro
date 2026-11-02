@@ -1,0 +1,54 @@
+-- DRAFT ONLY: included before COMMIT in a separately guarded test proposal.
+-- Requires the exact prior feedback foundation; never apply this fragment alone.
+-- The preceding no-public-wrappers note describes original #189 only.
+BEGIN;
+DO $fragment_guard$ BEGIN RAISE EXCEPTION 'UNREVIEWED FEEDBACK WRAPPERS: DO NOT APPLY'; END $fragment_guard$;
+CREATE FUNCTION public.feedback_barrier_submit(p_user uuid,p_session uuid,p_client uuid,p_category text,p_message text) RETURNS jsonb
+LANGUAGE sql SECURITY INVOKER SET search_path='' AS $$
+ SELECT app_private.draft_feedback_submit(p_user,p_session,p_client,p_category,p_message)
+$$;
+CREATE FUNCTION public.feedback_barrier_status(p_user uuid,p_session uuid,p_client uuid) RETURNS jsonb
+LANGUAGE sql SECURITY INVOKER SET search_path='' AS $$
+ SELECT app_private.draft_feedback_status(p_user,p_session,p_client)
+$$;
+CREATE FUNCTION public.feedback_barrier_cancel(p_user uuid,p_session uuid,p_client uuid) RETURNS jsonb
+LANGUAGE sql SECURITY INVOKER SET search_path='' AS $$
+ SELECT app_private.draft_feedback_cancel(p_user,p_session,p_client)
+$$;
+REVOKE ALL ON FUNCTION public.feedback_barrier_submit(uuid,uuid,uuid,text,text),public.feedback_barrier_status(uuid,uuid,uuid),public.feedback_barrier_cancel(uuid,uuid,uuid) FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION public.feedback_barrier_submit(uuid,uuid,uuid,text,text),public.feedback_barrier_status(uuid,uuid,uuid),public.feedback_barrier_cancel(uuid,uuid,uuid) TO service_role;
+-- After independently verified drain, close the historical externally callable writer.
+-- Privileged owners and SECURITY DEFINER callers still require catalog inventory.
+REVOKE ALL ON FUNCTION public.feedback_submit(uuid,uuid,uuid,text,text),app_private.feedback_submit(uuid,uuid,uuid,text,text) FROM PUBLIC,anon,authenticated,service_role;
+DO $sc_acl$
+DECLARE signature text; actor_role text; table_name text; action_name text;
+BEGIN
+ IF pg_catalog.has_schema_privilege('service_role','app_private','USAGE') IS DISTINCT FROM true THEN RAISE EXCEPTION 'FEEDBACK_SCHEMA_ACL_REFUSED'; END IF;
+ FOREACH signature IN ARRAY ARRAY['app_private.draft_feedback_submit(uuid,uuid,uuid,text,text)','app_private.draft_feedback_status(uuid,uuid,uuid)','app_private.draft_feedback_cancel(uuid,uuid,uuid)'] LOOP
+  IF pg_catalog.has_function_privilege('anon',signature,'EXECUTE') IS DISTINCT FROM false
+   OR pg_catalog.has_function_privilege('authenticated',signature,'EXECUTE') IS DISTINCT FROM false
+   OR pg_catalog.has_function_privilege('service_role',signature,'EXECUTE') IS DISTINCT FROM true THEN RAISE EXCEPTION 'FEEDBACK_DELEGATE_ACL_REFUSED'; END IF;
+ END LOOP;
+ FOREACH signature IN ARRAY ARRAY['public.feedback_barrier_submit(uuid,uuid,uuid,text,text)','public.feedback_barrier_status(uuid,uuid,uuid)','public.feedback_barrier_cancel(uuid,uuid,uuid)'] LOOP
+  IF pg_catalog.has_function_privilege('anon',signature,'EXECUTE') IS DISTINCT FROM false
+    OR pg_catalog.has_function_privilege('authenticated',signature,'EXECUTE') IS DISTINCT FROM false
+    OR pg_catalog.has_function_privilege('service_role',signature,'EXECUTE') IS DISTINCT FROM true THEN
+   RAISE EXCEPTION 'FEEDBACK_ACL_REFUSED';
+  END IF;
+ END LOOP;
+ FOREACH signature IN ARRAY ARRAY['public.feedback_submit(uuid,uuid,uuid,text,text)','app_private.feedback_submit(uuid,uuid,uuid,text,text)'] LOOP
+  IF pg_catalog.has_function_privilege('anon',signature,'EXECUTE') IS DISTINCT FROM false
+    OR pg_catalog.has_function_privilege('authenticated',signature,'EXECUTE') IS DISTINCT FROM false
+    OR pg_catalog.has_function_privilege('service_role',signature,'EXECUTE') IS DISTINCT FROM false THEN
+   RAISE EXCEPTION 'FEEDBACK_LEGACY_ACL_REFUSED';
+  END IF;
+ END LOOP;
+ FOREACH actor_role IN ARRAY ARRAY['anon','authenticated','service_role'] LOOP
+  FOREACH table_name IN ARRAY ARRAY['app_private.feedback_barriers_draft','app_private.feedback_requests'] LOOP
+   FOREACH action_name IN ARRAY ARRAY['SELECT','INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES','TRIGGER'] LOOP
+    IF pg_catalog.has_table_privilege(actor_role,table_name,action_name) IS DISTINCT FROM false THEN RAISE EXCEPTION 'FEEDBACK_TABLE_ACL_REFUSED'; END IF;
+   END LOOP;
+  END LOOP;
+ END LOOP;
+END $sc_acl$;
+COMMIT;

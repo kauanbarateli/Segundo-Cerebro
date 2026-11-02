@@ -1,0 +1,26 @@
+# Reconciliação de feedback — rascunho não ativado
+
+**Atualização de 01/11/2026:** a 028 instalou as barreiras no QA, conforme [evidência da Frente B](implementation/front-b-qa-m028-20261101.md). O gate continua fechado por padrão e em produção; o código agora permite ensaio somente na homologação estritamente verificada, com as flags explícitas `SC_FRONT_B_SCHEMA_READY=true` e `SC_FEEDBACK_QA_READY=true`. Nenhuma flag foi configurada, e essa capacidade não comprova Auth/PostgREST, concorrência, navegador ou corte. Os parágrafos seguintes registram o estado histórico do rascunho e não substituem as evidências posteriores nem autorizam ativação.
+
+Esta proposta não habilita envios: `feedbackReconciliationReady()` retorna `false` fixo. A página deixa o histórico disponível, mostra que o envio está temporariamente indisponível e não cria marcador. As rotas de escrita também recusam antes de RPC. A versão atualmente implantada continua com seu comportamento anterior até uma mudança de deploy; se este rascunho for implantado fechado, os envios ficarão indisponíveis. Não integrar nem implantar como entrega pronta.
+
+A aplicação antiga e sua RPC ainda podem escrever fora da barreira. Não há fallback para a escrita antiga nesta proposta. Antes da mudança, decidir uma janela de corte: suspender novos envios, drenar processos e transações legadas, cercar ou revogar todos os escritores antigos, instalar e qualificar a SQL e os wrappers revisados, implantar o código com gate fechado e somente depois propor a abertura em alteração separada. Não alternar versões que escrevam por contratos diferentes em paralelo. A SQL de #189 continua protegida por guarda e não foi aplicada; os wrappers `feedback_barrier_submit`, `feedback_barrier_status` e `feedback_barrier_cancel` são contratos propostos, ainda não implementados nela.
+
+## Comportamento proposto
+
+No envio habilitado futuramente, a aba grava antes da chamada somente `{version,clientId,ownerBinding}` em `sessionStorage`; não grava texto ou categoria. O pseudônimo não autentica o usuário. Falha na gravação ou na leitura fecha o envio; se o texto ainda estiver na memória e a identidade estiver verificada, ele permanece em um campo de somente leitura para cópia. Ao perder a identidade, o histórico e o texto deixam de ser exibidos. A página é keyed pelo usuário.
+
+Após timeout, recarga ou resposta incerta, a tentativa existente precisa ser consultada ou cancelada; ausência de estado remoto significa desconhecido. Mesmo após um recibo terminal, o marcador permanece na aba e uma recarga exige nova consulta. Uma nova chave só substitui a anterior após recibo terminal correlacionado e ação explícita da pessoa. Falha ambígua ao substituir o marcador não autoriza chamada de envio; a recarga volta a verificar a chave que permanecer. Essa garantia pressupõe que todos os escritores e cancelamentos usem a barreira atômica qualificada.
+
+Uma resposta direta de submissão só poderá confirmar o rascunho se o contrato SQL qualificado comprovar, dentro da transação, que a categoria e o texto normalizado correspondem àquela chave. O ACK proposto contém apenas identificadores: sozinho, ele não comprova igualdade de conteúdo, e os mocks não comprovam a lógica anti-conflito nem a normalização do banco. Status isolado prova somente que houve uma tentativa: após conflito, o texto em memória é preservado e não recebe confirmação. Cancelamento também preserva o texto em memória. Uma mensagem explícita permite revisar antes de criar outra tentativa. No reload o texto em memória deixa de existir; a interface não inventa seu conteúdo nem atribui conteúdo ao envio anterior.
+
+As operações de envio e consulta têm gerações e controle de identidade: rejeições e respostas atrasadas não podem alterar a tela nem encerrar operação posterior depois de troca/revalidação de conta. Os testes sintéticos cobrem corpo JSON 409 rejeitado tardiamente, falha/resultado atrasado do POST, gravação seguida de exceção e falha de readback.
+
+## Pré-requisitos antes de abrir o gate
+
+- Qualificar SQL, wrappers, permissões, autenticação/moderação e dreno dos escritores legados em PostgreSQL descartável e QA autorizado; cobrir transações concorrentes, cancelamento, rollback, commit com resposta perdida e migração. Não há evidência dessas provas neste patch.
+- Definir retenção e exclusão dos tombstones, estratégia de rotação do pseudônimo e recuperação segura após limpeza/perda de storage. `sessionStorage` não garante persistência após limpeza, fechamento de sessão do navegador, crash ou clonagem em outra aba; não há garantia de deduplicação entre dispositivos/abas independentes.
+- Adaptar e executar o percurso real de navegador, incluindo foco/visibilidade, contas A→B→A, reload, tempo limite, armazenamento indisponível e leitor de tela. A spec Playwright foi adaptada, mas ainda não foi executada.
+- Reconciliar tipos, inventários, versões e políticas de retenção; atualizar o planejamento e executar testes completos, sem reaplicar migrations por divergência no ledger. Uma consulta de status não prova a correspondência do texto.
+
+Nenhum banco, Docker, serviço remoto ou navegador foi executado para esta proposta. A validação focada de código e testes sintéticos não substitui esses gates.

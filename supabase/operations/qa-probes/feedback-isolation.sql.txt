@@ -1,0 +1,115 @@
+-- Guarded QA-only evidence; never execute this file without separate review.
+DO $qa_guard$ BEGIN RAISE EXCEPTION 'QA PROBE REQUIRES EXPLICIT REVIEW'; END $qa_guard$;
+-- PROPOSTA PARA REVISÃO; NÃO EXECUTADA.
+-- Alvo exclusivo: projeto de homologação twrydxsdemaykgvdlpyd.
+-- Antes da execução, conferir o project_ref pelo próprio canal autenticado:
+-- current_database() e current_user não distinguem QA de produção.
+-- O resultado PASS cobre apenas os wrappers SQL com sessões sintéticas.
+-- Não cobre GoTrue, SMTP, API/HTTP, PostgREST, RLS de JWT nem concorrência.
+-- Uma desconexão deve encerrar/reverter a transação; se o cliente mantiver a
+-- conexão aberta após interrupção, emitir ROLLBACK nela. Não executar só trechos.
+
+BEGIN;
+SET LOCAL lock_timeout = '2s';
+SET LOCAL statement_timeout = '20s';
+SET LOCAL idle_in_transaction_session_timeout = '30s';
+SELECT pg_catalog.set_config('qa_feedback.result', 'FAIL:incomplete', true);
+
+DO $test$
+DECLARE
+  user_a uuid := pg_catalog.gen_random_uuid();
+  user_b uuid := pg_catalog.gen_random_uuid();
+  session_a uuid := pg_catalog.gen_random_uuid();
+  session_b uuid := pg_catalog.gen_random_uuid();
+  client_id uuid := pg_catalog.gen_random_uuid();
+  email_a text := 'qa-feedback-' || user_a::text || '@example.invalid';
+  email_b text := 'qa-feedback-' || user_b::text || '@example.invalid';
+  result_a jsonb;
+  retry_a jsonb;
+  result_b jsonb;
+  list_a jsonb;
+  list_b jsonb;
+  rejected boolean;
+  changed integer;
+  step text := 'preflight';
+BEGIN
+  -- An exception rolls back this subtransaction; the outer ROLLBACK still runs.
+  BEGIN
+    IF current_user <> 'postgres' THEN RAISE EXCEPTION 'Executor recusado'; END IF;
+    -- Hold compatible write locks so a concurrent CREATE TRIGGER/ALTER TABLE
+    -- cannot change the reviewed relations during the probe.
+    LOCK TABLE auth.users, auth.sessions, app_private.user_admission,
+      public.profiles, public.user_preferences, public.user_roles,
+      public.user_moderation, public.domain_events,
+      app_private.feedback_requests, app_private.feedback_barriers_draft
+      IN ROW EXCLUSIVE MODE;
+
+    IF user_a = user_b OR session_a = session_b
+      OR EXISTS (SELECT 1 FROM auth.users WHERE id IN (user_a,user_b) OR email IN (email_a,email_b))
+      OR EXISTS (SELECT 1 FROM auth.sessions WHERE id IN (session_a,session_b))
+      OR EXISTS (SELECT 1 FROM app_private.admin_operations WHERE target_user_id IN (user_a,user_b))
+      THEN RAISE EXCEPTION 'Colisão de identidade sintética'; END IF;
+
+    step := 'synthetic_users';
+    INSERT INTO auth.users(id,aud,role,email,email_confirmed_at,is_anonymous,raw_user_meta_data,raw_app_meta_data)
+    VALUES (user_a,'authenticated','authenticated',email_a,pg_catalog.now(),false,'{}'::jsonb,'{}'::jsonb),
+           (user_b,'authenticated','authenticated',email_b,pg_catalog.now(),false,'{}'::jsonb,'{}'::jsonb);
+    INSERT INTO auth.sessions(id,user_id,created_at,updated_at)
+    VALUES (session_a,user_a,pg_catalog.now(),pg_catalog.now()),
+           (session_b,user_b,pg_catalog.now(),pg_catalog.now());
+    -- Novas identidades nascem pendentes; admitir apenas as duas desta transação.
+    UPDATE app_private.user_admission SET origin='legacy',state='admitted',admitted_at=pg_catalog.now()
+      WHERE user_id IN (user_a,user_b) AND origin='unclassified' AND state='pending';
+    GET DIAGNOSTICS changed = ROW_COUNT;
+    IF changed <> 2 THEN RAISE EXCEPTION 'Admissão sintética recusada'; END IF;
+
+    step := 'submit_and_retry';
+    PERFORM pg_catalog.set_config('role','service_role',true);
+    result_a := public.feedback_barrier_submit(user_a,session_a,client_id,'suggestion','Mensagem sintética da pessoa A.');
+    retry_a := public.feedback_barrier_submit(user_a,session_a,client_id,'suggestion','Mensagem sintética da pessoa A.');
+    IF result_a IS DISTINCT FROM retry_a OR result_a->>'status' <> 'submitted'
+      OR result_a->>'feedbackId' IS NULL THEN RAISE EXCEPTION 'Retry não idempotente'; END IF;
+
+    step := 'first_isolation';
+    list_a := public.feedback_list(user_a,session_a,NULL,NULL);
+    list_b := public.feedback_list(user_b,session_b,NULL,NULL);
+    IF pg_catalog.jsonb_array_length(list_a) <> 1 OR pg_catalog.jsonb_array_length(list_b) <> 0
+      OR list_a->0->>'id' IS DISTINCT FROM result_a->>'feedbackId'
+      OR list_a->0->>'text' IS DISTINCT FROM 'Mensagem sintética da pessoa A.'
+      THEN RAISE EXCEPTION 'Isolamento inicial recusado'; END IF;
+
+    step := 'wrong_session';
+    rejected := false;
+    BEGIN
+      PERFORM public.feedback_list(user_a,session_b,NULL,NULL);
+    EXCEPTION WHEN insufficient_privilege THEN rejected := true;
+    END;
+    IF NOT rejected THEN RAISE EXCEPTION 'Sessão B aceita para conta A'; END IF;
+    rejected := false;
+    BEGIN
+      PERFORM public.feedback_list(user_b,session_a,NULL,NULL);
+    EXCEPTION WHEN insufficient_privilege THEN rejected := true;
+    END;
+    IF NOT rejected THEN RAISE EXCEPTION 'Sessão A aceita para conta B'; END IF;
+
+    step := 'second_owner';
+    -- Mesmo client_id, outra conta: idempotência é vinculada ao dono.
+    result_b := public.feedback_barrier_submit(user_b,session_b,client_id,'other','Mensagem sintética da pessoa B.');
+    list_a := public.feedback_list(user_a,session_a,NULL,NULL);
+    list_b := public.feedback_list(user_b,session_b,NULL,NULL);
+    IF result_b->>'status' <> 'submitted' OR result_b->>'feedbackId' IS NULL
+      OR result_b->>'feedbackId' = result_a->>'feedbackId'
+      OR pg_catalog.jsonb_array_length(list_a) <> 1 OR pg_catalog.jsonb_array_length(list_b) <> 1
+      OR list_a->0->>'id' IS DISTINCT FROM result_a->>'feedbackId'
+      OR list_b->0->>'id' IS DISTINCT FROM result_b->>'feedbackId'
+      OR list_b->0->>'text' IS DISTINCT FROM 'Mensagem sintética da pessoa B.'
+      THEN RAISE EXCEPTION 'Isolamento final recusado'; END IF;
+
+    PERFORM pg_catalog.set_config('qa_feedback.result','PASS',true);
+  EXCEPTION WHEN OTHERS THEN
+    PERFORM pg_catalog.set_config('qa_feedback.result','FAIL:' || step || ':' || SQLSTATE,true);
+  END;
+END $test$;
+
+SELECT pg_catalog.current_setting('qa_feedback.result') AS resultado;
+ROLLBACK;

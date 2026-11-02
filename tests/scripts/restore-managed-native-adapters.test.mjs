@@ -6,6 +6,7 @@ import { PassThrough } from "node:stream";
 import { spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { createHistorical026CanonicalSql } from "../helpers/local-canonical-sql.ts";
 import { planManagedRestore, managedRestoreRequirements, authorizeManagedRestore } from "../../scripts/operations/restore-managed-plan.mjs";
 import { runManagedRestore } from "../../scripts/operations/restore-managed-stream.mjs";
@@ -13,10 +14,20 @@ import { mintManagedSnapshot } from "../../scripts/operations/restore-managed-sn
 import { PERSONAL_REF } from "../../scripts/operations/backup-config.mjs";
 import { createManagedRestoreAdapters, checkManagedBeforeCommit, validateManagedValidation, PRIVATE_TOC_ACL_HELPER, PRIVATE_TOC_ACL_HELPER_SHA256, MANAGED_ADAPTER_DEADLINE_MS } from "../../scripts/operations/restore-managed-native-adapters.mjs";
 import { MANAGED_VALIDATION_SQL } from "../../scripts/operations/restore-managed-validation-sql.mjs";
-import { readHistorical026CanonicalMigrations } from "../helpers/canonical-release-source.mjs";
+import { readHistorical026FromReviewedFrontB } from "../helpers/canonical-front-b-source.mjs";
+import { withStagedFrontB30 } from "./helpers/staged-front-b30-sequence.mjs";
 
-async function historicalCatalogueSource(){
- await readHistorical026CanonicalMigrations();
+const repository = fileURLToPath(new URL("../../",import.meta.url));
+function historicalTest(name,run){
+ test(`${name} [repository sources]`,async()=>run(repository));
+ test(`${name} [draft 30]`,async t=>withStagedFrontB30(t,run));
+}
+
+async function historicalCatalogueSource(reviewRoot){
+ // This is an explicitly historical 026 catalogue. Qualify the complete
+ // reviewed source tree before projecting the 026 prefix; never treat it as
+ // evidence for the later schema or bypass validation of its remaining files.
+ await readHistorical026FromReviewedFrontB(reviewRoot);
  const bytes=await readFile(new URL("../fixtures/schema-release-026/release-catalog.sql",import.meta.url));
  assert.equal(bytes.length,82143);
  assert.equal(hash(bytes),"4557741f008d48ea60ad8a3e2d5a41667630543c3bf2ab0682ec2b33ad97e297");
@@ -212,8 +223,8 @@ test("closed counts/booleans refuse getters, coercion, symbols, arbitrary JSON/e
  const value=validateManagedValidation(report());assert.equal(Object.getPrototypeOf(value),null);assert.equal(Object.isFrozen(value),true);assert.equal(reads,0);assert.equal(JSON.stringify(value).includes(canary),false);
 });
 
-test("SQL contains exactly the sealed historical026 release checks CTE and no transaction control or constraint disabling",async()=>{
- const source=await historicalCatalogueSource();
+historicalTest("SQL contains exactly the sealed historical026 release checks CTE and no transaction control or constraint disabling",async reviewRoot=>{
+ const source=await historicalCatalogueSource(reviewRoot);
  const cte=source.slice(source.indexOf("with expected_tables"),source.lastIndexOf("\nselect jsonb_build_object('version',1,'ok'"));
  assert.equal(MANAGED_VALIDATION_SQL.includes(cte),true);assert.equal(/\b(begin transaction|commit;|rollback;|disable trigger|disable constraint)\b/i.test(MANAGED_VALIDATION_SQL),false);
  assert.equal(MANAGED_VALIDATION_SQL.includes("set local row_security = off"),true);assert.equal(MANAGED_VALIDATION_SQL.includes("conpfeqop"),true);assert.equal(MANAGED_VALIDATION_SQL.includes("OPERATOR(%I.%s)"),true);
@@ -231,8 +242,8 @@ async function actual(db){
  assert.equal(rows.length,1);return validateManagedValidation(rows[0].managed_validation);
 }
 
-test("literal PGlite full historical026 schema catalogue+FK checks see uncommitted native data in the same transaction",async()=>{
- const db=await createHistorical026CanonicalSql();try{
+historicalTest("literal PGlite full historical026 schema catalogue+FK checks see uncommitted native data in the same transaction",async reviewRoot=>{
+ const db=await createHistorical026CanonicalSql(reviewRoot);try{
   await db.exec("begin;set local session_replication_role=replica");
   // PL/pgSQL reads an IF expression up to THEN at parenthesis depth zero.
   // Removing only this CASE grouping must fail parsing, never pass validation.
@@ -249,14 +260,14 @@ test("literal PGlite full historical026 schema catalogue+FK checks see uncommitt
  }finally{await db.close();}
 });
 
-test("managed validation normalizes only reviewed owner defaults and still rejects an API grant before COMMIT",async()=>{
- const db=await createHistorical026CanonicalSql();try{
+historicalTest("managed validation normalizes only reviewed owner defaults and still rejects an API grant before COMMIT",async reviewRoot=>{
+ const db=await createHistorical026CanonicalSql(reviewRoot);try{
   await db.exec("begin;set local session_replication_role=replica");
   const baseline=await actual(db);assert.equal(baseline.catalogueChecks,1720);
   for(const kind of ["tables","functions","sequences"])await db.exec("alter default privileges for role postgres in schema public grant all on "+kind+" to postgres");
   assert.deepEqual(await actual(db),baseline);
   await db.exec("alter default privileges for role postgres in schema public grant usage on sequences to anon");
-  const source=await historicalCatalogueSource();
+  const source=await historicalCatalogueSource(reviewRoot);
   const cte=source.slice(source.indexOf("with expected_tables"),source.lastIndexOf("\nselect jsonb_build_object('version',1,'ok'"));
   const denied=(await db.query(cte+" select check_name,object_name from checks where ok is distinct from true order by check_name,object_name")).rows;
   assert.deepEqual(denied,[{check_name:"default_acl_closed",object_name:"public.S"}]);
@@ -269,8 +280,8 @@ test("managed validation normalizes only reviewed owner defaults and still rejec
  }finally{await db.close();}
 });
 
-test("post-replica fixed Capture validation preserves legacy/rich history and original receipts while refusing bypassed row/event guards",async()=>{
- const db=await createHistorical026CanonicalSql(),owner=randomUUID(),richId=randomUUID(),legacyId=randomUUID(),eventId=randomUUID(),createdId=randomUUID(),createdCaptureId=randomUUID(),metadataCaptureId=randomUUID();
+historicalTest("post-replica fixed Capture validation preserves legacy/rich history and original receipts while refusing bypassed row/event guards",async reviewRoot=>{
+ const db=await createHistorical026CanonicalSql(reviewRoot),owner=randomUUID(),richId=randomUUID(),legacyId=randomUUID(),eventId=randomUUID(),createdId=randomUUID(),createdCaptureId=randomUUID(),metadataCaptureId=randomUUID();
  const stamp="2026-10-21T12:00:00.000Z";
  const document=text=>({type:"doc",content:[{type:"paragraph",content:[{type:"text",text}]}]});
  const legacy={id:richId,user_id:owner,client_id:"restore-capture-rich",project_id:null,type:"note",title:"Historical Capture",content:"  literal  ",status:"inbox",category_id:null,converted_task_id:null,captured_at:stamp,organized_at:null,archived_at:null,deleted_at:null,created_at:stamp,updated_at:stamp};
@@ -387,8 +398,8 @@ test("post-replica fixed Capture validation preserves legacy/rich history and or
  }finally{await db.close();}
 });
 
-test("literal FK SELECTs distinguish MATCH SIMPLE/FULL null tuples and actual orphan rows, never TRUST convalidated alone",async()=>{
- const db=await createHistorical026CanonicalSql();try{
+historicalTest("literal FK SELECTs distinguish MATCH SIMPLE/FULL null tuples and actual orphan rows, never TRUST convalidated alone",async reviewRoot=>{
+ const db=await createHistorical026CanonicalSql(reviewRoot);try{
   await db.exec("create table auth.fixture_parent(a integer,b integer,primary key(a,b));create table auth.fixture_simple(a integer,b integer,foreign key(a,b) references auth.fixture_parent(a,b) match simple);create table auth.fixture_full(a integer,b integer,foreign key(a,b) references auth.fixture_parent(a,b) match full)");
   await db.exec("begin;set local session_replication_role=replica;insert into auth.fixture_parent values(1,1);insert into auth.fixture_simple values(1,null),(null,null),(1,1);insert into auth.fixture_full values(null,null),(1,1)");
   const clean=await actual(db);assert.equal(clean.foreignKeyViolations,0);assert.equal(clean.catalogueOk,true);
@@ -399,8 +410,8 @@ test("literal FK SELECTs distinguish MATCH SIMPLE/FULL null tuples and actual or
  }finally{await db.close();}
 });
 
-test("literal FK casts select conpfeqop's exact overload and refuse polymorphic operator inputs",async()=>{
- const db=await createHistorical026CanonicalSql();try{
+historicalTest("literal FK casts select conpfeqop's exact overload and refuse polymorphic operator inputs",async reviewRoot=>{
+ const db=await createHistorical026CanonicalSql(reviewRoot);try{
   await db.exec("create domain auth.fixture_uuid as uuid;create table auth.fixture_domain_parent(id auth.fixture_uuid primary key);create table auth.fixture_domain_child(id auth.fixture_uuid references auth.fixture_domain_parent(id));create function auth.fixture_domain_equal(auth.fixture_uuid,auth.fixture_uuid) returns boolean language sql immutable as 'select false';create operator pg_catalog.= (leftarg=auth.fixture_uuid,rightarg=auth.fixture_uuid,function=auth.fixture_domain_equal)");
   const identity=(await db.query("select op.oprleft='uuid'::regtype and op.oprright='uuid'::regtype as original_base from pg_constraint con join pg_operator op on op.oid=con.conpfeqop[1] where con.conrelid='auth.fixture_domain_child'::regclass and con.contype='f'")).rows;
   assert.deepEqual(identity,[{original_base:true}]);
@@ -414,8 +425,8 @@ test("literal FK casts select conpfeqop's exact overload and refuse polymorphic 
  }finally{await db.close();}
 });
 
-test("literal check refuses RLS invisibility and catalogue drift before application helpers, without private names",async()=>{
- const db=await createHistorical026CanonicalSql();try{
+historicalTest("literal check refuses RLS invisibility and catalogue drift before application helpers, without private names",async reviewRoot=>{
+ const db=await createHistorical026CanonicalSql(reviewRoot);try{
   await db.exec("begin;alter table auth.users disable trigger second_brain_identity_created");
   await assert.rejects(actual(db),error=>error.code==="23514"&&!error.message.includes("second_brain_identity_created"));await db.exec("rollback");
   await db.exec("create table auth.fixture_parent(id integer primary key);create table auth.fixture_child(id integer references auth.fixture_parent(id));alter table auth.fixture_child enable row level security;create role fk_actor login;grant usage on schema auth,storage,public,app_private to fk_actor;grant select on all tables in schema auth,storage,public,app_private to fk_actor;set session authorization fk_actor;begin");

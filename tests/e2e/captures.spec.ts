@@ -221,6 +221,6 @@ for (const width of [320, 390, 1280]) test(`editor e primeira imagem alcançáve
   const attach = page.getByRole("button", { name: "Anexar imagem", exact: true });
   await expect(attach).toBeVisible();
   const rect = await attach.boundingBox(); expect(rect?.width).toBeGreaterThanOrEqual(44); expect(rect?.height).toBeGreaterThanOrEqual(44);
-  await expect(page.getByRole("button", { name: "Organizar e definir tipo", exact: true })).toHaveAttribute("aria-expanded", "false");
+  await expect(page.getByRole("button", { name: "Configurações da nota", exact: true })).toHaveAttribute("aria-expanded", "false");
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
 });

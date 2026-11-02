@@ -9,7 +9,6 @@ import { useDemoAccess } from "@/lib/navigation/demo-access-provider";
 import { MVP_WORKSPACE_ROUTES as WORKSPACE_ROUTES } from "@/lib/navigation/routes";
 import { DemoSettings } from "@/components/layout/demo-settings";
 import { ThemeModels } from "@/components/theme/theme-models";
-import { InstallHelp } from "@/components/pwa/install-help";
 import { PageNavigation } from "@/components/ui/data-display";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
@@ -18,7 +17,7 @@ import "./settings.css";
 import { SettingsConnectedWorkspace } from "./settings-connected-workspace";
 import { SettingsLegalSection } from "./settings-legal-section";
 
-const sections = [{ href: "#perfil", label: "Perfil" }, { href: "#aparencia", label: "Aparência" }, { href: "#modulos", label: "Módulos" }, { href: "#demonstracao", label: "Demonstração" }, { href: "#privacidade-e-termos", label: "Privacidade e termos" }, { href: "#instalacao", label: "Instalação" }];
+const sections = [{ href: "#perfil", label: "Perfil" }, { href: "#aparencia", label: "Aparência" }, { href: "#modulos", label: "Módulos" }, { href: "#demonstracao", label: "Demonstração" }, { href: "#privacidade-e-termos", label: "Privacidade e termos" }];
 const queryOptions = [
   { key: "tasks", feature: "tarefas" }, { key: "captures", feature: "capturar" },
   { key: "habits", feature: "habitos" }, { key: "finance", feature: "financeiro" },
@@ -27,9 +26,9 @@ const queryOptions = [
   { key: "vault", feature: "cofre" }, { key: "settings", feature: "configuracoes" },
 ] as const;
 
-export function SettingsWorkspace() {
+export function SettingsWorkspace({originAvailable=false}:{originAvailable?:boolean}) {
   const { connected } = useDemoAccess();
-  return connected ? <SettingsConnectedWorkspace /> : <DemoSettingsWorkspace />;
+  return connected ? <SettingsConnectedWorkspace originAvailable={originAvailable} /> : <DemoSettingsWorkspace />;
 }
 function DemoSettingsWorkspace() {
   const query = useDemoQuery("settings"), app = useDemoApplication();
@@ -88,6 +87,5 @@ function DemoSettingsWorkspace() {
       </div></div><p className="settings-feedback" role="status">{feedback}</p>
     </section>
     <SettingsLegalSection />
-    <section id="instalacao" className="settings-panel" aria-label="Instalação do aplicativo"><InstallHelp /></section>
   </div>;
 }

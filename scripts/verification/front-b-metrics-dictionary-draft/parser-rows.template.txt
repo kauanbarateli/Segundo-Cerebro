@@ -1,0 +1,12 @@
+    const seen = new Set<string>();
+    if (!Array.isArray(rows) || rows.length > 102) return null;
+    for (const row of rows) {
+      if (!object(row) || !exact(row,['kind','value','count']) || !count(row.count) || row.count===0) return null;
+      if (row.kind === 'value') {
+        if (typeof row.value !== 'string' || row.count < 5 || !ORIGIN_DICTIONARY[key].some(entry=>entry.code===row.value)) return null;
+      } else if ((row.kind !== 'other' && row.kind !== 'not-informed') || row.value !== null) return null;
+      const identity = `${row.kind}:${row.value ?? ''}`;
+      if (seen.has(identity)) return null;
+      seen.add(identity);
+    }
+    if (rows.reduce((sum,row)=>sum+row.count,0)!==total) return null;

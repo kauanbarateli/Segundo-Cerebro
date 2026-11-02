@@ -157,12 +157,18 @@ for (const variant of ["original", "controlled-render"] as const) {
       await expect(acknowledgement).toHaveAttribute("required", "");
       await email.fill("synthetic-auth@example.invalid");
       await form.getByLabel("Senha", { exact: true }).fill("Synthetic-only-123!");
-      for (const [name, href] of [["Ler os Termos de Serviço (abre em nova aba)", "/termos-de-servico"], ["Ler a Política de Privacidade (abre em nova aba)", "/privacidade"]] as const) {
+      for (const [name, href] of [["Termos de Serviço", "/termos-de-servico"], ["Política de Privacidade", "/privacidade"]] as const) {
         const link = form.getByRole("link", { name, exact: true });
         await expect(link).toHaveAttribute("href", href);
         await expect(link).toHaveAttribute("target", "_blank");
         await expect(link).toHaveAttribute("rel", /(?:^|\s)noopener(?:\s|$)/);
-        expect(await link.evaluate(node => node.closest("label") === null)).toBe(true);
+        // O link fica no texto da caixa; clicar nele não a marca nem envia o formulário.
+        expect(await link.evaluate(node => node.closest("label.auth-legal-check") !== null)).toBe(true);
+        await link.evaluate(node => node.addEventListener("click", event => event.preventDefault(), { once: true }));
+        await link.click();
+        await expect(acknowledgement).not.toBeChecked();
+        await expect(email).toHaveValue("synthetic-auth@example.invalid");
+        expect(await calls()).toBe(0);
       }
       await form.getByRole("button", { name: "Entrar", exact: true }).click();
       await expect(acknowledgement).toBeFocused();

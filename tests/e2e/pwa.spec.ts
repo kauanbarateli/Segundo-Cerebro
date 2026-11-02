@@ -50,7 +50,7 @@ test("share target informa limite sem persistir ou refletir o conteúdo comparti
   await expect(page.getByRole("main")).not.toContainText("conteudo-privado-de-teste");
 });
 
-test("convite de instalação permanece nas configurações e mantém evento recebido no Início", async ({ page }) => {
+test("A05: o evento de instalação é recebido sem convite no Início e Configurações não traz mais o card", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Início", level: 1 })).toBeVisible();
   // The browser's real installability is tested above. This event probes deferred UX.
@@ -61,8 +61,8 @@ test("convite de instalação permanece nas configurações e mantém evento rec
   });
   await expect(page.getByRole("button", { name: "Instalar Segundo Cérebro" })).toHaveCount(0);
   await page.getByRole("navigation", { name: "Navegação principal", exact: true }).getByRole("link", { name: "Configurações", exact: true }).click();
-  const install = page.getByRole("button", { name: "Instalar Segundo Cérebro" });
-  await install.click();
-  await expect(page.getByRole("status").filter({ hasText: "Você pode instalar mais tarde pelo menu do navegador." })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Segundo Cérebro no seu dispositivo" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Configurações", level: 1 })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Instalar Segundo Cérebro" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Segundo Cérebro no seu dispositivo" })).toHaveCount(0);
+  await expect(page.locator("#instalacao, #dados")).toHaveCount(0);
 });
