@@ -12,7 +12,7 @@ export interface NavigationGroup {
 
 export interface GroupedNavigation {
   readonly groups: readonly NavigationGroup[];
-  /** Integrações, Configurações and Admin live in the sidebar footer. */
+  /** Integrações and Configurações live in the sidebar footer. */
   readonly utility: readonly WorkspaceRoute[];
   /** False when a custom order mixes groups and the list keeps that order unlabeled. */
   readonly labeled: boolean;

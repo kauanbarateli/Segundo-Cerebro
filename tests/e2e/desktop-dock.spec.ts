@@ -153,12 +153,13 @@ test.describe("desktop 1440", () => {
     await applyNavigation(page, "Dock inferior");
     await expectDock(other);
     await other.close();
-    await expect(dockLink(page, "Admin")).toBeVisible();
+    await page.goto("/admin");
+    await expect(page.locator('[data-access="allowed"]')).toBeVisible();
     await page.getByRole("button", { name: "Abrir perfil de demonstração" }).click();
     await page.getByRole("link", { name: "Sair da demonstração" }).click();
-    await page.goto("/");
+    await page.goto("/admin");
     await expectDock(page);
-    await expect(dockLink(page, "Admin")).toHaveCount(0);
+    await expect(page.locator('[data-access="denied"]')).toBeVisible();
   });
 
   test("N09: teclado, dica no foco, Escape, sem armadilha nem landmark duplicado", async ({ page }) => {
@@ -234,12 +235,14 @@ test.describe("desktop 1440", () => {
     await expect(popover).toBeHidden();
   });
 
-  test("N11: Admin só com privilégio; vetar/ocultar segue a mesma política da lateral", async ({ page }) => {
+  test("N11: Admin não vira item nem com privilégio; vetar/ocultar segue a mesma política da lateral", async ({ page }) => {
     await page.goto("/configuracoes#aparencia");
     await applyNavigation(page, "Dock inferior");
     await expect(dockLink(page, "Admin")).toHaveCount(0);
     await page.getByRole("combobox", { name: "Privilégio Admin da demonstração" }).selectOption("enabled");
-    await expect(dockLink(page, "Admin")).toBeVisible();
+    await expect(dockLink(page, "Configurações")).toBeVisible();
+    await expect(dockLink(page, "Admin")).toHaveCount(0);
+    await expect(rail(page).getByRole("link", { name: "Admin", exact: true })).toHaveCount(0);
     const order = await dock(page).locator("a[data-dock-item], .desktop-dock__overflow a").evaluateAll((links) => links.map((link) => link.getAttribute("href")));
     await applyNavigation(page, "Menu lateral");
     const sidebarOrder = await rail(page).locator(".shell-nav-link").evaluateAll((links) => links.map((link) => link.getAttribute("href")));
@@ -373,7 +376,7 @@ test("N07/N08/N12: larguras, redimensionamento e transbordo sem cortar alvos", a
 
   for (const width of [1051, 1280, 1440, 1920]) {
     await page.setViewportSize({ width, height: 900 });
-    await page.goto("/admin");
+    await page.goto("/configuracoes");
     await expectDock(page);
     expect(await horizontalOverflow(page), `${width}`).toBeLessThanOrEqual(0);
     const geometry = await dock(page).evaluate((element) => {
@@ -404,7 +407,8 @@ test("N07/N08/N12: larguras, redimensionamento e transbordo sem cortar alvos", a
     await expect(list).toBeHidden();
   }
   const all = await dock(page).locator("a").evaluateAll((links) => [...new Set(links.map((link) => link.getAttribute("href")))]);
-  for (const href of ["/", "/tarefas", "/cofre", "/configuracoes", "/integracoes", "/admin"]) expect(all).toContain(href);
+  for (const href of ["/", "/tarefas", "/cofre", "/configuracoes", "/integracoes"]) expect(all).toContain(href);
+  expect(all).not.toContain("/admin");
 
   // N08: focus on a dock item survives a resize back to the sidebar without staying on a hidden element.
   await page.setViewportSize({ width: 1440, height: 900 });

@@ -2,12 +2,12 @@ import { describe, expect, it } from "vitest";
 import { buildDockEntries, dockCapacity, DOCK_SLOT, isDockCurrent } from "../src/components/layout/desktop-dock";
 import { DEFAULT_DEMO_POLICY } from "../src/lib/navigation/demo-state";
 import { groupNavigationRoutes } from "../src/lib/navigation/groups";
-import { getVisibleRoutes } from "../src/lib/navigation/routes";
+import { getNavigationRoutes, getVisibleRoutes } from "../src/lib/navigation/routes";
 import type { AccessPolicy } from "../src/core/access/resolve-access";
 
-const sidebarOrder = (policy: AccessPolicy) => getVisibleRoutes(policy).map((route) => route.href);
+const sidebarOrder = (policy: AccessPolicy) => getNavigationRoutes(policy).map((route) => route.href);
 const dockOrder = (policy: AccessPolicy, metrics = false) => {
-  const { modules, pinned } = buildDockEntries(groupNavigationRoutes(getVisibleRoutes(policy)), metrics);
+  const { modules, pinned } = buildDockEntries(groupNavigationRoutes(getNavigationRoutes(policy)), metrics);
   return [...modules, ...pinned];
 };
 
@@ -22,13 +22,14 @@ describe("doc21 N10: a dock usa a mesma navegação visível da lateral", () => 
     expect(entries.some((entry) => entry.href === "/admin")).toBe(false);
   });
 
-  it("módulo oculto ou vetado não aparece; Admin só com privilégio", () => {
+  it("módulo oculto ou vetado não aparece; Admin nunca vira item, nem com privilégio", () => {
     const hidden: AccessPolicy = { ...DEFAULT_DEMO_POLICY, preferences: { tarefas: { visible: false, order: 0 } } };
     expect(dockOrder(hidden).some((entry) => entry.key === "tarefas")).toBe(false);
     const vetoed: AccessPolicy = { ...DEFAULT_DEMO_POLICY, entitlements: { habitos: false } };
     expect(dockOrder(vetoed).some((entry) => entry.key === "habitos")).toBe(false);
     const admin: AccessPolicy = { ...DEFAULT_DEMO_POLICY, isAdmin: true, entitlements: { admin: true } };
-    expect(dockOrder(admin).some((entry) => entry.href === "/admin")).toBe(true);
+    expect(getVisibleRoutes(admin).some((route) => route.href === "/admin")).toBe(true);
+    expect(dockOrder(admin).some((entry) => entry.href === "/admin")).toBe(false);
   });
 
   it("Métricas entra apenas quando disponível e fica entre os fixos", () => {

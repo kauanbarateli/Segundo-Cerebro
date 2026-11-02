@@ -11,7 +11,7 @@ import "./desktop-dock.css";
  * Optional desktop navigation (doc21). Always server-rendered as static Next links;
  * CSS shows it only for `html[data-desktop-navigation="dock"]` on eligible desktops,
  * so the sidebar stays usable while this chunk loads or if it fails. Items come from
- * the same visible routes as the sidebar (policy order, entitlements, Admin) — never
+ * the same navigation routes as the sidebar (policy order, entitlements) — never
  * from a fixed list. No mobile variant: phones keep the existing bottom navigation.
  */
 export interface DockEntry { key: string; href: string; label: string; icon: ReactNode; separatorBefore: boolean }
@@ -22,7 +22,7 @@ const DOCK_PADDING = 28, DOCK_SEPARATOR = 14, DOCK_MAGNIFICATION_RESERVE = 48, D
 
 /**
  * How many leading module entries fit before "Mais áreas" is needed. Pinned utilities
- * (Configurações, Integrações, Admin, Métricas) always stay visible so the choice can be
+ * (Configurações, Integrações, Métricas) always stay visible so the choice can be
  * reverted. Never shrinks a target below 44px and never wraps to a second row.
  */
 export function dockCapacity(viewport: number, modules: number, pinned: number, separators: number): number {

@@ -11,7 +11,7 @@ import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { useDemoAccess } from "@/lib/navigation/demo-access-provider";
 import { useDemoApplication } from "@/lib/demo/demo-provider";
 import { resolveAccess } from "@/core/access/resolve-access";
-import { getMobileRoutes, getRouteByPath, getVisibleRoutes, type WorkspaceRoute } from "@/lib/navigation/routes";
+import { getMobileRoutes, getNavigationRoutes, getRouteByPath, type WorkspaceRoute } from "@/lib/navigation/routes";
 import { groupNavigationRoutes } from "@/lib/navigation/groups";
 import { resolveOptionalNavigation, type OptionalDestinations } from "@/lib/navigation/optional-destinations";
 import {
@@ -106,7 +106,7 @@ export function WorkspaceShell({ children, avatarId = null, displayName = null, 
   const tipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const main = useRef<HTMLElement>(null);
   const previousPath = useRef(pathname);
-  const routes = getVisibleRoutes(policy);
+  const routes = getNavigationRoutes(policy);
   const navigation = groupNavigationRoutes(routes);
   const bottomRoutes = getMobileRoutes(routes);
   const current = getRouteByPath(pathname);

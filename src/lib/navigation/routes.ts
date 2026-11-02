@@ -51,6 +51,14 @@ export function getVisibleRoutes(policy: AccessPolicy): WorkspaceRoute[] {
     .map(({ route }) => route);
 }
 
+/**
+ * Shell navigation (sidebar, desktop dock and phone menu). Admin opens from its own
+ * view, never from a navigation item; its access rules and the route stay unchanged.
+ */
+export function getNavigationRoutes(policy: AccessPolicy): WorkspaceRoute[] {
+  return getVisibleRoutes(policy).filter((route) => route.feature !== "admin");
+}
+
 export function filterRoutes(routes: readonly WorkspaceRoute[], query: string): WorkspaceRoute[] {
   const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
   const term = normalize(query);
