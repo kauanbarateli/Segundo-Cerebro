@@ -21,6 +21,8 @@ const SAME_BROWSER_PINS=Object.freeze([
  ['scripts/verification/front-b-135-draft/same-browser-composed-v1.guarded.sql.txt','038f7a9fa96eaebcdee44b8974e41a1b13dd796651ca5d0fe12a56dcec7fb652']
 ]);
 const LOCAL_PINS=Object.freeze({
+ 'ledger-visibility-probe.draft.mjs':'94742c71529b24a0308844a6b63659ef18d647b94613c0c62ee85ca4c2969d5d',
+ 'ledger-visibility-probe.fail.sql.txt':'d29322fe522a256c8a669a1936a33735320ccd03e1a6a7bddc297a94dbedfdd9',
  'pending-origin-race.draft.mjs':'1dc9b5e22161a14fb28a0be7543d8896db5dd689b0a8d04b472447317ffdbe05',
  'pending-origin-v2.guarded.sql.txt':'7d34cef6d839dca2bbc71b37f62cb8818693ba3e06e203989c7e353f0088ac84',
  'origin-218-full-ledger.draft.mjs':'631ab61ad59e54af2e305b377a8a2c4602b82638cb73ec1a83a2f0d40049a1cf',
@@ -50,9 +52,10 @@ const LOCAL_PINS=Object.freeze({
  'ledger-preflight.readonly.sql.txt':'21f4757e4be28ac872703724051512dd7ae149c5efcebd24128022af4bd2a141'
 });
 const SUPPORT_PINS=Object.freeze([
+ [BASE+'ledger-visibility-probe.draft.test.mjs','3a385b67ffe80318b0d0f68889b95760b7311ab6f0f688c9fbe1448a6285a0d8'],
  [BASE+'pending-origin-race.draft.test.mjs','60d75a26b898c54b9c8aec74edbc1de78bb576d5b8387e4a0b666c38b1ce96cb'],
  [BASE+'origin-218-full-ledger.draft.test.mjs','2afdb1127a77ec167fac50eac02daf014682cc15854240295926e5d1aff1b871'],
- [BASE+'runner.test.mjs','5d942e38f8e1972d6727b8c5c7fba2c15aba6f57e2eae26b4bfc37c293a39ea1'],
+ [BASE+'runner.test.mjs','51871e5eb3c09a02ebf35fe98b12f7c311ce99716cf2c624345cc11a4ef29008'],
  [BASE+'origin-218-freeze-exception.draft.test.mjs','434324a5c05876aba211680fd8764a5e04de8bf3310c3e182199a9bc08b58e99'],
  [BASE+'withdrawal-v2-race.draft.test.mjs','7e246b335f59fa77f1585dc9bd440dfa61674943f4e6b95bd214ef74ac746b89'],
  [BASE+'full-cutover-transaction.draft.test.mjs','680ead06bfb0b9b6dd97e951f32ca21720a09c0c1f8ecf236ff8d42339c37165'],
@@ -80,12 +83,12 @@ const pause=ms=>new Promise(resolveTimer=>setTimeout(resolveTimer,ms));
 async function groupAbsent(pid){if(!Number.isSafeInteger(pid)||pid<2)return false;for(let i=0;i<20;i++){try{process.kill(-pid,0);}catch(e){return e?.code==='ESRCH';}await pause(50);}return false;}
 export function mayTeardown(groupKnown,pending,states){return groupKnown===true&&pending===0&&Array.isArray(states)&&states.every(s=>s?.groupGone===true);}
 export function receipt(sha,results,groupKnown,pending,allClean){
- if(!SHA.test(sha)||!mayTeardown(groupKnown,pending,[])||allClean!==true||!Array.isArray(results)||results.length!==19)fail();
- for(const [index,name] of ['reservation-exclusive-pg17','start-exclusive-pg17','same-browser-renewal-prune-pg17','same-browser-fence-prune-pg17','legacy-prune-resumes-after-replacement-pg17','legacy-prune-blocked-by-persistent-freeze-pg17','persistent-freeze-reverse-pg17','persistent-freeze-rollback-pg17','full-cutover-ledger-transaction-pg17','withdrawal-renew-first-pg17','withdrawal-withdraw-first-pg17','origin-218-freeze-commit-pg17','origin-218-freeze-rollback-pg17','origin-218-full-quarantine-synthetic-ledger-pg17','origin-218-full-cutover-synthetic-ledger-pg17','pending-origin-reserve-first-pg17','pending-origin-withdraw-reserve-pg17','pending-origin-finish-first-pg17','pending-origin-withdraw-finish-pg17'].entries()){const r=results[index];if(!r||Object.keys(r).sort().join(',')!=='acceptance,hostedCertified,scenario,status'||r.scenario!==name||r.status!=='CASE_OBSERVED_CLEANUP_PENDING'||r.acceptance!==false||r.hostedCertified!==false)fail();}
- return {scenario:'front-b-reservation-races-pg17',status:'OBSERVED',acceptance:false,hostedCertified:false,cleanupConfirmed:true,cases:19,sourceSha:sha};
+ if(!SHA.test(sha)||!mayTeardown(groupKnown,pending,[])||allClean!==true||!Array.isArray(results)||results.length!==22)fail();
+ for(const [index,name] of ['reservation-exclusive-pg17','start-exclusive-pg17','same-browser-renewal-prune-pg17','same-browser-fence-prune-pg17','legacy-prune-resumes-after-replacement-pg17','legacy-prune-blocked-by-persistent-freeze-pg17','persistent-freeze-reverse-pg17','persistent-freeze-rollback-pg17','full-cutover-ledger-transaction-pg17','withdrawal-renew-first-pg17','withdrawal-withdraw-first-pg17','origin-218-freeze-commit-pg17','origin-218-freeze-rollback-pg17','origin-218-full-quarantine-synthetic-ledger-pg17','origin-218-full-cutover-synthetic-ledger-pg17','pending-origin-reserve-first-pg17','pending-origin-withdraw-reserve-pg17','pending-origin-finish-first-pg17','pending-origin-withdraw-finish-pg17','ledger-visibility-absent-pg17','ledger-visibility-visible-pg17','ledger-visibility-duplicate-pg17'].entries()){const r=results[index];if(!r||Object.keys(r).sort().join(',')!=='acceptance,hostedCertified,scenario,status'||r.scenario!==name||r.status!=='CASE_OBSERVED_CLEANUP_PENDING'||r.acceptance!==false||r.hostedCertified!==false)fail();}
+ return {scenario:'front-b-reservation-races-pg17',status:'OBSERVED',acceptance:false,hostedCertified:false,cleanupConfirmed:true,cases:22,sourceSha:sha};
 }
 export async function execute(env=process.env){
- environment(env);assertIntegratedPath(relative(ROOT,fileURLToPath(import.meta.url)).replaceAll('\\','/'));if(await realpath(ROOT)!==ROOT||await realpath(env.RUNNER_TEMP)!==env.RUNNER_TEMP||Object.keys(LOCAL_PINS).length!==27)fail();
+ environment(env);assertIntegratedPath(relative(ROOT,fileURLToPath(import.meta.url)).replaceAll('\\','/'));if(await realpath(ROOT)!==ROOT||await realpath(env.RUNNER_TEMP)!==env.RUNNER_TEMP||Object.keys(LOCAL_PINS).length!==29)fail();
  const os={PATH:SAFE_PATH,HOME:env.RUNNER_TEMP,LANG:env.LANG??'C.UTF-8',LC_ALL:env.LC_ALL??'C.UTF-8',TZ:'UTC',NO_COLOR:'1',GIT_CONFIG_NOSYSTEM:'1',GIT_CONFIG_GLOBAL:'/dev/null',GIT_CONFIG_SYSTEM:'/dev/null',GIT_CONFIG_COUNT:'1',GIT_CONFIG_KEY_0:'core.fsmonitor',GIT_CONFIG_VALUE_0:'false',GIT_TERMINAL_PROMPT:'0',DOCKER_HOST:'unix:///var/run/docker.sock'};
  const git=args=>execFileSync('git',['-c','gc.auto=0','-c','protocol.allow=never','-c','core.hooksPath=/dev/null',...args],{cwd:ROOT,env:os,timeout:15000,maxBuffer:2097152});
  if(git(['rev-parse','HEAD']).toString().trim()!==env.GITHUB_SHA||git(['status','--porcelain','--untracked-files=all']).toString().trim())fail();
@@ -102,6 +105,7 @@ export async function execute(env=process.env){
  const {observeOrigin218Freeze}=await import(pathToFileURL(join(ROOT,BASE+'origin-218-freeze-exception.draft.mjs')).href);
  const {observeOrigin218Ledger}=await import(pathToFileURL(join(ROOT,BASE+'origin-218-full-ledger.draft.mjs')).href);
  const {observePendingOriginRace}=await import(pathToFileURL(join(ROOT,BASE+'pending-origin-race.draft.mjs')).href);
+ const {observeLedgerVisibility}=await import(pathToFileURL(join(ROOT,BASE+'ledger-visibility-probe.draft.mjs')).href);
  const {runBoundedProcess}=await import(pathToFileURL(join(ROOT,'scripts/verification/auth-local-ci.mjs')).href);
  const qualified=qualifySources(bytes.get(BASE+'fixture.sql'),bytes.get(BASE+'reservation.sql.txt'),bytes.get('scripts/verification/front-b-signup-reservation-draft/candidate-reservation.sql.txt'));requireSqlBytes(qualified.fixture);requireSqlBytes(qualified.candidate);
  const sameBrowser=qualifySameBrowser({foundation:bytes.get(SAME_BROWSER_PINS[0][0]),composition:bytes.get(SAME_BROWSER_PINS[1][0]),fixture:bytes.get(BASE+'same-browser-fixture.sql'),seed:bytes.get(BASE+'same-browser-seed.sql')});for(const sql of Object.values(sameBrowser))requireSqlBytes(sql);
@@ -113,7 +117,7 @@ export async function execute(env=process.env){
  try{
   home=await mkdtemp(join(env.RUNNER_TEMP,'sc-fb-race-'));if(await realpath(home)!==home)fail();os.HOME=home;os.DOCKER_CONFIG=join(home,'docker-config');
   await run(['pull','--platform','linux/amd64',IMAGE],300000,{capture:false});const image=requireImage(json((await run(['image','inspect','--format','{{json .}}',IMAGE])).stdout));
-  for(const kind of ['reservation','start','renewal','fence','legacy','persistent-freeze','freeze-reverse','freeze-rollback','full-cutover','withdrawal-renew-first','withdrawal-withdraw-first','origin-218-freeze-commit','origin-218-freeze-rollback','origin-218-full-quarantine','origin-218-full-cutover','pending-origin-reserve-first','pending-origin-withdraw-reserve','pending-origin-finish-first','pending-origin-withdraw-finish']){
+  for(const kind of ['reservation','start','renewal','fence','legacy','persistent-freeze','freeze-reverse','freeze-rollback','full-cutover','withdrawal-renew-first','withdrawal-withdraw-first','origin-218-freeze-commit','origin-218-freeze-rollback','origin-218-full-quarantine','origin-218-full-cutover','pending-origin-reserve-first','pending-origin-withdraw-reserve','pending-origin-finish-first','pending-origin-withdraw-finish','ledger-visibility-absent','ledger-visibility-visible','ledger-visibility-duplicate']){
    process.stderr.write(JSON.stringify({stage:'case-start',kind})+'\n');
    const nonce=randomBytes(16).toString('hex'),name='sc-front-b-offline-'+nonce,label='sc.front-b-offline='+nonce;let id=null,created=false,ok=false;const sessions=[];
    const owned=async()=>{const a=await list('name=^/'+name+'$'),b=await list('label='+label);if(a.length>1||b.length>1||JSON.stringify(a)!==JSON.stringify(b)||a.some(x=>!ID.test(x)))fail();return a[0]??null;};
@@ -132,13 +136,14 @@ export async function execute(env=process.env){
       await checked(bytes.get(BASE+'withdrawal-v2.fixture.sql').toString('utf8'));
       const candidate=bytes.get(BASE+'withdrawal-v2.guarded.sql.txt').toString('utf8'),guard="DO $guard$ BEGIN RAISE EXCEPTION 'GUARDED: review cutover and exact database provenance'; END $guard$;";
       if(candidate.split(guard).length!==2)fail();await checked(candidate.replace(guard,''));
-    } else for(const sql of ['legacy','persistent-freeze','freeze-reverse','freeze-rollback','full-cutover'].includes(kind)?[sameBrowser.fixture,sameBrowser.foundation]:[sameBrowser.fixture,sameBrowser.foundation,sameBrowser.composition,sameBrowser.seed])await checked(sql.toString('utf8'));
+    } else if(!kind.startsWith('ledger-visibility-')) for(const sql of ['legacy','persistent-freeze','freeze-reverse','freeze-rollback','full-cutover'].includes(kind)?[sameBrowser.fixture,sameBrowser.foundation]:[sameBrowser.fixture,sameBrowser.foundation,sameBrowser.composition,sameBrowser.seed])await checked(sql.toString('utf8'));
     process.stderr.write(JSON.stringify({stage:'case-fixture-ready',kind})+'\n');
     const context={nonce,systemIdentifier,user:'10000000-0000-4000-8000-000000000001',session:'20000000-0000-4000-8000-000000000001',intent:'30000000-0000-4000-8000-000000000001',requestA:'40000000-0000-4000-8000-000000000001',requestB:'40000000-0000-4000-8000-000000000002'};
     if(kind==='reservation')for(const nullCase of ['intent_state','intent_expiry','admission_origin','admission_state','identity_null']){const result=json(await checked(nullCaseSql(context,nullCase)));if(result.kind!=='null-refused'||result.case!==nullCase||Object.keys(result).length!==2)fail();const baseline=json(await checked(nullBaselineSql(context)));if(baseline.kind!=='baseline'||baseline.intact!==true||Object.keys(baseline).length!==2)fail();}
     let generation=null;if(kind==='start'){const seed=json(await checked(seedStartSql(context)));if(seed.kind!=='seed'||seed.result?.status!=='acquired'||seed.result.requestId!==context.requestA||!/^[0-9a-f-]{36}$/i.test(seed.result.generation))fail();generation=seed.result.generation;}
     const ports={open:async()=>{const session=openDockerSession({id,cwd:ROOT,env:os,checkSql:requireSqlBytes,groupAbsent});sessions.push(session);return session;},query:async sql=>json(await checked(sql)),pause:()=>pause(100)};
-    if(kind.startsWith('withdrawal-')){
+    if(kind.startsWith('ledger-visibility-'))results.push(await observeLedgerVisibility({exec:checked},bytes.get(BASE+'ledger-visibility-probe.fail.sql.txt'),kind.slice('ledger-visibility-'.length)));
+    else if(kind.startsWith('withdrawal-')){
      const initial=json(await checked(`select json_build_object('kind','initial','result',public.signup_origin_status_v2('${context.user}'::uuid,'${context.session}'::uuid));`));
      if(initial?.kind!=='initial'||initial.result?.status!=='active'||!/^[0-9a-f-]{36}$/i.test(initial.result?.revision??''))fail();
      results.push(await observeWithdrawalRace(ports,{nonce,systemIdentifier,user:context.user,session:context.session},initial.result.revision,kind==='withdrawal-renew-first'?'renew-first':'withdraw-first'));
