@@ -18,11 +18,14 @@ function find(node: ReactNode, predicate: (element: ReactElement<Record<string, 
   for (const child of Children.toArray(node)) { if (!isValidElement<Record<string, unknown>>(child)) continue; if (predicate(child)) return child; const found = find(child.props.children as ReactNode, predicate); if (found) return found; }
 }
 const text = (value: ReactNode) => JSON.stringify(value, (_key, item) => typeof item === "function" ? undefined : item);
-function fixture(fetcher: typeof fetch) {
+function fixture(fetcher: typeof fetch, store = new Map<string, string>(), actor = owner) {
   const hooks: PrivacyHooks = { states: [], refs: [], memos: [], effects: [], pending: [], stateIndex: 0, refIndex: 0, memoIndex: 0, effectIndex: 0 };
-  vi.stubGlobal("fetch", fetcher); vi.stubGlobal("window", new EventTarget());
+  vi.stubGlobal("fetch", fetcher);
+  const win = new EventTarget() as EventTarget & { sessionStorage: Pick<Storage, "getItem" | "setItem" | "removeItem"> };
+  win.sessionStorage = { getItem: key => store.get(key) ?? null, setItem: (key, value) => { store.set(key, value); }, removeItem: key => { store.delete(key); } };
+  vi.stubGlobal("window", win);
   const doc = new EventTarget() as EventTarget & { visibilityState: string }; doc.visibilityState = "visible"; vi.stubGlobal("document", doc);
-  return { render() { seam.hooks = hooks; beginPrivacyRender(hooks); const tree = OriginWithdrawal({ userId: owner }); flushPrivacyEffects(hooks); return tree; }, unmount() { for (const effect of hooks.effects) effect.cleanup?.(); } };
+  return { render() { seam.hooks = hooks; beginPrivacyRender(hooks); const tree = OriginWithdrawal({ userId: actor }); flushPrivacyEffects(hooks); return tree; }, unmount() { for (const effect of hooks.effects) effect.cleanup?.(); } };
 }
 function click(tree: ReactNode, label: string) { (find(tree, element => element.type === "action-button" && element.props.children === label)!.props.onClick as () => void)(); }
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
@@ -50,12 +53,29 @@ describe("retirada da origem pelo titular", () => {
     let reads = 0, writes = 0;
     const app = fixture(async (_path, init) => {
       if (init?.method === "POST") { writes++; throw new DOMException("timeout", "TimeoutError"); }
-      return ++reads === 1 ? active() : json({ ok: true, result: { status: "absent", expiresAt: null } });
+      reads++; return active();
     });
     app.render(); await settle(); click(app.render(), "Retirar consentimento"); await settle();
     let tree = app.render(); expect(text(tree)).toContain("Não foi possível confirmar"); expect(writes).toBe(1);
     expect(text(tree)).not.toContain("Retirar consentimento"); click(tree, "Verificar novamente"); await settle();
-    tree = app.render(); expect(text(tree)).toContain("Não há consentimento ativo"); expect(writes).toBe(1); app.unmount();
+    tree = app.render(); expect(text(tree)).toContain("Não foi possível confirmar a retirada"); expect(text(tree)).not.toContain("Retirar consentimento"); expect(writes).toBe(1); app.unmount();
+  });
+  it("mantém o bloqueio na recarga mesmo se a leitura mostrar ausência", async () => {
+    const store = new Map<string, string>(), fetcher = async (_path: RequestInfo | URL, init?: RequestInit) => init?.method === "POST" ? Promise.reject(new DOMException("timeout", "TimeoutError")) : active();
+    const first = fixture(fetcher, store); first.render(); await settle(); click(first.render(), "Retirar consentimento"); await settle(); first.unmount();
+    const second = fixture(async () => json({ ok: true, result: { status: "absent", expiresAt: null } }), store);
+    second.render(); await settle(); const tree = second.render();
+    expect(text(tree)).toContain("Não foi possível confirmar a retirada"); expect(text(tree)).not.toContain("Não há consentimento ativo"); expect(text(tree)).not.toContain("Retirar consentimento"); second.unmount();
+  });
+  it("separa marcador de cada usuário sem armazenar ou exibir UTMs", async () => {
+    const store = new Map<string, string>(), other = "20000000-0000-4000-8000-000000000002";
+    const first = fixture(async (_path, init) => init?.method === "POST" ? Promise.reject(new DOMException("timeout", "TimeoutError")) : active(), store);
+    first.render(); await settle(); click(first.render(), "Retirar consentimento"); await settle(); first.unmount();
+    const requests: RequestInit[] = [];
+    const second = fixture(async (_path, init) => { requests.push(init!); return active(); }, store, other);
+    second.render(); await settle(); const tree = second.render();
+    expect(text(tree)).toContain("Retirar consentimento"); expect((requests[0]?.headers as Record<string, string>)["x-expected-user-id"]).toBe(other);
+    expect([...store.values()]).toEqual(["1"]); expect(JSON.stringify([...store.entries()])).not.toMatch(/utm_|2027-10-01/); expect(text(tree)).not.toMatch(/utm_|2027-10-01/); second.unmount();
   });
   it("revalida a identidade se a conta mudar enquanto a retirada está em andamento", async () => {
     let finish!: (response: Response) => void, reads = 0;

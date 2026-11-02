@@ -1,20 +1,21 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Brand } from "@/components/ui/brand";
 import { ThemeSelector } from "@/components/theme/theme-selector";
 import { OriginWithdrawal } from "@/components/legal/origin-withdrawal";
-import { requireUser } from "@/lib/auth/guards";
-import { AuthGuardError } from "@/lib/auth/types";
+import { readAuthState } from "@/lib/auth/guards";
 import "@/components/legal/legal-document.css";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Origem de cadastro · Segundo Cérebro", robots: { index: false } };
 
 export default async function OriginPrivacyPage() {
-  let identity;
-  try { identity = await requireUser(); }
-  catch (error) { if (error instanceof AuthGuardError && error.code === "demo") notFound(); throw error; }
+  const auth = await readAuthState();
+  if (auth.mode === "demo") notFound();
+  const identity = auth.identity;
+  if (!identity) redirect("/entrar?notice=session-required&returnTo=%2Fprivacidade%2Forigem-cadastro");
+  if (identity.mustChangePassword) redirect("/trocar-senha");
   return <div className="legal-page">
     <a className="skip-link" href="#conteudo">Pular para o conteúdo</a>
     <header className="legal-header"><Link className="legal-brand" href="/conheca" prefetch={false} aria-label="Segundo Cérebro · conhecer o aplicativo"><Brand variant="horizontal" size={44} /></Link><ThemeSelector /></header>
