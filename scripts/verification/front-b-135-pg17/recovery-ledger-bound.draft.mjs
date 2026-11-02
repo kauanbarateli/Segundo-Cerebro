@@ -22,10 +22,19 @@ export function recoveryLedgerPlan(ctx,inputs){
 }
 export async function observeRecoveryLedger(ports,ctx,inputs){
  if(!ports||typeof ports.exec!=='function'||typeof ports.query!=='function')fail();
- const p=recoveryLedgerPlan(ctx,inputs);
- await ports.exec(p.seed);await ports.exec(p.quarantine);await ports.exec(p.seedStatement);
- const before=await ports.query(p.check);if(!before||before.quarantine!==true||before.cutover!==false||before.freeze!==true||before.triggers!==true||before.v2!==false)fail();
- await ports.exec(p.recovery);
- const after=await ports.query(p.check);if(!after||after.quarantine!==true||after.cutover!==false||after.freeze!==false||after.triggers!==false||after.v2!==false)fail();
- return Object.freeze({scenario:'recovery-ledger-bound-pg17',status:'CASE_OBSERVED_CLEANUP_PENDING',acceptance:false,hostedCertified:false});
+ let phase='plan';
+ try{
+  const p=recoveryLedgerPlan(ctx,inputs);
+  phase='seed';await ports.exec(p.seed);
+  phase='quarantine';await ports.exec(p.quarantine);
+  phase='seed-statement';await ports.exec(p.seedStatement);
+  phase='before';const before=await ports.query(p.check);if(!before||before.quarantine!==true||before.cutover!==false||before.freeze!==true||before.triggers!==true||before.v2!==false)fail();
+  phase='recovery';await ports.exec(p.recovery);
+  phase='after';const after=await ports.query(p.check);if(!after||after.quarantine!==true||after.cutover!==false||after.freeze!==false||after.triggers!==false||after.v2!==false)fail();
+  return Object.freeze({scenario:'recovery-ledger-bound-pg17',status:'CASE_OBSERVED_CLEANUP_PENDING',acceptance:false,hostedCertified:false});
+ }catch(error){
+  const reason=['COMMAND_FAILED','COMMAND_TIMEOUT','COMMAND_UNAVAILABLE','COMMAND_GROUP_UNCONFIRMED'].includes(error?.code)?error.code:'OTHER';
+  process.stderr.write(JSON.stringify({code:'RECOVERY_LEDGER_BOUND_REFUSED',phase,reason})+'\n');
+  fail();
+ }
 }
