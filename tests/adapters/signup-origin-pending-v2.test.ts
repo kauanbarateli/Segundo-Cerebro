@@ -28,6 +28,15 @@ it("usa somente a sessão provisória verificada para consultar e retirar a revi
   fake.rpc.mockResolvedValueOnce({ status: "stale" }); expect(await (await POST(post())).json()).toEqual({ ok: true, result: { status: "stale" } });
   expect(fake.rpc).toHaveBeenLastCalledWith(config, "signup_origin_withdraw_v2", { p_user: userId, p_session: sessionId, p_revision: revision }); expect(fake.set).not.toHaveBeenCalled();
 });
+it("permite retirada com checkpoint expirado e contexto provisório ainda válido", async () => {
+  fake.getAll.mockReturnValue([{ name: SIGNUP_CONTEXT_COOKIE, value: signSignupContext({ scope, userId, sessionId }, config.stateSecret) }, { name: "sc-flow-signup-confirmation", value: "expired-or-invalid" }]);
+  fake.rpc.mockResolvedValueOnce({ status: "withdrawn" });const response=await POST(post());
+  expect(response.status).toBe(200);expect(await response.json()).toEqual({ok:true,result:{status:"withdrawn"}});expect(fake.rpc).toHaveBeenCalledWith(config,"signup_origin_withdraw_v2",{p_user:userId,p_session:sessionId,p_revision:revision});
+});
+it("recusa contexto provisório expirado sem consultar ou retirar origem", async () => {
+  fake.getAll.mockReturnValue([{name:SIGNUP_CONTEXT_COOKIE,value:signSignupContext({scope,userId,sessionId},config.stateSecret,Date.now()-25*60*60*1000)}]);
+  expect((await POST(post())).status).toBe(401);expect(fake.client).not.toHaveBeenCalled();expect(fake.rpc).not.toHaveBeenCalled();
+});
 it("recusa conta trocada ou sessão provisória divergente sem chamar RPC", async () => {
   expect((await POST(post(JSON.stringify({ revision }), other))).status).toBe(409); expect(fake.rpc).not.toHaveBeenCalled();
   fake.client.mockReturnValueOnce({ auth: { getUser: async () => ({ data: { user: { id: userId, email_confirmed_at: "2026-01-01", is_anonymous: false } }, error: null }), getClaims: async () => ({ data: { claims: { sub: userId, session_id: other } }, error: null }) } });

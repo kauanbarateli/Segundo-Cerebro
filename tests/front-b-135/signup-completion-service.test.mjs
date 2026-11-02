@@ -29,6 +29,10 @@ function fixture({provider=async()=> 'updated',enabled=true,markFail=false,ackFa
 test('disabled runtime is closed before reading identities or calling Auth',async()=>{
  const f=fixture({enabled:false});assert.deepEqual(await completePublicSignup(f.ports,input,legal),{status:'unavailable'});assert.equal(f.identityCalls,0);assert.equal(f.calls,0);
 });
+test('passwordConfirmed no checkpoint não autoriza reserva nem nova chamada Auth',async()=>{
+ const f=fixture();f.ports.readCheckpoint=()=>({...checkpoint,passwordConfirmed:true});let reserved=0;f.ports.reserveCompletion=async()=>{reserved++;return null;};
+ assert.equal((await completePublicSignup(f.ports,input,legal)).status,'pending-reconciliation');assert.equal(reserved,0);assert.equal(f.calls,0);
+});
 test('v2 recusa revisão ausente e nunca chama a retirada legada',async()=>{
  const f=fixture();let writes=0;f.ports.originRevisionMode=()=>true;f.ports.withdrawCurrent=async()=>{writes++;throw Error('legacy');};f.ports.reserveCompletionV2=async()=>{writes++;return null;};f.ports.finishCompletionV2=async()=>false;
  assert.equal((await completePublicSignup(f.ports,{...input,acceptedOrigin:false},legal)).status,'unavailable');assert.equal(writes,0);assert.equal(f.calls,0);

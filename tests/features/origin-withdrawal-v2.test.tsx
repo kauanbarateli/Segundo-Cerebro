@@ -18,15 +18,21 @@ function find(node: ReactNode, predicate: (element: ReactElement<Record<string, 
   for (const child of Children.toArray(node)) { if (!isValidElement<Record<string, unknown>>(child)) continue; if (predicate(child)) return child; const found = find(child.props.children as ReactNode, predicate); if (found) return found; }
 }
 const text = (value: ReactNode) => JSON.stringify(value, (_key, item) => typeof item === "function" ? undefined : item);
-function fixture(fetcher: typeof fetch) {
+function fixture(fetcher: typeof fetch, context: "account" | "signup" = "account") {
   const hooks: PrivacyHooks = { states: [], refs: [], memos: [], effects: [], pending: [], stateIndex: 0, refIndex: 0, memoIndex: 0, effectIndex: 0 };
   vi.stubGlobal("fetch", fetcher); vi.stubGlobal("window", new EventTarget());
   const doc = new EventTarget() as EventTarget & { visibilityState: string }; doc.visibilityState = "visible"; vi.stubGlobal("document", doc);
-  return { render() { seam.hooks = hooks; beginPrivacyRender(hooks); const tree = OriginWithdrawalV2({ userId: owner }); flushPrivacyEffects(hooks); return tree; }, unmount() { for (const effect of hooks.effects) effect.cleanup?.(); } };
+  return { render() { seam.hooks = hooks; beginPrivacyRender(hooks); const tree = OriginWithdrawalV2({ userId: owner, context }); flushPrivacyEffects(hooks); return tree; }, unmount() { for (const effect of hooks.effects) effect.cleanup?.(); } };
 }
 function click(tree: ReactNode, label: string) { (find(tree, element => element.type === "action-button" && element.props.children === label)!.props.onClick as () => void)(); }
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 describe("retirada versionada pelo titular", () => {
+  it("usa somente endpoint provisório e mantém a revisão original após resposta incerta", async () => {
+    const calls:{path:string;body:string|undefined}[]=[];let writes=0;
+    const app=fixture(async(path,init)=>{calls.push({path:String(path),body:typeof init?.body==='string'?init.body:undefined});if(init?.method!=='POST')return active();if(++writes===1)throw new DOMException('timeout','TimeoutError');return json({ok:true,result:{status:'withdrawn'}});},"signup");
+    app.render();await settle();click(app.render(),"Retirar consentimento");await settle();expect(text(app.render())).toContain("Não foi possível confirmar");click(app.render(),"Tentar novamente");await settle();
+    expect(text(app.render())).toContain("Consentimento retirado.");expect(calls.every(call=>call.path==='/api/signup-origin-pending-v2')).toBe(true);expect(calls.filter(call=>call.body).map(call=>call.body)).toEqual([JSON.stringify({revision}),JSON.stringify({revision})]);app.unmount();
+  });
   it("após timeout repete somente a revisão originalmente escolhida", async () => {
     const bodies: string[] = []; let writes = 0;
     const app = fixture(async (_path, init) => {
