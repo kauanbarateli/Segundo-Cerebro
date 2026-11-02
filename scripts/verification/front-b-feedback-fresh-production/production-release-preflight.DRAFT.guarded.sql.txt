@@ -1,0 +1,86 @@
+-- DRAFT ONLY: never execute against any remote database. These are point-in-time pins.
+-- Project identity, PT409, concurrent DDL/ledger writers and transport are not proven.
+BEGIN;
+DO $manual_guard$ BEGIN RAISE EXCEPTION 'STOP: feedback release not qualified or authorized'; END $manual_guard$;
+DO $pt409_guard$ BEGIN RAISE EXCEPTION 'STOP: PT409 preservation not yet qualified'; END $pt409_guard$;
+SET LOCAL lock_timeout = '5s';
+SET LOCAL statement_timeout = '60s';
+SET LOCAL search_path = pg_catalog, public;
+LOCK TABLE public.domain_events IN ACCESS EXCLUSIVE MODE;
+-- This snapshot classifier is the original PT409 predicate; the fatal guard above remains.
+DO $pt409_snapshot$
+BEGIN
+  IF NOT coalesce((select
+    p.prokind = 'f' and not p.proretset and p.prorettype = 'jsonb'::regtype
+    and l.lanname = 'plpgsql' and p.provolatile = 'v' and not p.prosecdef
+    and not p.proisstrict and not p.proleakproof and p.proparallel = 'u' and p.provariadic = 0
+    and p.proconfig = array['search_path=""'] and pg_get_userbyid(p.proowner) = 'postgres'
+    and p.proargnames = array['p_user','p_session','p_operation','p_request']::text[]
+    and p.proargmodes is null and p.pronargdefaults = 0
+    and octet_length(convert_to(replace(p.prosrc,E'\r\n',E'\n'),'UTF8')) = 198
+    and encode(sha256(convert_to(replace(p.prosrc,E'\r\n',E'\n'),'UTF8')),'hex') = '59b03c44483704520a5300bb940111cec5c24694e6668a56b6e6574527ed021a'
+    and (select count(*) from aclexplode(coalesce(p.proacl,acldefault('f',p.proowner)))) = 2
+    and exists(select 1 from aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a
+      where a.grantee = p.proowner and a.grantor = p.proowner and a.privilege_type = 'EXECUTE' and not a.is_grantable)
+    and exists(select 1 from aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a
+      where a.grantee = 'service_role'::regrole and a.grantor = p.proowner and a.privilege_type = 'EXECUTE' and not a.is_grantable)
+    and not exists(select 1 from aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a
+      where a.grantor <> p.proowner or a.is_grantable or a.privilege_type <> 'EXECUTE'
+        or (a.grantee <> p.proowner and a.grantee <> 'service_role'::regrole))
+    from pg_proc p join pg_language l on l.oid = p.prolang
+    where p.oid = to_regprocedure('public.onboarding_call(uuid,uuid,text,jsonb)')), false) THEN
+    RAISE EXCEPTION 'FEEDBACK_PT409_SNAPSHOT_REFUSED';
+  END IF;
+END $pt409_snapshot$;
+DO $production_snapshot$
+DECLARE
+  f record;
+  fn oid;
+  c pg_catalog.pg_constraint;
+BEGIN
+  IF current_user <> 'postgres' OR pg_catalog.current_setting('server_version_num') <> '170011' THEN
+    RAISE EXCEPTION 'FEEDBACK_EXECUTOR_VERSION_REFUSED';
+  END IF;
+  IF pg_catalog.to_regclass('supabase_migrations.schema_migrations') IS NULL THEN
+    RAISE EXCEPTION 'FEEDBACK_LEDGER_UNAVAILABLE';
+  END IF;
+  IF (SELECT count(*) FROM supabase_migrations.schema_migrations) <> 5 OR EXISTS (
+    SELECT 1 FROM (VALUES
+      ('20261007151834','identity_foundation'),
+      ('20261007151850','auth_password_completion'),
+      ('20261007151904','restrict_rls_event_trigger_execution'),
+      ('20261007210519','capture_task_transactions'),
+      ('20261007223710','activity_page')
+    ) AS expected(version,name)
+    WHERE NOT EXISTS (SELECT 1 FROM supabase_migrations.schema_migrations m
+      WHERE m.version=expected.version AND m.name=expected.name)
+  ) THEN RAISE EXCEPTION 'FEEDBACK_LEDGER_REFUSED'; END IF;
+  FOR f IN SELECT * FROM (VALUES
+    ('require_actor','app_private.require_actor(uuid,uuid)','68e8122cedd4c6062b4c9ee9630fcdbba36a5e079ce31c9ded480ca23fa2f478'),
+    ('session_active','app_private.session_active(uuid,uuid)','d996b99e2bc3f327a1780582cdfd44cdce482c572eb765b1fb0004eff7a5092d'),
+    ('append_event','app_private.append_event(uuid,text,uuid,text,text,jsonb,jsonb)','f59ebde8976e8b6d0f68dcc9676336f29c648de86cb3d47f92c26d9fdcd19c85')
+  ) AS expected(name,signature,definition_sha256) LOOP
+    fn := pg_catalog.to_regprocedure(f.signature);
+    IF fn IS NULL OR (SELECT count(*) FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace
+        WHERE n.nspname='app_private' AND p.proname=f.name) <> 1 OR
+       NOT EXISTS (SELECT 1 FROM pg_catalog.pg_proc p WHERE p.oid=fn AND p.prosecdef
+         AND pg_catalog.pg_get_userbyid(p.proowner)='postgres'
+         AND pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(pg_catalog.pg_get_functiondef(p.oid),'UTF8')),'hex')=f.definition_sha256) OR
+       pg_catalog.has_function_privilege('anon',fn,'EXECUTE') OR
+       pg_catalog.has_function_privilege('authenticated',fn,'EXECUTE') OR
+       pg_catalog.has_function_privilege('service_role',fn,'EXECUTE') THEN
+      RAISE EXCEPTION 'FEEDBACK_DEPENDENCY_REFUSED';
+    END IF;
+  END LOOP;
+  SELECT * INTO STRICT c FROM pg_catalog.pg_constraint
+    WHERE conrelid='public.domain_events'::pg_catalog.regclass AND conname='domain_events_entity_type_check';
+  IF c.contype IS DISTINCT FROM 'c' OR c.convalidated IS DISTINCT FROM true OR
+      c.condeferrable IS DISTINCT FROM false OR c.condeferred IS DISTINCT FROM false OR c.connoinherit IS DISTINCT FROM false OR
+      pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(pg_catalog.pg_get_constraintdef(c.oid),'UTF8')),'hex')
+        IS DISTINCT FROM '803504cb5f1c0ab40e7334eea9dc43e263ef54c04669c9ca7c0f76ba212280d3' OR
+      NOT EXISTS (SELECT 1 FROM pg_catalog.pg_class r WHERE r.oid=c.conrelid AND r.relkind='r'
+        AND r.relrowsecurity AND pg_catalog.pg_get_userbyid(r.relowner)='postgres') THEN
+    RAISE EXCEPTION 'FEEDBACK_EVENT_CONTRACT_REFUSED';
+  END IF;
+END $production_snapshot$;
+ROLLBACK;
