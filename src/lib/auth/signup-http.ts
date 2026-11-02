@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseAuthConfig } from "./config";
 import type { FenceArgs } from "./signup-fence-wire";
 import { isTrustedHostedDatabaseOrigin } from "./database-origin-server";
+import {HOMOLOGATION_DATABASE_ORIGIN} from "../environment/application-destination";
 
 export const signupUnavailable = () => { throw new Error("Signup unavailable."); };
 // Hard gate: only a reviewed code change after the SQL/provider/cutover gates may remove this.
@@ -9,14 +10,21 @@ const TRANSACTIONAL_SIGNUP_RELEASED: boolean = false;
 // Separate release guard: QA/provider version, configuration and duplicate
 // races require qualification. This is not an automatic drift detector.
 const SIGNUP_DUPLICATE_CONTRACT_QUALIFIED: boolean = false;
+// QA-ONLY REVIEW OVERLAY: never merge or deploy to a production branch.
+// This enables a controlled experiment, not provider or release qualification.
+const QA_BROWSER_TEST_BUILD: boolean = true;
+function qaBrowserExperiment(config:SupabaseAuthConfig):boolean {
+  return QA_BROWSER_TEST_BUILD && process.env.SC_QA_SIGNUP_BROWSER_EXPERIMENT === "true" &&
+    config.supabaseUrl === HOMOLOGATION_DATABASE_ORIGIN && isTrustedHostedDatabaseOrigin(config);
+}
 export function signupFenceDeployed(config: SupabaseAuthConfig): boolean {
-  return TRANSACTIONAL_SIGNUP_RELEASED && isTrustedHostedDatabaseOrigin(config);
+  return (TRANSACTIONAL_SIGNUP_RELEASED || qaBrowserExperiment(config)) && isTrustedHostedDatabaseOrigin(config);
 }
 export function signupEnabled(config: SupabaseAuthConfig): boolean {
   return signupFenceDeployed(config) && process.env.PUBLIC_SIGNUP_ENABLED === "true";
 }
 export function signupSameBrowserEnabled(config:SupabaseAuthConfig):boolean {
-  return SIGNUP_DUPLICATE_CONTRACT_QUALIFIED && signupEnabled(config);
+  return (SIGNUP_DUPLICATE_CONTRACT_QUALIFIED || qaBrowserExperiment(config)) && signupEnabled(config);
 }
 async function boundedJson(response: Response): Promise<unknown> {
   const reader = response.body?.getReader();
