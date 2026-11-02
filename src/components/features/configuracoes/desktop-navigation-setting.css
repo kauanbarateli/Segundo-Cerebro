@@ -1,0 +1,55 @@
+/* Navegação no computador (doc21). Subgrupo de Aparência com os tokens existentes;
+   miniaturas geométricas decorativas (sem dados), cartão inteiro como label. */
+.desktop-navigation { min-width: 0; margin: var(--space-6) 0 0; padding: var(--space-6) 0 0; border: 0; border-top: 1px solid var(--line); }
+.desktop-navigation__legend { float: left; width: 100%; margin: 0 0 var(--space-1); padding: 0; font-size: var(--type-corpo); font-weight: 500; }
+.desktop-navigation__legend + * { clear: both; }
+.desktop-navigation__hint { margin: 0; color: var(--ink-muted); font-size: var(--type-corpo); line-height: var(--leading-corpo); }
+.desktop-navigation__options { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: var(--space-4); margin-top: var(--space-4); }
+.desktop-navigation__option {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--control-line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color var(--motion-fast) var(--motion-ease);
+}
+.desktop-navigation__option[data-selected] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.desktop-navigation__input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.desktop-navigation__option:has(.desktop-navigation__input:focus-visible) { outline: 2px solid var(--ink); outline-offset: 3px; }
+@media (hover: hover) and (pointer: fine) { .desktop-navigation__option:hover { border-color: var(--accent); } }
+
+/* Miniatura: mesma janela; uma com trilho à esquerda, outra com dock no rodapé. */
+.desktop-navigation__preview { display: block; block-size: 104px; padding: var(--space-3); border-radius: var(--radius-md); background: var(--surface-muted); }
+.desktop-navigation__window { position: relative; display: flex; gap: 6px; block-size: 100%; padding: 6px; overflow: hidden; border-radius: 6px; background: var(--canvas); box-shadow: inset 0 0 0 1px var(--line); }
+.desktop-navigation__window i { display: block; border-radius: 3px; }
+.desktop-navigation__rail { display: flex; flex: none; flex-direction: column; gap: 4px; inline-size: 24%; padding: 5px 4px; border-radius: 4px; background: var(--surface-muted); }
+.desktop-navigation__rail i { block-size: 5px; background: var(--line-strong); }
+.desktop-navigation__rail i:first-child { inline-size: 60%; background: var(--accent); }
+.desktop-navigation__content { display: grid; flex: 1; grid-template-columns: 1fr 1fr; grid-template-rows: 10px 1fr; gap: 5px; min-inline-size: 0; }
+.desktop-navigation__content i { background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
+.desktop-navigation__content i:first-child { grid-column: 1 / -1; inline-size: 55%; background: var(--line-strong); box-shadow: none; }
+.desktop-navigation__preview--dock .desktop-navigation__content { grid-template-rows: 10px 1fr 14px; }
+.desktop-navigation__dock { position: absolute; bottom: 6px; left: 50%; display: flex; gap: 3px; padding: 4px 5px; border-radius: 6px; transform: translateX(-50%); background: var(--surface); box-shadow: 0 4px 10px -4px color-mix(in srgb, var(--ink) 30%, transparent); }
+.desktop-navigation__dock i { inline-size: 9px; block-size: 9px; background: var(--surface-muted); box-shadow: inset 0 0 0 1px var(--line); }
+.desktop-navigation__dock i:first-child { background: var(--accent); box-shadow: none; }
+
+.desktop-navigation__copy { display: grid; gap: var(--space-1); }
+.desktop-navigation__title { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-size: var(--type-corpo); font-weight: 550; }
+/* Estado selecionado: anel do rádio preenchido + borda do cartão; não depende só de cor. */
+.desktop-navigation__radio { display: grid; flex: none; place-items: center; inline-size: 18px; block-size: 18px; border: 1.5px solid var(--ink-subtle); border-radius: var(--radius-full); }
+.desktop-navigation__option[data-selected] .desktop-navigation__radio { border-color: var(--accent); }
+.desktop-navigation__option[data-selected] .desktop-navigation__radio::after { content: ""; inline-size: 8px; block-size: 8px; border-radius: var(--radius-full); background: var(--accent); }
+.desktop-navigation__badge { padding: 1px var(--space-2); border-radius: var(--radius-full); background: var(--surface-muted); color: var(--ink-muted); font-size: var(--type-legenda); font-weight: 500; line-height: var(--leading-legenda); }
+.desktop-navigation__description { color: var(--ink-muted); font-size: var(--type-dado); line-height: var(--leading-dado); }
+
+.desktop-navigation__actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-4); margin-top: var(--space-4); }
+.desktop-navigation__apply[aria-disabled="true"] { opacity: 0.55; cursor: default; }
+.desktop-navigation__status { margin: 0; color: var(--ink-muted); font-size: var(--type-dado); line-height: var(--leading-dado); }
+
+@media (prefers-reduced-motion: reduce) { .desktop-navigation__option { transition: none; } }

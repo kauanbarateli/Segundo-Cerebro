@@ -15,3 +15,7 @@ Alvos e campos seguem os primitivos, foco em duas camadas, cores dos tokens e ne
 ## Layout Codex (D-033, #46)
 
 Composição atual: coluna até 940px com painéis Perfil, Aparência, Módulos, Calendários conectados, Dados da demonstração e Instalação. Na demonstração, Aparência usa os três modelos de tema; na conta conectada, o select “Tema da conta” + “Salvar aparência” continua para não gravar a cada clique. Relatório e desvios: `docs/implementation/layout-codex-ds21/README.md`.
+
+## Navegação no computador (doc21)
+
+Aparência ganha o grupo "Navegação no computador": dois cartões de rádio exclusivos, Menu lateral (Padrão) e Dock inferior, cada um com miniatura decorativa em tokens. O rádio edita um rascunho; só "Aplicar navegação" grava, sem POST, neste navegador. Storage bloqueado aplica só na visita e avisa; mudança em outra aba acompanha, preservando seleção não aplicada com aviso. Em celular/toque mostra apenas a explicação, sem controles. **RECOMENDADO** sobre o protótipo: o protótipo não tinha esta escolha; copy e composição seguem os cartões de tema existentes.

@@ -483,3 +483,42 @@ html[data-input="keyboard"] .shell-sidebar-toggle svg { transition: none; }
 .quick-capture .capture-image p { padding: var(--space-4); font-size: var(--type-legenda); color: var(--ink-muted); background: var(--surface-muted); border-radius: var(--radius-control); }
 .quick-capture .capture-image figcaption { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); font-size: var(--type-legenda); overflow-wrap: anywhere; }
 @media (max-width: 600px) { .quick-capture .capture-images { grid-template-columns: 1fr; } }
+
+/* Dock desktop opcional (doc21). Fora do modo dock, nada abaixo muda a lateral,
+   a barra inferior do celular ou o menu modal. Os acionadores novos da topbar ficam
+   ocultos (fora da árvore acessível) até a dock estar realmente visível. */
+.shell-top-brand, .shell-top-account, .shell-menu-profile { display: none; }
+.shell-top-brand { flex: none; align-items: center; justify-content: center; min-block-size: var(--target); min-inline-size: var(--target); margin-right: var(--space-2); border-radius: var(--radius-control); color: var(--ink); }
+.shell-top-brand:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; box-shadow: 0 0 0 2px var(--canvas); }
+
+@media (min-width: 1051px) and (any-pointer: fine) {
+  html[data-desktop-navigation="dock"] .workspace-shell { grid-template-columns: minmax(0, 1fr); }
+  /* A lateral sai do fluxo e da árvore acessível, mas o popover único da conta continua
+     renderizável (visibility é sobrescrita no descendente) e ancorado à topbar. */
+  html[data-desktop-navigation="dock"] .shell-sidebar {
+    position: fixed;
+    inset: 0 auto auto 0;
+    inline-size: 0;
+    block-size: 0;
+    padding: 0;
+    overflow: visible;
+    border: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+  html[data-desktop-navigation="dock"] .shell-sidebar .shell-profile {
+    inset: calc(var(--layout-topbar) - var(--space-2)) var(--layout-gutter) auto auto;
+    visibility: visible;
+    pointer-events: auto;
+  }
+  html[data-desktop-navigation="dock"] .shell-nav-tip,
+  html[data-desktop-navigation="dock"] .shell-sidebar-toggle,
+  html[data-desktop-navigation="dock"] .shell-top-avatar--link { display: none; }
+  html[data-desktop-navigation="dock"] .shell-top-search,
+  html[data-desktop-navigation="dock"] .shell-top-brand,
+  html[data-desktop-navigation="dock"] .shell-menu-profile { display: flex; }
+  html[data-desktop-navigation="dock"] .shell-top-account { display: grid; }
+  /* A última ação de cada módulo continua acima da dock. */
+  html[data-desktop-navigation="dock"] { scroll-padding-bottom: var(--dock-clearance); }
+  html[data-desktop-navigation="dock"] .shell-workspace { padding-bottom: var(--dock-clearance); }
+}

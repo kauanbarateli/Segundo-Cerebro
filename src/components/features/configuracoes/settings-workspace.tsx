@@ -16,6 +16,7 @@ import { Icons } from "@/components/ui/icons";
 import "./settings.css";
 import { SettingsConnectedWorkspace } from "./settings-connected-workspace";
 import { SettingsLegalSection } from "./settings-legal-section";
+import { DesktopNavigationSetting } from "./desktop-navigation-setting";
 
 const sections = [{ href: "#perfil", label: "Perfil" }, { href: "#aparencia", label: "Aparência" }, { href: "#modulos", label: "Módulos" }, { href: "#demonstracao", label: "Demonstração" }, { href: "#privacidade-e-termos", label: "Privacidade e termos" }];
 const queryOptions = [
@@ -60,6 +61,7 @@ function DemoSettingsWorkspace() {
     <section id="aparencia" className="settings-panel" aria-labelledby="settings-appearance-title">
       <div className="settings-heading"><h2 id="settings-appearance-title">Aparência</h2><p>O tema acompanha todas as áreas e fica salvo neste navegador. Sistema acompanha a preferência do aparelho.</p></div>
       <ThemeModels legend="Tema" />
+      <DesktopNavigationSetting />
     </section>
     <section id="modulos" className="settings-panel" aria-label="Módulos e cenários de acesso">
       <div className="settings-heading"><h2>Módulos</h2><p>{connected ? "Os módulos liberados para sua conta." : "Visibilidade, ordem e acesso simulado desta demonstração."}</p></div>

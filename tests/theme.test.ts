@@ -85,3 +85,34 @@ describe("o mesmo script pinta a lateral antes da hidratação", () => {
     expect(sidebar(null, true, true)).toBe("collapsed");
   });
 });
+
+describe("doc21: o mesmo script pinta a navegação do computador antes da hidratação", () => {
+  function navigation(stored: Record<string, string | null>, blocked = false) {
+    const attributes = new Map<string, string>();
+    runInNewContext(THEME_INIT_SCRIPT, {
+      localStorage: { getItem(key: string) { if (blocked) throw new Error("bloqueado"); return stored[key] ?? null; } },
+      window: { matchMedia: () => ({ matches: false }) },
+      document: { documentElement: { getAttribute: () => null, setAttribute: (key: string, value: string) => attributes.set(key, value), style: { colorScheme: "" } }, querySelector: () => null },
+      getComputedStyle: () => ({ getPropertyValue: () => "" }),
+    });
+    return { navigation: attributes.get("data-desktop-navigation"), sidebar: attributes.get("data-sidebar") };
+  }
+  const key = "segundo-cerebro-desktop-navigation-v1";
+  it.each([
+    ["sem chave", {}, "sidebar"],
+    ["dock salva", { [key]: "dock" }, "dock"],
+    ["sidebar salva", { [key]: "sidebar" }, "sidebar"],
+    ["valor inválido", { [key]: "DOCK" }, "sidebar"],
+    ["JSON arbitrário", { [key]: '{"mode":"dock"}' }, "sidebar"],
+    ["texto vazio", { [key]: "" }, "sidebar"],
+  ])("N01: %s resolve para %s", (_name, stored, expected) => {
+    expect(navigation(stored as Record<string, string | null>).navigation).toBe(expected);
+  });
+  it("N01: armazenamento bloqueado não lança e mantém a lateral", () => {
+    expect(() => navigation({}, true)).not.toThrow();
+    expect(navigation({}, true).navigation).toBe("sidebar");
+  });
+  it("a dock salva não reescreve a escolha recolhida da lateral", () => {
+    expect(navigation({ [key]: "dock", "segundo-cerebro-sidebar": "collapsed" })).toEqual({ navigation: "dock", sidebar: "collapsed" });
+  });
+});

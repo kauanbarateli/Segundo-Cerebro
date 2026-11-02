@@ -1,0 +1,165 @@
+/* Dock desktop opcional (doc21). Valores OBSERVADOS no protótipo refinado, mapeados
+   aos tokens DS 2.1; nada aqui é global. A dock só aparece com a preferência "dock"
+   em computador elegível (≥1051px e ponteiro preciso disponível); no restante ela não
+   participa da árvore acessível nem do Tab. Sem variante mobile. */
+:root { --dock-height: 76px; --dock-bottom: 24px; --dock-clearance: calc(var(--dock-height) + var(--dock-bottom) + var(--space-6) + env(safe-area-inset-bottom)); }
+
+.desktop-dock { display: none; }
+
+@media (min-width: 1051px) and (any-pointer: fine) {
+  html[data-desktop-navigation="dock"] .desktop-dock {
+    position: fixed;
+    z-index: var(--z-mobile-navigation);
+    bottom: calc(var(--dock-bottom) + env(safe-area-inset-bottom));
+    left: 50%;
+    display: flex;
+    align-items: flex-end;
+    gap: var(--space-2);
+    max-width: calc(100vw - 32px);
+    height: var(--dock-height);
+    padding: 10px 14px 16px;
+    border-radius: 24px;
+    transform: translateX(-50%);
+    background: var(--glass-fallback);
+    /* OBSERVADO: sombra deslocada suave; a única elevação, sem borda adicional. */
+    box-shadow: 0 12px 32px -12px color-mix(in srgb, var(--ink) 24%, transparent);
+    color: var(--ink);
+  }
+}
+/* OBSERVADO: vidro com blur 20px e saturação 125%; opaco sem suporte ou com transparência reduzida. */
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  @media (min-width: 1051px) and (any-pointer: fine) and (prefers-reduced-transparency: no-preference) {
+    html[data-desktop-navigation="dock"] .desktop-dock {
+      background: var(--glass-surface);
+      -webkit-backdrop-filter: blur(20px) saturate(125%);
+      backdrop-filter: blur(20px) saturate(125%);
+    }
+  }
+}
+
+.desktop-dock__item {
+  position: relative;
+  display: block;
+  flex: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 14px;
+  background: none;
+  color: var(--ink-muted);
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.desktop-dock__tile {
+  position: relative;
+  display: grid;
+  place-items: center;
+  inline-size: var(--dock-tile, 44px);
+  block-size: var(--dock-tile, 44px);
+  border-radius: 14px;
+  background: var(--surface-muted);
+  transition: background-color var(--motion-surface) var(--motion-ease);
+}
+.desktop-dock__icon { display: grid; place-items: center; inline-size: var(--dock-icon, 22px); block-size: var(--dock-icon, 22px); }
+.desktop-dock__icon > svg { inline-size: 100%; block-size: 100%; stroke-width: 1.7; }
+
+@media (hover: hover) {
+  .desktop-dock__item:hover .desktop-dock__tile { background: var(--surface-hover); }
+  .desktop-dock__item:hover { color: var(--ink); }
+}
+.desktop-dock__item:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; box-shadow: 0 0 0 2px var(--canvas); }
+.desktop-dock__item:focus-visible .desktop-dock__tile { background: var(--surface-hover); }
+
+/* Ativo: fundo accent + marcador inferior + aria-current; não depende só de cor. */
+.desktop-dock__item[aria-current="page"], .desktop-dock__more[data-current] { color: var(--accent-ink); }
+.desktop-dock__item[aria-current="page"] .desktop-dock__tile, .desktop-dock__more[data-current] .desktop-dock__tile { background: var(--accent); }
+.desktop-dock__item[aria-current="page"]::after, .desktop-dock__more[data-current]::after {
+  content: "";
+  position: absolute;
+  left: calc(50% - 2.5px);
+  bottom: -9px;
+  inline-size: 5px;
+  block-size: 3px;
+  border-radius: var(--radius-full);
+  background: var(--ink);
+}
+
+/* Separador discreto entre grupos reais; nunca reordena. */
+.desktop-dock__separator { flex: none; align-self: center; inline-size: 1px; block-size: 26px; margin: 0 3px 2px; background: var(--line-strong); }
+
+/* Tooltip: hover persistente (o balão é filho do link), foco visível e Escape. */
+.desktop-dock__tip {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  padding: 7px 11px;
+  border-radius: 8px;
+  background: var(--surface-inverse);
+  box-shadow: var(--shadow-float);
+  color: var(--ink-inverse);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 6px);
+  transition: opacity var(--motion-fast) var(--motion-ease), transform var(--motion-fast) var(--motion-ease);
+}
+/* Ponte transparente sobre o vão de 10px: o balão continua com hover ao subir o ponteiro (WCAG 1.4.13). */
+.desktop-dock__tip::before { content: ""; position: absolute; inset-inline: 0; top: 100%; block-size: 12px; }
+.desktop-dock__tip::after { content: ""; position: absolute; left: calc(50% - 4px); bottom: -4px; inline-size: 8px; block-size: 8px; transform: rotate(45deg); background: inherit; }
+@media (hover: hover) {
+  .desktop-dock__item:hover > .desktop-dock__tip { opacity: 1; pointer-events: auto; transform: translate(-50%, 0); }
+}
+.desktop-dock__item:focus-visible > .desktop-dock__tip { opacity: 1; transform: translate(-50%, 0); }
+.desktop-dock[data-tips-dismissed] .desktop-dock__tip { opacity: 0; pointer-events: none; }
+.desktop-dock__more:popover-open > .desktop-dock__tip, .desktop-dock:has(.desktop-dock__overflow:popover-open) .desktop-dock__more > .desktop-dock__tip { opacity: 0; }
+
+/* Mais áreas: lista de links na mesma ordem, acima da dock. */
+.desktop-dock__overflow {
+  position: fixed;
+  inset: auto auto calc(var(--dock-clearance) - var(--space-3)) 50%;
+  inline-size: min(260px, calc(100vw - 32px));
+  max-block-size: calc(100dvh - var(--dock-clearance) - var(--layout-topbar));
+  margin: 0;
+  padding: var(--space-2);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 0;
+  border-radius: 16px;
+  transform: translateX(-50%);
+  background: var(--surface);
+  box-shadow: 0 12px 32px -12px color-mix(in srgb, var(--ink) 28%, transparent);
+  color: var(--ink);
+}
+.desktop-dock__overflow-title { margin: var(--space-2) var(--space-3) var(--space-1); color: var(--ink-muted); font-size: var(--type-legenda); line-height: var(--leading-legenda); }
+.desktop-dock__overflow ul { margin: 0; padding: 0; list-style: none; }
+.desktop-dock__overflow-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: var(--target);
+  padding: 0 var(--space-3);
+  border-radius: 12px;
+  color: var(--ink);
+  font-size: var(--type-dado);
+  text-decoration: none;
+}
+.desktop-dock__overflow-link > svg { inline-size: 20px; block-size: 20px; color: var(--ink-muted); }
+@media (hover: hover) { .desktop-dock__overflow-link:hover { background: var(--surface-hover); } }
+.desktop-dock__overflow-link:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }
+.desktop-dock__overflow-link[aria-current="page"] { background: var(--accent); color: var(--accent-ink); }
+.desktop-dock__overflow-link[aria-current="page"] > svg { color: var(--accent-ink); }
+
+@media (prefers-reduced-motion: reduce) {
+  .desktop-dock__tile, .desktop-dock__tip { transition: none; }
+  .desktop-dock__tip { transform: translate(-50%, 0); }
+}
+
+/* Avisos ficam acima da dock, sem cobrir os itens centrais. */
+@media (min-width: 1051px) and (any-pointer: fine) {
+  html[data-desktop-navigation="dock"] .ui-toast-region { bottom: var(--dock-clearance); }
+}

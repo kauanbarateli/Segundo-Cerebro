@@ -24,7 +24,7 @@ export const DRIVE_INFRA_KEYS = Object.freeze(["pg17","instanceBound","container
 // historical; this inventory never qualifies execution or CURRENT27 coverage.
 // Frentes A/B and signup fence added sixteen reviewed transitive sources; no Drive route was enabled.
 // The historical canonical reader adds one reviewed transitive helper only.
-export const DRIVE_SOURCE_COUNTS = Object.freeze({git:313,dependencies:50});
+export const DRIVE_SOURCE_COUNTS = Object.freeze({git:316,dependencies:50});
 export const DRIVE_HISTORICAL_READER_SOURCE = Object.freeze({path:"tests/helpers/canonical-front-b-source.mjs",bytes:6638,sha256:"fcdbeb291832d3025d3551d42e47fb8b20ecbf1b7fe294990b6be25d41202040"});
 // Public c781efe Git sources reached from uploads/route.ts:8, then helper:3.
 // Closed provenance metadata; it neither enables Drive nor proves hosted use.

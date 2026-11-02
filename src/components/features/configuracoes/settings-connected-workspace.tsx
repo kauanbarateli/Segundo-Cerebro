@@ -22,6 +22,7 @@ import { SettingsLegalSection } from "./settings-legal-section";
 import { SettingsFocusSection } from "./settings-focus-section";
 import { reconcilePreferenceDraft } from "./preference-draft";
 import "./settings.css";
+import { DesktopNavigationSetting } from "./desktop-navigation-setting";
 
 export function SettingsConnectedWorkspace() {
   const router = useRouter();
@@ -74,7 +75,7 @@ export function SettingsConnectedWorkspace() {
   if (!data || !preferences) return <div className="settings-workspace"><div className="settings-panel settings-error"><p role="alert">{error}</p><Button onClick={() => void load().then(value => { if (value) adopt(value); })}>Tentar novamente</Button></div><SettingsLegalSection /></div>;
   const initial = (data.profile.display_name ?? data.profile.email ?? "?").trim().slice(0, 1).toUpperCase() || "?";
   return <div className="settings-workspace" data-access="allowed">
-    <p className="settings-intro">Ajuste o Segundo Cérebro ao seu jeito de organizar a vida. Cada seção salva na sua conta.</p>
+    <p className="settings-intro">Ajuste sua conta e a aparência deste navegador.</p>
     <nav className="settings-links" aria-label="Nesta página"><a href="#perfil">Perfil</a><a href="#aparencia">Aparência</a><a href="#imagem-do-inicio">Imagem do Início</a><a href="#lembretes">Preferências</a><a href="#modulos">Módulos</a><a href="#sessoes">Sessões</a><a href="#privacidade-e-termos">Privacidade e termos</a></nav>
     {error && <p role="alert" className="settings-alert">{error}</p>}<p role="status" className="settings-feedback">{message}</p>
     <section id="perfil" className="settings-panel settings-primary-panel" aria-labelledby="settings-profile-title"><div className="settings-heading"><h2 id="settings-profile-title">Perfil</h2></div><div className="settings-primary-content">
@@ -101,6 +102,7 @@ export function SettingsConnectedWorkspace() {
     <section id="aparencia" className="settings-panel settings-primary-panel" aria-labelledby="settings-appearance-title"><div className="settings-heading"><h2 id="settings-appearance-title">Aparência</h2><p>Escolha o tema que acompanha sua conta nos aparelhos.</p></div><div className="settings-primary-content">
       <ThemeModelPicker legend="Tema da conta" value={preferences.theme} disabled={saving} onChange={value => setPreferences({ ...preferences, theme: value })} />
       <Button variant="primary" loading={saving} onClick={() => void save("settings.preferences.update", { patch: { theme: preferences.theme } })}>Salvar aparência</Button>
+      <DesktopNavigationSetting />
     </div></section>
     <section id="imagem-do-inicio" className="settings-panel settings-primary-panel" aria-label="Imagem do destaque do dia"><HomeImageSettings /></section>
     <section id="lembretes" className="settings-panel settings-primary-panel" aria-labelledby="settings-preferences-title"><div className="settings-heading"><h2 id="settings-preferences-title">Preferências</h2><p>Pequenos ajustes para o seu dia a dia.</p></div><div className="settings-primary-content">

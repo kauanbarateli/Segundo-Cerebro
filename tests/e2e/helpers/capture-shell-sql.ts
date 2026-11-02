@@ -22,7 +22,7 @@ let product: Product, browserBundle: string, styles: string;
 const componentCss = ["src/components/ui/button.css", "src/components/ui/field.css", "src/components/ui/card.css", "src/components/ui/dialog.css",
   "src/components/ui/data-display.css", "src/components/ui/toast.css", "src/components/layout/related-panel.css",
   "src/components/ui/brand.css", "src/components/layout/account-avatar.css", "src/components/theme/theme-toggle.css",
-  "src/components/layout/command-palette.css", "src/components/layout/connected-command-feedback.css", "src/components/layout/workspace-shell.css",
+  "src/components/layout/command-palette.css", "src/components/layout/connected-command-feedback.css", "src/components/layout/workspace-shell.css", "src/components/layout/desktop-dock.css",
   "src/components/features/capturar/capture.css", "src/components/editor/document-editor.css"];
 export async function prepareCaptureShellFixture() {
   const nodeBuild = await rolldown({ input: resolve("tests/e2e/fixtures/issue23-sql-server.entry.ts"), platform: "node", tsconfig: false,
