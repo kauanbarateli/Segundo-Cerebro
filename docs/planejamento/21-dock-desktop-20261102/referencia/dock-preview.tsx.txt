@@ -1,0 +1,31 @@
+import * as React from "react";
+import { createRoot } from "react-dom/client";
+import { FloatingDock, type FloatingDockItem } from "./floating-dock";
+
+const sections = [
+  ["Início", "home"], ["Capturar", "capture"], ["Conhecimento", "book"],
+  ["Tarefas", "tasks"], ["Calendário", "calendar"], ["Projetos", "folder"],
+  ["Hábitos", "habit"], ["Financeiro", "wallet"], ["Cofre", "lock"],
+  ["Integrações", "link"], ["Configurações", "settings"]
+] as const;
+
+function PreviewDock() {
+  const [active, setActive] = React.useState("Início");
+  const [theme, setTheme] = React.useState(() => document.documentElement.dataset.theme === "dark" ? "dark" : "light");
+  React.useEffect(() => {
+    const observer = new MutationObserver(() => setTheme(document.documentElement.dataset.theme === "dark" ? "dark" : "light"));
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    return () => observer.disconnect();
+  }, []);
+  const items: FloatingDockItem[] = sections.map(([title, icon]) => ({
+    title,
+    icon: <span className="preview-dock-icon" dangerouslySetInnerHTML={{ __html: (window as unknown as { App: { icon: (name: string, size: number) => string } }).App.icon(icon, 24) }} />,
+    active: title === active,
+    separatorBefore: title === "Financeiro" || title === "Configurações",
+    onClick: () => setActive(title)
+  }));
+  return <FloatingDock items={items} theme={theme} label="Navegação demonstrativa" desktopClassName="preview-dock" mobileClassName="preview-dock-mobile" />;
+}
+const target = document.getElementById("dock-preview-root");
+if (target) createRoot(target).render(<PreviewDock />);
+

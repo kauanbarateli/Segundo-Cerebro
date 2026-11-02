@@ -1,5 +1,7 @@
 # Planejamento — Novo Segundo Cérebro
 
+**Complemento de navegação — 02/11/2026:** [doc21 — dock opcional no desktop](21-dock-desktop-20261102/README.md). Sidebar permanece padrão, escolha exclusiva em Configurações e mobile preservado. Plano e referência; não substitui o escopo geral do doc20 e não comprova implementação.
+
 **Entrada vigente — 31/10/2026:** [doc20 — entrega inicial em duas frentes](20-entrega-inicial-20261031/README.md). Cadastro somente e-mail/senha, beta gratuito, UTM simples, métricas, feedback e atualizações; integrações e ADM em etapa posterior. O doc20 substitui a ordem/escopo conflitantes abaixo, preservando evidências e aceites históricos. Publicação de planejamento não significa implementação.
 
 **Entrada vigente26/10/2026:** [doc18 — convergência ao protótipo](18-convergencia-prototipo-20261025/README.md). Consolida código/Preview/CI/issues/branches e substitui o backlog histórico abaixo onde houver divergência. Snapshot303doc17 é a autoridade visual; D-077/D-078/D-080–083 delimitam execução e exceções. Implementação permanece pausada, investigação/issues autorizadas.

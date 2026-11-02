@@ -3,6 +3,7 @@
   "git": {
     "deploymentEnabled": {
       "main": false,
+      "codex/plano-dock-desktop-20261102": false,
       "codex/front-b-218-retirada-duravel": false,
       "codex/front-b-privacidade-retirada": false,
       "codex/paginas-legais-e-checklist-20261018": false,
