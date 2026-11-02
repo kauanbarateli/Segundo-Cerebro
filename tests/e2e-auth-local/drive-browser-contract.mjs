@@ -53,7 +53,7 @@ export const DRIVE_FRONT_AB_SOURCES = Object.freeze([
   Object.freeze({path:"src/lib/auth/signup-fence-wire.ts",bytes:3290,sha256:"1e4774a0f0f48eaaa92e9710ceee9280bec2ef849eb4047c11c8de7b691e882f"}),
   Object.freeze({path:"src/lib/auth/signup-provisional.ts",bytes:3202,sha256:"e24655cef6a9517b06d47bbe63ff19ac251f082abfa21e4ae1cc67adf14a2baa"}),
   Object.freeze({path:"src/lib/supabase/database.front-b-qa028.ts",bytes:3969,sha256:"53bcc3e4dc1ae54c137b281deebc394ef74249042b307120e7f10b5898f5f8ea"}),
-  Object.freeze({path:"src/lib/feedback/reconciliation-gate.ts",bytes:637,sha256:"9342a5bd9b1aed1ae1d58cbc8ccf425501d4a9a5366895bb54a9256f4d84bdf0"}),
+  Object.freeze({path:"src/lib/feedback/reconciliation-gate.ts",bytes:1529,sha256:"449e0b81569de2600cf913fea4bd6f26c19e33f76e4833db7f54fe7adad996b0"}),
 ]);
 export function driveRefuse(code){const e=new Error(DRIVE_CODES.includes(code)?code:"BROWSER_REFUSED");e.name="DriveBrowserFailure";e.stack=e.name+": "+e.message;throw e;}
 export function isDriveAuthActionRequest(value,method){
