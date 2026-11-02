@@ -2,7 +2,7 @@
    OBSERVADO: grade de 3 cartões (gap 22px; 15px ≤1270; 1 coluna ≤780), cartão plano de 16px com
    símbolo 48px, título 24px (20px ≤1270), descrição 14px e rodapé 12px; detalhe com hero e grade 1.2/1.
    RECOMENDADO: progresso feito/total só a partir de tarefas reais; sem prazo/estado inventados. */
-.projects-workspace { min-width: 0; }
+.projects-workspace { min-width: 0; --project-gap: 22px; }
 /* A05 (RECOMENDADO): cover keeps a 16:9 proportion at any card width instead of a fixed 172px height. */
 .project-card .project-cover { inline-size: calc(100% + 52px); block-size: auto; aspect-ratio: 16 / 9; flex: none; margin: -26px -26px 20px; border-radius: var(--radius-panel) var(--radius-panel) 0 0; }
 @media (max-width: 1270px) { .project-card .project-cover { inline-size: calc(100% + 40px); margin: -20px -20px 20px; } }
@@ -47,18 +47,26 @@
 .project-back:focus-visible, .project-section a:focus-visible, .project-message a:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; box-shadow: 0 0 0 2px var(--surface); }
 
 /* OBSERVADO: hero de detalhe com padding 30px, título 30px e descrição 14px. */
-.project-hero { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: start; gap: 25px; overflow: hidden; margin-bottom: var(--space-6); padding: 30px; border-radius: var(--radius-panel); background: var(--surface); }
+.project-hero { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: start; gap: 25px; overflow: hidden; margin-bottom: var(--project-gap); padding: 30px; border-radius: var(--radius-panel); background: var(--surface); }
 .project-hero-copy { display: grid; gap: var(--space-3); justify-items: start; min-width: 0; max-width: 70ch; }
 .project-hero h2 { margin-top: var(--space-2); font-size: 30px; line-height: 1.25; font-weight: var(--weight-page-title); letter-spacing: var(--tracking-page-title); overflow-wrap: anywhere; }
 .project-hero p { color: var(--ink-muted); font-size: var(--type-corpo); line-height: 1.65; }
 .project-hero .ui-progress { width: min(100%, 420px); margin-top: var(--space-2); }
 .project-hero .project-actions { flex: none; margin: 0; }
-.project-detail-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 22px; align-items: start; }
+.project-detail-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: var(--project-gap); align-items: start; }
 .project-detail-grid[data-single] { grid-template-columns: minmax(0, 1fr); }
-.project-detail-side { display: grid; gap: 22px; min-width: 0; }
+/* 02/11 (RECOMENDADO): Tarefas acompanha a altura da coluna lateral; as duas colunas terminam na mesma linha. */
+.project-detail-grid:not([data-single]) > .project-section { align-self: stretch; }
+.project-detail-side { display: grid; gap: var(--project-gap); min-width: 0; }
 .project-detail-grid[data-single] > .project-detail-side { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.project-section { padding: var(--space-6); }
-.project-section h3 { margin-bottom: var(--space-3); font-size: var(--type-section-title); line-height: var(--leading-section-title); font-weight: var(--weight-section-title); letter-spacing: var(--tracking-section-title); }
+.project-section { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-content: start; align-items: center; gap: var(--space-4) var(--space-3); padding: var(--space-6); container-type: inline-size; }
+.project-section > * { grid-column: 1 / -1; min-width: 0; }
+.project-section h3, .project-context-card .attribute-editor h3, .projects-workspace > .related-panel h3 { margin: 0; font-size: var(--type-section-title); line-height: var(--leading-section-title); font-weight: var(--weight-section-title); letter-spacing: var(--tracking-section-title); }
+/* 02/11 (RECOMENDADO): título e ações dividem a mesma linha do cartão; em cartão estreito as ações descem. */
+.project-section > h3 { grid-column: 1; }
+.project-section .project-actions, .project-section .project-task-error { margin: 0; }
+.project-section > h3 + .project-actions { grid-column: 2; justify-content: flex-end; }
+@container (max-width: 26rem) { .project-section > h3 + .project-actions { grid-column: 1 / -1; justify-content: flex-start; } }
 .project-section ul { margin: 0; padding: 0; list-style: none; }
 .project-section li + li { border-top: 1px solid var(--line); }
 .project-section a { display: flex; flex-direction: column; justify-content: center; gap: var(--space-1); min-height: 64px; padding-block: var(--space-2); color: var(--ink); font-size: var(--type-corpo); overflow-wrap: anywhere; text-underline-offset: .2em; }
@@ -80,6 +88,22 @@
 .project-section p a { display: inline-flex; min-height: var(--target); flex-direction: row; align-items: center; }
 .project-container-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
 .project-container-row a { flex: 1; min-width: 0; min-height: var(--target); }
+/* 02/11 (RECOMENDADO): Contexto do projeto e Relacionados são cartões do mesmo ritmo que as seções. */
+.project-context-card { margin-bottom: var(--project-gap); padding: var(--space-6); }
+.project-context-card .attribute-editor { grid-template-columns: minmax(0, 1fr) auto; align-items: start; justify-items: stretch; gap: var(--space-4); margin: 0; }
+.project-context-card .attribute-editor__heading { grid-column: 1; max-width: 65ch; }
+.project-context-card .attribute-editor > .ui-button { grid-column: 2; grid-row: 1; justify-self: end; }
+.project-context-card .attribute-editor > div:not(.attribute-editor__heading) { grid-column: 1 / -1; padding-top: var(--space-4); border-top: 1px solid var(--line); }
+.project-context-card .attribute-editor__form { gap: var(--space-4); }
+.project-context-card .attribute-editor__feedback { margin-block-start: var(--space-3); }
+.project-context-card .attribute-editor__feedback:empty { margin: 0; }
+.projects-workspace > .related-panel { grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-4) var(--space-3); margin-top: var(--project-gap); padding: var(--space-6); border: 0; border-radius: var(--radius-panel); background: var(--surface); }
+.projects-workspace > .related-panel > * { grid-column: 1 / -1; }
+.projects-workspace > .related-panel > h3 { grid-column: 1; grid-row: 1; }
+.projects-workspace > .related-panel > .ui-button:last-of-type { grid-column: 2; grid-row: 1; justify-self: end; }
+.projects-workspace > .related-panel > p { color: var(--ink-muted); font-size: var(--type-control); line-height: 1.6; }
+.projects-workspace > .related-panel ul { gap: 0; }
+.projects-workspace > .related-panel li + li { border-top: 1px solid var(--line); }
 .project-message { display: grid; justify-items: start; gap: var(--space-4); padding: var(--space-6); }
 .project-message h2 { font-size: 18px; font-weight: var(--weight-section-title); }
 .project-message p { max-width: 45ch; color: var(--ink-muted); font-size: var(--type-corpo); line-height: 1.65; }
@@ -111,6 +135,8 @@
 @media (max-width: 600px) {
   .project-hero { padding: 23px; }
   .project-hero .project-detail-cover { inline-size: calc(100% + 46px); margin: -23px -23px 0; block-size: 160px; }
-  .project-section { padding: 20px; }
+  .project-section, .project-context-card, .projects-workspace > .related-panel { padding: 20px; }
+  .project-context-card .attribute-editor { grid-template-columns: minmax(0, 1fr); }
+  .project-context-card .attribute-editor > .ui-button { grid-column: 1; grid-row: auto; justify-self: start; }
 }
 @media (prefers-reduced-motion: reduce) { .project-card { transition: none; } }
