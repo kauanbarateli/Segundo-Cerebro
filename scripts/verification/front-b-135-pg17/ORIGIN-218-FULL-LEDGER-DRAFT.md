@@ -1,0 +1,12 @@
+# Ensaio sintético da quarentena e do corte #221
+
+Esta integração não altera o workflow, nem conecta QA ou produção. Reutiliza o runner PG17 isolado por `--network none`, verificação de imagem, instância e nonce, diretórios próprios, encerramento de processos e limpeza comprovada. As propostas `.guarded.sql.txt` são copiadas por bytes, com suas travas incondicionais originais e hashes de `d8baa49`; o ensaio deriva comandos somente em memória depois de verificar os hashes e o contexto offline. Nenhum SQL guardado é uma migration executável.
+
+São propostos dois cenários adicionais, além dos 13 já aprovados na execução 41387715729:
+
+1. `origin-218-full-quarantine-synthetic-ledger-pg17`: constrói ledger sintético com as quatro entradas 028/029, retira somente em memória as guardas fatais da quarentena, executa toda a proposta com um registro sintético na mesma transação e verifica rollback de barreira e ledger; repete com commit e confere barreira e ledger.
+2. `origin-218-full-cutover-synthetic-ledger-pg17`: com quarentena sintética confirmada, executa a guarda **real e inalterada** de catálogo dentro de uma exceção controlada, exigindo sua recusa por ledger posterior a 029. Em seguida, para exercitar o restante, deriva em memória a candidata integral com uma **guarda de catálogo sintética no lugar da guarda real** e remove somente as duas travas fatais. Testa rollback e commit, inclusive locks, hash/estado da barreira, suspensão e reativação, corpo v2 e um registro sintético na mesma transação.
+
+O catálogo do container não reproduz os 38 hashes, todas as tabelas, constraints, ACLs ou dados do QA. Não se substituem os fingerprints reais por fingerprints sintéticos; a guarda real não é qualificada pelo caso positivo e deve recusar no caso negativo. Os identificadores de ledger e seus statements são fabricados exclusivamente para o ensaio, sem relação com uma versão futura no Supabase. A inserção de ledger dentro da mesma transação é uma **simulação explícita**, não uma reprodução ou certificação de `apply_migration`, MCP, projeto hospedado, drenagem, transporte ou autorização de corte.
+
+Os testes de unidade cobrem pins, guardas, sequência e recibos simulados; até a publicação e aprovação de um novo run, os dois novos cenários PG17 permanecem não executados. Mesmo um run verde não demonstra aplicação do SQL integral com o catálogo real, nem remove a necessidade de requalificar a versão da quarentena efetivamente observada no ledger e ensaiar o transporte antes do corte.
