@@ -12,14 +12,16 @@ test('accepts only pinned sources and emits a fully isolated transaction plan',(
  assert.match(p.cutover,/disable trigger sc_cutover_freeze_038f/); assert.match(p.cutover,/enable always trigger sc_cutover_freeze_038f/);
  assert.match(p.cutover,/signup_origin_withdraw_v2/); assert.match(p.cutover,/commit;select json_build_object/);
  assert.match(p.verify,/tgenabled='A'/); assert.match(p.setup,/OFFLINE_INSTANCE_REFUSED/);
+ assert.match(p.diagnostic(111,222),/blockedByCutter/); assert.match(p.diagnostic(111,222),/intentRowExclusive/); assert.doesNotMatch(p.diagnostic(111,222),/query_start|query_text|usename/);
+ assert.match(p.diagnostic(111,222),/'idle',exists\(select 1 from pg_stat_activity where pid=222 and backend_type='client backend' and state='idle'\)/);
  assert.throws(()=>origin218FreezePlan({...ctx,nonce:'bad'},freeze,candidate,'commit'));
  assert.throws(()=>origin218FreezePlan(ctx,freeze,Buffer.concat([candidate,Buffer.from(' ')]),'commit'));
  assert.throws(()=>p.waiting(111,111));
 });
 function mock(mode,opts={}){
- const traces=[],a=[{kind:'cutter',pid:101},{kind:'locked'},{kind:`cutover-${mode}`}],b=[{kind:'writer',pid:202},{kind:'old-result',result:{blocked:true}},{kind:'writer-done'}];
+ const traces=[],a=[{kind:'cutter',pid:101},{kind:'locked'},{kind:`cutover-${mode}`}],b=[{kind:'writer',pid:202},{kind:'old-result',result:opts.early?{blocked:false,reason:'permission-or-identity'}:{blocked:true,reason:'freeze'}},{kind:'writer-done'}];
  const sessions=[a,b].map(queue=>({async send(sql){traces.push(sql);},async read(){return queue.shift();},async close(){return !opts.closeFails;}}));let index=0;
- return {traces,ports:{async open(){return sessions[index++];},async pause(){},async query(sql){traces.push(sql);if(sql.includes("'kind','waiting'"))return {kind:'waiting',blocked:!opts.neverWait};if(sql.includes("'kind','verify'"))return {kind:'verify',v2:mode==='commit',freeze:true};return {kind:'setup'};}}};
+ return {traces,ports:{async open(){return sessions[index++];},async pause(){},async query(sql){traces.push(sql);if(sql.includes("'kind','waiting'"))return {kind:'waiting',blocked:!opts.neverWait};if(sql.includes("'kind','diagnostic'"))return {kind:'diagnostic',present:true,active:!opts.early,idle:!!opts.early,blockedByCutter:!opts.early,waitingOnLock:!opts.early,intentRowShare:false,intentRowExclusive:!opts.early,intentAccessShare:false,originRowShare:false,originRowExclusive:false,originAccessShare:false};if(sql.includes("'kind','verify'"))return {kind:'verify',v2:mode==='commit',freeze:true};return {kind:'setup'};}}};
 }
 for(const mode of ['commit','rollback'])test(`requires observed waiting and retained freeze after ${mode}`,async()=>{
  const f=mock(mode);const result=await observeOrigin218Freeze(f.ports,ctx,freeze,candidate,mode);
@@ -27,4 +29,5 @@ for(const mode of ['commit','rollback'])test(`requires observed waiting and reta
  assert.ok(f.traces.some(sql=>sql.includes('pg_blocking_pids')));assert.ok(f.traces.some(sql=>sql.includes(`${mode};select json_build_object`)));
 });
 test('fails closed when a blocked writer is not observed',async()=>{const f=mock('commit',{neverWait:true});await assert.rejects(observeOrigin218Freeze(f.ports,ctx,freeze,candidate,'commit'),/ORIGIN_218_FREEZE_REFUSED/);});
+test('a classified early error remains a failure and consumes only the expected receipt',async()=>{const f=mock('commit',{neverWait:true,early:true});await assert.rejects(observeOrigin218Freeze(f.ports,ctx,freeze,candidate,'commit'),/ORIGIN_218_FREEZE_REFUSED/);assert.ok(f.traces.some(sql=>sql.includes("'kind','diagnostic'")));});
 test('fails closed when a session cannot close',async()=>{const f=mock('rollback',{closeFails:true});await assert.rejects(observeOrigin218Freeze(f.ports,ctx,freeze,candidate,'rollback'),/ORIGIN_218_FREEZE_REFUSED/);});
