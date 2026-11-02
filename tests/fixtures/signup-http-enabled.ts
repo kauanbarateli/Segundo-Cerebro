@@ -84,6 +84,13 @@ export async function signupOriginRpc(config: SupabaseAuthConfig, name: "signup_
   return postRpc(config, name, body);
 }
 
+type OriginV2Args = { signup_origin_status_v2: Actor; signup_origin_withdraw_v2: Actor & { p_revision: string } };
+/** Never falls back to the legacy unversioned operation. */
+export async function signupOriginV2Rpc<Name extends keyof OriginV2Args>(config: SupabaseAuthConfig, name: Name, body: OriginV2Args[Name]): Promise<unknown> {
+  if (!["signup_origin_status_v2", "signup_origin_withdraw_v2"].includes(name) || !isTrustedHostedDatabaseOrigin(config)) return signupUnavailable();
+  return postRpc(config, name, body);
+}
+
 /** Draft-only transport. No environment variable can turn this on. */
 export async function signupFenceRpc<K extends keyof FenceArgs>(config:SupabaseAuthConfig,name:K,body:FenceArgs[K]):Promise<unknown> {
   if (!signupFenceDeployed(config) || (name !== "signup_fence_withdraw" && !signupEnabled(config)) || !["signup_fence_reserve","signup_fence_start","signup_fence_uncertain","signup_fence_ack","signup_fence_finish","signup_fence_confirm","signup_fence_withdraw"].includes(name)) return signupUnavailable();

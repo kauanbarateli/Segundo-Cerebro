@@ -1,0 +1,94 @@
+-- DRAFT: must not be applied to a remote database. See README.md.
+BEGIN;
+DO $guard$ BEGIN RAISE EXCEPTION 'GUARDED: review cutover and exact database provenance'; END $guard$;
+
+-- Distinct, opaque revisions for every current grant. Existing rows are
+-- backfilled while ALTER TABLE holds its transactional lock.
+ALTER TABLE app_private.signup_origins ADD COLUMN origin_revision uuid;
+ALTER TABLE app_private.signup_intents ADD COLUMN origin_revision uuid;
+UPDATE app_private.signup_origins SET origin_revision=pg_catalog.gen_random_uuid();
+UPDATE app_private.signup_intents SET origin_revision=pg_catalog.gen_random_uuid() WHERE origin IS NOT NULL;
+ALTER TABLE app_private.signup_origins ALTER COLUMN origin_revision SET NOT NULL;
+ALTER TABLE app_private.signup_intents ADD CONSTRAINT signup_intents_origin_revision_consistent
+ CHECK ((origin IS NULL) = (origin_revision IS NULL));
+
+CREATE FUNCTION app_private.origin_revision_trigger() RETURNS trigger
+LANGUAGE plpgsql SET search_path='' AS $fn$
+BEGIN
+ IF NEW.origin IS NULL THEN NEW.origin_revision:=NULL;
+ ELSE NEW.origin_revision:=pg_catalog.gen_random_uuid(); END IF;
+ RETURN NEW;
+END $fn$;
+REVOKE ALL ON FUNCTION app_private.origin_revision_trigger() FROM PUBLIC,anon,authenticated,service_role;
+CREATE FUNCTION app_private.origin_revision_immutable() RETURNS trigger
+LANGUAGE plpgsql SET search_path='' AS $fn$
+BEGIN
+ IF NEW.origin_revision IS DISTINCT FROM OLD.origin_revision THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='42501'; END IF;
+ RETURN NEW;
+END $fn$;
+REVOKE ALL ON FUNCTION app_private.origin_revision_immutable() FROM PUBLIC,anon,authenticated,service_role;
+CREATE TRIGGER origin_revision_immutable BEFORE UPDATE OF origin_revision
+ ON app_private.signup_intents FOR EACH ROW EXECUTE FUNCTION app_private.origin_revision_immutable();
+CREATE TRIGGER origin_revision_immutable BEFORE UPDATE OF origin_revision
+ ON app_private.signup_origins FOR EACH ROW EXECUTE FUNCTION app_private.origin_revision_immutable();
+CREATE TRIGGER signup_intents_origin_revision BEFORE INSERT OR UPDATE OF origin,origin_consent_version,origin_consented_at,expires_at
+ ON app_private.signup_intents FOR EACH ROW EXECUTE FUNCTION app_private.origin_revision_trigger();
+CREATE TRIGGER signup_origins_origin_revision BEFORE INSERT OR UPDATE OF origin,consent_version,consented_at,expires_at
+ ON app_private.signup_origins FOR EACH ROW EXECUTE FUNCTION app_private.origin_revision_trigger();
+
+-- The lock order is identical to draft_withdraw_current. No UTM leaves this RPC.
+CREATE FUNCTION app_private.origin_withdrawal_current_v2(p_user uuid,p_session uuid) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $fn$
+DECLARE n integer; revision uuid;
+BEGIN
+ IF p_user IS NULL OR p_session IS NULL THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='42501'; END IF;
+ PERFORM 1 FROM auth.users WHERE id=p_user FOR SHARE;
+ PERFORM 1 FROM auth.sessions WHERE id=p_session AND user_id=p_user FOR SHARE;
+ PERFORM 1 FROM public.user_moderation WHERE user_id=p_user FOR SHARE;
+ IF app_private.draft_withdraw_identity(p_user,p_session) IS NOT TRUE THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='42501'; END IF;
+ PERFORM pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(p_user::text || ':signup',0));
+ PERFORM 1 FROM app_private.signup_intents WHERE user_id=p_user ORDER BY id FOR UPDATE;
+ PERFORM 1 FROM app_private.user_admission WHERE user_id=p_user FOR UPDATE;
+ PERFORM 1 FROM app_private.signup_completion_fences_draft WHERE user_id=p_user FOR UPDATE;
+ PERFORM 1 FROM app_private.signup_origins WHERE user_id=p_user FOR UPDATE;
+ SELECT count(*)::integer INTO n FROM (
+  SELECT origin_revision FROM app_private.signup_intents WHERE user_id=p_user AND state='bound' AND origin IS NOT NULL AND expires_at>pg_catalog.clock_timestamp()
+  UNION ALL SELECT origin_revision FROM app_private.signup_origins WHERE user_id=p_user AND expires_at>pg_catalog.clock_timestamp()
+ ) AS origins;
+ IF n>1 THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='42501'; END IF;
+ IF n=0 THEN RETURN pg_catalog.jsonb_build_object('status','absent','revision',NULL); END IF;
+ SELECT origin_revision INTO STRICT revision FROM (
+  SELECT origin_revision FROM app_private.signup_intents WHERE user_id=p_user AND state='bound' AND origin IS NOT NULL AND expires_at>pg_catalog.clock_timestamp()
+  UNION ALL SELECT origin_revision FROM app_private.signup_origins WHERE user_id=p_user AND expires_at>pg_catalog.clock_timestamp()
+ ) AS origins;
+ RETURN pg_catalog.jsonb_build_object('status','active','revision',revision);
+END $fn$;
+
+CREATE FUNCTION public.signup_origin_status_v2(p_user uuid,p_session uuid) RETURNS jsonb
+LANGUAGE sql SECURITY DEFINER SET search_path='' AS $fn$
+ SELECT app_private.origin_withdrawal_current_v2(p_user,p_session)
+$fn$;
+CREATE FUNCTION public.signup_origin_withdraw_v2(p_user uuid,p_session uuid,p_revision uuid) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $fn$
+DECLARE current_state jsonb; outcome jsonb;
+BEGIN
+ IF p_revision IS NULL THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='42501'; END IF;
+ current_state:=app_private.origin_withdrawal_current_v2(p_user,p_session);
+ IF current_state->>'status'='absent' THEN RETURN pg_catalog.jsonb_build_object('status','absent'); END IF;
+ IF current_state->>'revision' IS DISTINCT FROM p_revision::text THEN RETURN pg_catalog.jsonb_build_object('status','stale'); END IF;
+ outcome:=app_private.draft_withdraw_current(p_user,p_session);
+ IF outcome IS DISTINCT FROM pg_catalog.jsonb_build_object('status','withdrawn') AND outcome IS DISTINCT FROM pg_catalog.jsonb_build_object('status','absent') THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='42501'; END IF;
+ RETURN outcome;
+END $fn$;
+REVOKE ALL ON FUNCTION app_private.origin_withdrawal_current_v2(uuid,uuid),public.signup_origin_status_v2(uuid,uuid),public.signup_origin_withdraw_v2(uuid,uuid,uuid) FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION public.signup_origin_status_v2(uuid,uuid),public.signup_origin_withdraw_v2(uuid,uuid,uuid) TO service_role;
+
+-- Old requests must fail closed after a separately qualified quiescent cutover.
+CREATE OR REPLACE FUNCTION public.signup_origin_withdraw(p_user uuid,p_session uuid) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $fn$ BEGIN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='42501'; END $fn$;
+CREATE OR REPLACE FUNCTION public.signup_fence_withdraw(p_user uuid,p_session uuid) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $fn$ BEGIN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='42501'; END $fn$;
+CREATE OR REPLACE FUNCTION public.signup_discard_pending_origin(p_user uuid,p_session uuid,p_intent uuid,p_subject_hash text) RETURNS jsonb
+LANGUAGE plpgsql SECURITY INVOKER SET search_path='' AS $fn$ BEGIN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='42501'; END $fn$;
+REVOKE EXECUTE ON FUNCTION app_private.signup_origin_withdraw(uuid,uuid),app_private.signup_discard_pending_origin(uuid,uuid,uuid,text),app_private.draft_withdraw_current(uuid,uuid),app_private.draft_withdraw_origin(uuid,uuid,uuid,text),app_private.draft_withdraw_pending_origin(uuid,uuid,uuid,text) FROM PUBLIC,anon,authenticated,service_role;
+COMMIT;

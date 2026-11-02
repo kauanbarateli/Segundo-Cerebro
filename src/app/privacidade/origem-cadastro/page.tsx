@@ -4,6 +4,8 @@ import { notFound, redirect } from "next/navigation";
 import { Brand } from "@/components/ui/brand";
 import { ThemeSelector } from "@/components/theme/theme-selector";
 import { OriginWithdrawal } from "@/components/legal/origin-withdrawal";
+import { OriginWithdrawalV2 } from "@/components/legal/origin-withdrawal-v2";
+import { originWithdrawalV2Enabled } from "@/lib/auth/origin-withdrawal-v2-gate";
 import { readAuthState } from "@/lib/auth/guards";
 import "@/components/legal/legal-document.css";
 
@@ -22,7 +24,7 @@ export default async function OriginPrivacyPage() {
     <main id="conteudo" className="legal-main" tabIndex={-1}>
       <div className="legal-intro"><Link className="legal-back" href="/privacidade#cookies" prefetch={false}>Voltar à política de privacidade</Link>
         <h1>Origem de cadastro</h1><p className="legal-summary">Gerencie o consentimento para usar a origem informada no cadastro.</p>
-        <OriginWithdrawal key={identity.userId} userId={identity.userId} />
+        {originWithdrawalV2Enabled() ? <OriginWithdrawalV2 key={identity.userId} userId={identity.userId} /> : <OriginWithdrawal key={identity.userId} userId={identity.userId} />}
       </div>
     </main>
   </div>;
