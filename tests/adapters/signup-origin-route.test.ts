@@ -23,6 +23,14 @@ describe("origem de cadastro privada", () => {
     expect((await POST(post('{"userId":"outro"}'))).status).toBe(403);
     expect(fake.rpc).not.toHaveBeenCalled();
   });
+  it("recusa POST com 401, 403 ou 409 antes da RPC e mascara falha da RPC como 503", async () => {
+    fake.identity.mockResolvedValueOnce(null); expect((await POST(post())).status).toBe(401);
+    fake.identity.mockResolvedValueOnce({ userId, sessionId, mustChangePassword: true }); expect((await POST(post())).status).toBe(403);
+    expect((await POST(post("{}", "https://app.example.invalid", "outro"))).status).toBe(409);
+    expect(fake.rpc).not.toHaveBeenCalled();
+    fake.rpc.mockRejectedValueOnce(new Error("uncertain")); expect((await POST(post())).status).toBe(503);
+    expect(fake.rpc).toHaveBeenCalledOnce();
+  });
   it("retira idempotentemente e não devolve valores de campanha", async () => {
     fake.rpc.mockResolvedValue({ status: "withdrawn" });
     expect(await (await POST(post())).json()).toEqual({ ok: true, result: { status: "withdrawn" } });

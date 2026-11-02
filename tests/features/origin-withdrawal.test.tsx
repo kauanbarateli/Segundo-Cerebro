@@ -67,6 +67,20 @@ describe("retirada da origem pelo titular", () => {
     second.render(); await settle(); const tree = second.render();
     expect(text(tree)).toContain("Não foi possível confirmar a retirada"); expect(text(tree)).not.toContain("Não há consentimento ativo"); expect(text(tree)).not.toContain("Retirar consentimento"); second.unmount();
   });
+  it.each([401, 403, 409])("recusa pré-RPC %s libera a escolha após entrar novamente", async status => {
+    const store = new Map<string, string>();
+    const first = fixture(async (_path, init) => init?.method === "POST" ? new Response(null, { status }) : active(), store);
+    first.render(); await settle(); click(first.render(), "Retirar consentimento"); await settle();
+    expect(text(first.render())).toContain("Não foi possível confirmar sua conta"); expect(store.size).toBe(0); first.unmount();
+    const second = fixture(async () => active(), store); second.render(); await settle();
+    const tree = second.render(); expect(text(tree)).toContain("Retirar consentimento"); expect(text(tree)).not.toContain("Não foi possível confirmar a retirada"); second.unmount();
+  });
+  it("resposta 503 mantém o marcador de operação incerta", async () => {
+    const store = new Map<string, string>();
+    const app = fixture(async (_path, init) => init?.method === "POST" ? new Response(null, { status: 503 }) : active(), store);
+    app.render(); await settle(); click(app.render(), "Retirar consentimento"); await settle();
+    expect(text(app.render())).toContain("Não foi possível confirmar a retirada"); expect([...store.values()]).toEqual(["1"]); app.unmount();
+  });
   it("separa marcador de cada usuário sem armazenar ou exibir UTMs", async () => {
     const store = new Map<string, string>(), other = "20000000-0000-4000-8000-000000000002";
     const first = fixture(async (_path, init) => init?.method === "POST" ? Promise.reject(new DOMException("timeout", "TimeoutError")) : active(), store);

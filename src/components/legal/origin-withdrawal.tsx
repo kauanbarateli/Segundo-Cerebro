@@ -57,7 +57,12 @@ export function OriginWithdrawal({ userId }: { userId: string }) {
     const id = ++generation.current; writing.current = true; setBusy(true);
     try {
       const response = await fetch("/api/signup-origin", { method: "POST", cache: "no-store", signal: AbortSignal.timeout(15000), headers: { "Content-Type": "application/json", "x-expected-user-id": userId }, body: "{}" });
-      if ([401, 403, 409].includes(response.status)) { if (id === generation.current) setState("closed"); return; }
+      if ([401, 403, 409].includes(response.status)) {
+        // These statuses are emitted by the route before invoking the RPC.
+        try { window.sessionStorage.removeItem(pendingKey); } catch { /* A stale marker only blocks a later attempt. */ }
+        if (id === generation.current) setState("closed");
+        return;
+      }
       const row = result(await response.json());
       if (!response.ok || !row || Object.keys(row).join(",") !== "status" || !["withdrawn", "absent"].includes(String(row.status))) throw new Error("unavailable");
       try { window.sessionStorage.removeItem(pendingKey); } catch { /* A stale marker only blocks a later attempt. */ }
