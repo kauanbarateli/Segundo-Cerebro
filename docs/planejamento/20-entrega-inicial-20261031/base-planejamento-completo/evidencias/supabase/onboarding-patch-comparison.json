@@ -1,0 +1,18 @@
+{
+  "source": "supabase/operations/onboarding-conflict-code.sql",
+  "function": "public.onboarding_call(uuid,uuid,text,jsonb)",
+  "body_length_source": 198,
+  "body_length_remote": 203,
+  "md5_source": "8de837c7219f3ba853cbf8b7b733d77f",
+  "md5_remote": "d0cf024a96f4ed619dc54e65c7024037",
+  "body_exact_match": false,
+  "language": "plpgsql",
+  "security_definer": false,
+  "anon_execute": false,
+  "authenticated_execute": false,
+  "service_execute": true,
+  "md5_source_crlf": "d0cf024a96f4ed619dc54e65c7024037",
+  "body_length_source_crlf": 203,
+  "matches_source_crlf": true,
+  "interpretation": "Remote matches the versioned operational patch with Windows CRLF line endings"
+}

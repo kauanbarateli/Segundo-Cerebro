@@ -1,0 +1,1148 @@
+[
+  {
+    "schemaname": "app_private",
+    "tablename": "admin_operations",
+    "indexname": "admin_operation_pending_target_idx",
+    "indexdef": "CREATE UNIQUE INDEX admin_operation_pending_target_idx ON app_private.admin_operations USING btree (target_user_id) WHERE (phase <> 'complete'::text)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "admin_operations",
+    "indexname": "admin_operations_actor_user_id_command_client_id_key",
+    "indexdef": "CREATE UNIQUE INDEX admin_operations_actor_user_id_command_client_id_key ON app_private.admin_operations USING btree (actor_user_id, command, client_id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "admin_operations",
+    "indexname": "admin_operations_pkey",
+    "indexdef": "CREATE UNIQUE INDEX admin_operations_pkey ON app_private.admin_operations USING btree (operation_id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "capture_task_revisions",
+    "indexname": "capture_task_revisions_pkey",
+    "indexdef": "CREATE UNIQUE INDEX capture_task_revisions_pkey ON app_private.capture_task_revisions USING btree (user_id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "command_receipts",
+    "indexname": "command_receipts_pkey",
+    "indexdef": "CREATE UNIQUE INDEX command_receipts_pkey ON app_private.command_receipts USING btree (user_id, command, client_id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "file_cleanup_runs",
+    "indexname": "file_cleanup_runs_pkey",
+    "indexdef": "CREATE UNIQUE INDEX file_cleanup_runs_pkey ON app_private.file_cleanup_runs USING btree (id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "finance_goal_dispositions",
+    "indexname": "finance_goal_dispositions_id_key",
+    "indexdef": "CREATE UNIQUE INDEX finance_goal_dispositions_id_key ON app_private.finance_goal_dispositions USING btree (id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "finance_goal_dispositions",
+    "indexname": "finance_goal_dispositions_pkey",
+    "indexdef": "CREATE UNIQUE INDEX finance_goal_dispositions_pkey ON app_private.finance_goal_dispositions USING btree (user_id, command, client_id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "finance_goal_highlights",
+    "indexname": "finance_goal_highlights_pkey",
+    "indexdef": "CREATE UNIQUE INDEX finance_goal_highlights_pkey ON app_private.finance_goal_highlights USING btree (id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "finance_goal_highlights",
+    "indexname": "finance_goal_highlights_user_id_key",
+    "indexdef": "CREATE UNIQUE INDEX finance_goal_highlights_user_id_key ON app_private.finance_goal_highlights USING btree (user_id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "finance_goal_releases",
+    "indexname": "finance_goal_releases_pkey",
+    "indexdef": "CREATE UNIQUE INDEX finance_goal_releases_pkey ON app_private.finance_goal_releases USING btree (id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "finance_goal_releases",
+    "indexname": "finance_goal_releases_total_page",
+    "indexdef": "CREATE INDEX finance_goal_releases_total_page ON app_private.finance_goal_releases USING btree (user_id, reservation_id, created_at, id) INCLUDE (amount_cents)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "finance_goal_releases",
+    "indexname": "finance_goal_releases_user_id_id_key",
+    "indexdef": "CREATE UNIQUE INDEX finance_goal_releases_user_id_id_key ON app_private.finance_goal_releases USING btree (user_id, id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "finance_goal_reservations",
+    "indexname": "finance_goal_reservations_account_total",
+    "indexdef": "CREATE INDEX finance_goal_reservations_account_total ON app_private.finance_goal_reservations USING btree (user_id, account_id, id) INCLUDE (amount_cents)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "finance_goal_reservations",
+    "indexname": "finance_goal_reservations_goal_page",
+    "indexdef": "CREATE INDEX finance_goal_reservations_goal_page ON app_private.finance_goal_reservations USING btree (user_id, goal_id, created_at, id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "finance_goal_reservations",
+    "indexname": "finance_goal_reservations_pkey",
+    "indexdef": "CREATE UNIQUE INDEX finance_goal_reservations_pkey ON app_private.finance_goal_reservations USING btree (id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "finance_goal_reservations",
+    "indexname": "finance_goal_reservations_user_id_id_key",
+    "indexdef": "CREATE UNIQUE INDEX finance_goal_reservations_user_id_id_key ON app_private.finance_goal_reservations USING btree (user_id, id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "finance_goals",
+    "indexname": "finance_goals_owner_image",
+    "indexdef": "CREATE INDEX finance_goals_owner_image ON app_private.finance_goals USING btree (user_id, image_file_id) WHERE (image_file_id IS NOT NULL)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "finance_goals",
+    "indexname": "finance_goals_owner_page",
+    "indexdef": "CREATE INDEX finance_goals_owner_page ON app_private.finance_goals USING btree (user_id, id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "finance_goals",
+    "indexname": "finance_goals_pkey",
+    "indexdef": "CREATE UNIQUE INDEX finance_goals_pkey ON app_private.finance_goals USING btree (id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "finance_goals",
+    "indexname": "finance_goals_user_id_id_key",
+    "indexdef": "CREATE UNIQUE INDEX finance_goals_user_id_id_key ON app_private.finance_goals USING btree (user_id, id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "finance_revisions",
+    "indexname": "finance_revisions_pkey",
+    "indexdef": "CREATE UNIQUE INDEX finance_revisions_pkey ON app_private.finance_revisions USING btree (user_id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "finance_series",
+    "indexname": "finance_series_owner_page",
+    "indexdef": "CREATE INDEX finance_series_owner_page ON app_private.finance_series USING btree (user_id, id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "finance_series",
+    "indexname": "finance_series_pkey",
+    "indexdef": "CREATE UNIQUE INDEX finance_series_pkey ON app_private.finance_series USING btree (id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "finance_series",
+    "indexname": "finance_series_user_id_id_key",
+    "indexdef": "CREATE UNIQUE INDEX finance_series_user_id_id_key ON app_private.finance_series USING btree (user_id, id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "finance_series_occurrences",
+    "indexname": "finance_series_map_order",
+    "indexdef": "CREATE INDEX finance_series_map_order ON app_private.finance_series_occurrences USING btree (user_id, series_id, ordinal)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "finance_series_occurrences",
+    "indexname": "finance_series_occurrences_pkey",
+    "indexdef": "CREATE UNIQUE INDEX finance_series_occurrences_pkey ON app_private.finance_series_occurrences USING btree (id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "finance_series_occurrences",
+    "indexname": "finance_series_occurrences_user_id_id_key",
+    "indexdef": "CREATE UNIQUE INDEX finance_series_occurrences_user_id_id_key ON app_private.finance_series_occurrences USING btree (user_id, id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "finance_series_occurrences",
+    "indexname": "finance_series_occurrences_user_id_series_id_ordinal_key",
+    "indexdef": "CREATE UNIQUE INDEX finance_series_occurrences_user_id_series_id_ordinal_key ON app_private.finance_series_occurrences USING btree (user_id, series_id, ordinal)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "finance_series_occurrences",
+    "indexname": "finance_series_occurrences_user_id_transaction_id_key",
+    "indexdef": "CREATE UNIQUE INDEX finance_series_occurrences_user_id_transaction_id_key ON app_private.finance_series_occurrences USING btree (user_id, transaction_id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "finance_series_occurrences",
+    "indexname": "finance_series_transaction_guard",
+    "indexdef": "CREATE UNIQUE INDEX finance_series_transaction_guard ON app_private.finance_series_occurrences USING btree (transaction_id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "finance_series_permits",
+    "indexname": "finance_series_permits_pkey",
+    "indexdef": "CREATE UNIQUE INDEX finance_series_permits_pkey ON app_private.finance_series_permits USING btree (row_id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "google_calendar_cursors",
+    "indexname": "google_calendar_cursors_pkey",
+    "indexdef": "CREATE UNIQUE INDEX google_calendar_cursors_pkey ON app_private.google_calendar_cursors USING btree (calendar_id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "google_calendar_limits",
+    "indexname": "google_calendar_limits_pkey",
+    "indexdef": "CREATE UNIQUE INDEX google_calendar_limits_pkey ON app_private.google_calendar_limits USING btree (user_id, scope)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "google_credentials",
+    "indexname": "google_credentials_pkey",
+    "indexdef": "CREATE UNIQUE INDEX google_credentials_pkey ON app_private.google_credentials USING btree (account_id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "google_event_links",
+    "indexname": "google_event_links_pkey",
+    "indexdef": "CREATE UNIQUE INDEX google_event_links_pkey ON app_private.google_event_links USING btree (user_id, calendar_id, google_id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "google_oauth_flows",
+    "indexname": "google_oauth_flows_pkey",
+    "indexdef": "CREATE UNIQUE INDEX google_oauth_flows_pkey ON app_private.google_oauth_flows USING btree (id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "google_oauth_flows",
+    "indexname": "google_oauth_flows_user_id_id_key",
+    "indexdef": "CREATE UNIQUE INDEX google_oauth_flows_user_id_id_key ON app_private.google_oauth_flows USING btree (user_id, id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "google_sync_executions",
+    "indexname": "google_sync_executions_pkey",
+    "indexdef": "CREATE UNIQUE INDEX google_sync_executions_pkey ON app_private.google_sync_executions USING btree (run_id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "google_sync_executions",
+    "indexname": "google_sync_executions_user_id_client_id_key",
+    "indexdef": "CREATE UNIQUE INDEX google_sync_executions_user_id_client_id_key ON app_private.google_sync_executions USING btree (user_id, client_id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "onboarding_commands",
+    "indexname": "onboarding_commands_pkey",
+    "indexdef": "CREATE UNIQUE INDEX onboarding_commands_pkey ON app_private.onboarding_commands USING btree (user_id, command, client_id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "onboarding_entries",
+    "indexname": "onboarding_entries_pkey",
+    "indexdef": "CREATE UNIQUE INDEX onboarding_entries_pkey ON app_private.onboarding_entries USING btree (user_id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "onboarding_entries",
+    "indexname": "onboarding_entries_source_operation_key",
+    "indexdef": "CREATE UNIQUE INDEX onboarding_entries_source_operation_key ON app_private.onboarding_entries USING btree (source_operation)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "onboarding_intents",
+    "indexname": "onboarding_active_ordinal",
+    "indexdef": "CREATE UNIQUE INDEX onboarding_active_ordinal ON app_private.onboarding_intents USING btree (user_id, round_id, ordinal) WHERE active"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "onboarding_intents",
+    "indexname": "onboarding_active_slot",
+    "indexdef": "CREATE UNIQUE INDEX onboarding_active_slot ON app_private.onboarding_intents USING btree (user_id, round_id, slot) WHERE active"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "onboarding_intents",
+    "indexname": "onboarding_intents_pkey",
+    "indexdef": "CREATE UNIQUE INDEX onboarding_intents_pkey ON app_private.onboarding_intents USING btree (id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "onboarding_intents",
+    "indexname": "onboarding_intents_user_id_round_id_slot_intent_version_key",
+    "indexdef": "CREATE UNIQUE INDEX onboarding_intents_user_id_round_id_slot_intent_version_key ON app_private.onboarding_intents USING btree (user_id, round_id, slot, intent_version)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "onboarding_intents",
+    "indexname": "onboarding_pending",
+    "indexdef": "CREATE INDEX onboarding_pending ON app_private.onboarding_intents USING btree (user_id, round_id, ordinal) WHERE (active AND (status <> ALL (ARRAY['confirmed'::text, 'omitted'::text])))"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "onboarding_oauth",
+    "indexname": "onboarding_oauth_pkey",
+    "indexdef": "CREATE UNIQUE INDEX onboarding_oauth_pkey ON app_private.onboarding_oauth USING btree (flow_id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "onboarding_retention_state",
+    "indexname": "onboarding_retention_state_pkey",
+    "indexdef": "CREATE UNIQUE INDEX onboarding_retention_state_pkey ON app_private.onboarding_retention_state USING btree (singleton)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "onboarding_rounds",
+    "indexname": "onboarding_expiry",
+    "indexdef": "CREATE INDEX onboarding_expiry ON app_private.onboarding_rounds USING btree (expires_at) WHERE (status <> 'expired'::text)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "onboarding_rounds",
+    "indexname": "onboarding_latest",
+    "indexdef": "CREATE INDEX onboarding_latest ON app_private.onboarding_rounds USING btree (user_id, created_at DESC, id DESC)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "onboarding_rounds",
+    "indexname": "onboarding_one_open",
+    "indexdef": "CREATE UNIQUE INDEX onboarding_one_open ON app_private.onboarding_rounds USING btree (user_id) WHERE (status = ANY (ARRAY['active'::text, 'paused'::text, 'executing'::text, 'partial'::text]))"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "onboarding_rounds",
+    "indexname": "onboarding_rounds_pkey",
+    "indexdef": "CREATE UNIQUE INDEX onboarding_rounds_pkey ON app_private.onboarding_rounds USING btree (id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "onboarding_rounds",
+    "indexname": "onboarding_rounds_user_id_id_key",
+    "indexdef": "CREATE UNIQUE INDEX onboarding_rounds_user_id_id_key ON app_private.onboarding_rounds USING btree (user_id, id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "onboarding_write_permits",
+    "indexname": "onboarding_write_permits_pkey",
+    "indexdef": "CREATE UNIQUE INDEX onboarding_write_permits_pkey ON app_private.onboarding_write_permits USING btree (intent_id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "profile_focus",
+    "indexname": "profile_focus_pkey",
+    "indexdef": "CREATE UNIQUE INDEX profile_focus_pkey ON app_private.profile_focus USING btree (user_id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "project_contexts",
+    "indexname": "project_contexts_pkey",
+    "indexdef": "CREATE UNIQUE INDEX project_contexts_pkey ON app_private.project_contexts USING btree (project_id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "projects_habits_revisions",
+    "indexname": "projects_habits_revisions_pkey",
+    "indexdef": "CREATE UNIQUE INDEX projects_habits_revisions_pkey ON app_private.projects_habits_revisions USING btree (user_id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "rate_limits",
+    "indexname": "rate_limits_expiry_idx",
+    "indexdef": "CREATE INDEX rate_limits_expiry_idx ON app_private.rate_limits USING btree (updated_at)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "rate_limits",
+    "indexname": "rate_limits_pkey",
+    "indexdef": "CREATE UNIQUE INDEX rate_limits_pkey ON app_private.rate_limits USING btree (scope, subject_hash)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "rate_limits",
+    "indexname": "rate_limits_user_idx",
+    "indexdef": "CREATE INDEX rate_limits_user_idx ON app_private.rate_limits USING btree (user_id) WHERE (user_id IS NOT NULL)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "upload_reservations",
+    "indexname": "upload_reservations_cleanup_idx",
+    "indexdef": "CREATE INDEX upload_reservations_cleanup_idx ON app_private.upload_reservations USING btree (expires_at, cleaned_at)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "upload_reservations",
+    "indexname": "upload_reservations_final_path_key",
+    "indexdef": "CREATE UNIQUE INDEX upload_reservations_final_path_key ON app_private.upload_reservations USING btree (final_path)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "upload_reservations",
+    "indexname": "upload_reservations_pkey",
+    "indexdef": "CREATE UNIQUE INDEX upload_reservations_pkey ON app_private.upload_reservations USING btree (id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "upload_reservations",
+    "indexname": "upload_reservations_staging_path_key",
+    "indexdef": "CREATE UNIQUE INDEX upload_reservations_staging_path_key ON app_private.upload_reservations USING btree (staging_path)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "upload_reservations",
+    "indexname": "upload_reservations_user_id_kind_client_id_key",
+    "indexdef": "CREATE UNIQUE INDEX upload_reservations_user_id_kind_client_id_key ON app_private.upload_reservations USING btree (user_id, kind, client_id)"
+  },
+  {
+    "schemaname": "app_private",
+    "tablename": "vault_revisions",
+    "indexname": "vault_revisions_pkey",
+    "indexdef": "CREATE UNIQUE INDEX vault_revisions_pkey ON app_private.vault_revisions USING btree (user_id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "admin_audit_events",
+    "indexname": "admin_audit_events_pkey",
+    "indexdef": "CREATE UNIQUE INDEX admin_audit_events_pkey ON public.admin_audit_events USING btree (id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "admin_audit_events",
+    "indexname": "admin_audit_order_idx",
+    "indexdef": "CREATE INDEX admin_audit_order_idx ON public.admin_audit_events USING btree (occurred_at DESC, id DESC)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "calendar_accounts",
+    "indexname": "calendar_accounts_pkey",
+    "indexdef": "CREATE UNIQUE INDEX calendar_accounts_pkey ON public.calendar_accounts USING btree (id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "calendar_accounts",
+    "indexname": "calendar_accounts_user_id_google_sub_key",
+    "indexdef": "CREATE UNIQUE INDEX calendar_accounts_user_id_google_sub_key ON public.calendar_accounts USING btree (user_id, google_sub)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "calendar_accounts",
+    "indexname": "calendar_accounts_user_id_id_key",
+    "indexdef": "CREATE UNIQUE INDEX calendar_accounts_user_id_id_key ON public.calendar_accounts USING btree (user_id, id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "calendar_events",
+    "indexname": "calendar_events_pkey",
+    "indexdef": "CREATE UNIQUE INDEX calendar_events_pkey ON public.calendar_events USING btree (id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "calendar_events",
+    "indexname": "calendar_events_time_idx",
+    "indexdef": "CREATE INDEX calendar_events_time_idx ON public.calendar_events USING btree (user_id, starts_at, ends_at)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "calendar_events",
+    "indexname": "calendar_events_user_id_calendar_id_google_id_key",
+    "indexdef": "CREATE UNIQUE INDEX calendar_events_user_id_calendar_id_google_id_key ON public.calendar_events USING btree (user_id, calendar_id, google_id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "calendar_events",
+    "indexname": "calendar_events_user_id_id_key",
+    "indexdef": "CREATE UNIQUE INDEX calendar_events_user_id_id_key ON public.calendar_events USING btree (user_id, id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "calendar_sources",
+    "indexname": "calendar_sources_pkey",
+    "indexdef": "CREATE UNIQUE INDEX calendar_sources_pkey ON public.calendar_sources USING btree (id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "calendar_sources",
+    "indexname": "calendar_sources_user_id_account_id_google_id_key",
+    "indexdef": "CREATE UNIQUE INDEX calendar_sources_user_id_account_id_google_id_key ON public.calendar_sources USING btree (user_id, account_id, google_id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "calendar_sources",
+    "indexname": "calendar_sources_user_id_account_id_id_key",
+    "indexdef": "CREATE UNIQUE INDEX calendar_sources_user_id_account_id_id_key ON public.calendar_sources USING btree (user_id, account_id, id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "calendar_sources",
+    "indexname": "calendar_sources_user_id_id_key",
+    "indexdef": "CREATE UNIQUE INDEX calendar_sources_user_id_id_key ON public.calendar_sources USING btree (user_id, id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "calendar_sync_runs",
+    "indexname": "calendar_sync_runs_pkey",
+    "indexdef": "CREATE UNIQUE INDEX calendar_sync_runs_pkey ON public.calendar_sync_runs USING btree (id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "calendar_sync_runs",
+    "indexname": "calendar_sync_runs_user_id_id_key",
+    "indexdef": "CREATE UNIQUE INDEX calendar_sync_runs_user_id_id_key ON public.calendar_sync_runs USING btree (user_id, id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "capture_file_links",
+    "indexname": "capture_file_links_pkey",
+    "indexdef": "CREATE UNIQUE INDEX capture_file_links_pkey ON public.capture_file_links USING btree (user_id, capture_id, file_id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "capture_links",
+    "indexname": "capture_links_pkey",
+    "indexdef": "CREATE UNIQUE INDEX capture_links_pkey ON public.capture_links USING btree (user_id, source_id, target_id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "capture_links",
+    "indexname": "capture_links_target_idx",
+    "indexdef": "CREATE INDEX capture_links_target_idx ON public.capture_links USING btree (user_id, target_id, source_id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "captures",
+    "indexname": "captures_category_idx",
+    "indexdef": "CREATE INDEX captures_category_idx ON public.captures USING btree (user_id, category_id) WHERE (category_id IS NOT NULL)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "captures",
+    "indexname": "captures_global_search_idx",
+    "indexdef": "CREATE INDEX captures_global_search_idx ON public.captures USING gin (search_terms)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "captures",
+    "indexname": "captures_global_substring_idx",
+    "indexdef": "CREATE INDEX captures_global_substring_idx ON public.captures USING gin (search_document gin_trgm_ops)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "captures",
+    "indexname": "captures_pkey",
+    "indexdef": "CREATE UNIQUE INDEX captures_pkey ON public.captures USING btree (id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "captures",
+    "indexname": "captures_project_idx",
+    "indexdef": "CREATE INDEX captures_project_idx ON public.captures USING btree (user_id, project_id) WHERE (project_id IS NOT NULL)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "captures",
+    "indexname": "captures_user_created_idx",
+    "indexdef": "CREATE INDEX captures_user_created_idx ON public.captures USING btree (user_id, created_at, id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "captures",
+    "indexname": "captures_user_id_client_id_key",
+    "indexdef": "CREATE UNIQUE INDEX captures_user_id_client_id_key ON public.captures USING btree (user_id, client_id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "captures",
+    "indexname": "captures_user_id_converted_task_id_key",
+    "indexdef": "CREATE UNIQUE INDEX captures_user_id_converted_task_id_key ON public.captures USING btree (user_id, converted_task_id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "captures",
+    "indexname": "captures_user_id_id_key",
+    "indexdef": "CREATE UNIQUE INDEX captures_user_id_id_key ON public.captures USING btree (user_id, id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "categories",
+    "indexname": "categories_pkey",
+    "indexdef": "CREATE UNIQUE INDEX categories_pkey ON public.categories USING btree (id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "categories",
+    "indexname": "categories_user_id_id_key",
+    "indexdef": "CREATE UNIQUE INDEX categories_user_id_id_key ON public.categories USING btree (user_id, id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "domain_events",
+    "indexname": "domain_events_capture_task_idx",
+    "indexdef": "CREATE INDEX domain_events_capture_task_idx ON public.domain_events USING btree (user_id, occurred_at, id) WHERE (entity_type = ANY (ARRAY['capture'::text, 'task'::text]))"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "domain_events",
+    "indexname": "domain_events_pkey",
+    "indexdef": "CREATE UNIQUE INDEX domain_events_pkey ON public.domain_events USING btree (id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "domain_events",
+    "indexname": "domain_events_retention_idx",
+    "indexdef": "CREATE INDEX domain_events_retention_idx ON public.domain_events USING btree (occurred_at)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "domain_events",
+    "indexname": "domain_events_user_time_idx",
+    "indexdef": "CREATE INDEX domain_events_user_time_idx ON public.domain_events USING btree (user_id, occurred_at DESC, id DESC)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "drive_files",
+    "indexname": "drive_files_folder_idx",
+    "indexdef": "CREATE INDEX drive_files_folder_idx ON public.drive_files USING btree (user_id, folder_id, deleted_at, id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "drive_files",
+    "indexname": "drive_files_global_search_idx",
+    "indexdef": "CREATE INDEX drive_files_global_search_idx ON public.drive_files USING gin (search_terms)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "drive_files",
+    "indexname": "drive_files_global_substring_idx",
+    "indexdef": "CREATE INDEX drive_files_global_substring_idx ON public.drive_files USING gin (search_document gin_trgm_ops)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "drive_files",
+    "indexname": "drive_files_pkey",
+    "indexdef": "CREATE UNIQUE INDEX drive_files_pkey ON public.drive_files USING btree (id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "drive_files",
+    "indexname": "drive_files_search_idx",
+    "indexdef": "CREATE INDEX drive_files_search_idx ON public.drive_files USING gin (to_tsvector('portuguese'::regconfig, name))"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "drive_files",
+    "indexname": "drive_files_storage_path_key",
+    "indexdef": "CREATE UNIQUE INDEX drive_files_storage_path_key ON public.drive_files USING btree (storage_path)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "drive_files",
+    "indexname": "drive_files_user_id_id_key",
+    "indexdef": "CREATE UNIQUE INDEX drive_files_user_id_id_key ON public.drive_files USING btree (user_id, id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "drive_folders",
+    "indexname": "drive_folders_owner_parent_idx",
+    "indexdef": "CREATE INDEX drive_folders_owner_parent_idx ON public.drive_folders USING btree (user_id, parent_id, id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "drive_folders",
+    "indexname": "drive_folders_owner_project_idx",
+    "indexdef": "CREATE INDEX drive_folders_owner_project_idx ON public.drive_folders USING btree (user_id, project_id) WHERE (project_id IS NOT NULL)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "drive_folders",
+    "indexname": "drive_folders_pkey",
+    "indexdef": "CREATE UNIQUE INDEX drive_folders_pkey ON public.drive_folders USING btree (id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "drive_folders",
+    "indexname": "drive_folders_user_id_id_key",
+    "indexdef": "CREATE UNIQUE INDEX drive_folders_user_id_id_key ON public.drive_folders USING btree (user_id, id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "fin_accounts",
+    "indexname": "fin_accounts_pkey",
+    "indexdef": "CREATE UNIQUE INDEX fin_accounts_pkey ON public.fin_accounts USING btree (id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "fin_accounts",
+    "indexname": "fin_accounts_user_id_id_key",
+    "indexdef": "CREATE UNIQUE INDEX fin_accounts_user_id_id_key ON public.fin_accounts USING btree (user_id, id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "fin_budgets",
+    "indexname": "fin_budgets_owner_month_plan_uidx",
+    "indexdef": "CREATE UNIQUE INDEX fin_budgets_owner_month_plan_uidx ON public.fin_budgets USING btree (user_id, month) WHERE (category_id IS NULL)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "fin_budgets",
+    "indexname": "fin_budgets_pkey",
+    "indexdef": "CREATE UNIQUE INDEX fin_budgets_pkey ON public.fin_budgets USING btree (id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "fin_budgets",
+    "indexname": "fin_budgets_user_id_category_id_month_key",
+    "indexdef": "CREATE UNIQUE INDEX fin_budgets_user_id_category_id_month_key ON public.fin_budgets USING btree (user_id, category_id, month)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "fin_budgets",
+    "indexname": "fin_budgets_user_id_id_key",
+    "indexdef": "CREATE UNIQUE INDEX fin_budgets_user_id_id_key ON public.fin_budgets USING btree (user_id, id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "fin_categories",
+    "indexname": "fin_categories_pkey",
+    "indexdef": "CREATE UNIQUE INDEX fin_categories_pkey ON public.fin_categories USING btree (id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "fin_categories",
+    "indexname": "fin_categories_user_id_id_key",
+    "indexdef": "CREATE UNIQUE INDEX fin_categories_user_id_id_key ON public.fin_categories USING btree (user_id, id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "fin_categories",
+    "indexname": "fin_categories_user_id_kind_normalized_name_key",
+    "indexdef": "CREATE UNIQUE INDEX fin_categories_user_id_kind_normalized_name_key ON public.fin_categories USING btree (user_id, kind, normalized_name)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "fin_tags",
+    "indexname": "fin_tags_pkey",
+    "indexdef": "CREATE UNIQUE INDEX fin_tags_pkey ON public.fin_tags USING btree (id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "fin_tags",
+    "indexname": "fin_tags_user_id_id_key",
+    "indexdef": "CREATE UNIQUE INDEX fin_tags_user_id_id_key ON public.fin_tags USING btree (user_id, id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "fin_tags",
+    "indexname": "fin_tags_user_id_normalized_name_key",
+    "indexdef": "CREATE UNIQUE INDEX fin_tags_user_id_normalized_name_key ON public.fin_tags USING btree (user_id, normalized_name)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "fin_transaction_tags",
+    "indexname": "fin_transaction_tags_pkey",
+    "indexdef": "CREATE UNIQUE INDEX fin_transaction_tags_pkey ON public.fin_transaction_tags USING btree (user_id, transaction_id, tag_id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "fin_transactions",
+    "indexname": "fin_transactions_global_search_idx",
+    "indexdef": "CREATE INDEX fin_transactions_global_search_idx ON public.fin_transactions USING gin (search_terms)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "fin_transactions",
+    "indexname": "fin_transactions_global_substring_idx",
+    "indexdef": "CREATE INDEX fin_transactions_global_substring_idx ON public.fin_transactions USING gin (search_document gin_trgm_ops)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "fin_transactions",
+    "indexname": "fin_transactions_pkey",
+    "indexdef": "CREATE UNIQUE INDEX fin_transactions_pkey ON public.fin_transactions USING btree (id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "fin_transactions",
+    "indexname": "fin_transactions_series_idx",
+    "indexdef": "CREATE INDEX fin_transactions_series_idx ON public.fin_transactions USING btree (user_id, installment_group_id, occurred_on) WHERE (installment_group_id IS NOT NULL)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "fin_transactions",
+    "indexname": "fin_transactions_transfer_idx",
+    "indexdef": "CREATE INDEX fin_transactions_transfer_idx ON public.fin_transactions USING btree (user_id, transfer_group_id) WHERE (transfer_group_id IS NOT NULL)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "fin_transactions",
+    "indexname": "fin_transactions_user_account_idx",
+    "indexdef": "CREATE INDEX fin_transactions_user_account_idx ON public.fin_transactions USING btree (user_id, account_id, occurred_on, id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "fin_transactions",
+    "indexname": "fin_transactions_user_competence_idx",
+    "indexdef": "CREATE INDEX fin_transactions_user_competence_idx ON public.fin_transactions USING btree (user_id, statement_month, occurred_on, id) WHERE (deleted_at IS NULL)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "fin_transactions",
+    "indexname": "fin_transactions_user_id_id_key",
+    "indexdef": "CREATE UNIQUE INDEX fin_transactions_user_id_id_key ON public.fin_transactions USING btree (user_id, id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "fin_transactions",
+    "indexname": "fin_transactions_user_id_installment_group_id_installment_n_key",
+    "indexdef": "CREATE UNIQUE INDEX fin_transactions_user_id_installment_group_id_installment_n_key ON public.fin_transactions USING btree (user_id, installment_group_id, installment_no)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "habit_entries",
+    "indexname": "habit_entries_owner_history_idx",
+    "indexdef": "CREATE INDEX habit_entries_owner_history_idx ON public.habit_entries USING btree (user_id, habit_id, done_on, id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "habit_entries",
+    "indexname": "habit_entries_pkey",
+    "indexdef": "CREATE UNIQUE INDEX habit_entries_pkey ON public.habit_entries USING btree (id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "habit_entries",
+    "indexname": "habit_entries_user_id_habit_id_done_on_key",
+    "indexdef": "CREATE UNIQUE INDEX habit_entries_user_id_habit_id_done_on_key ON public.habit_entries USING btree (user_id, habit_id, done_on)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "habit_entries",
+    "indexname": "habit_entries_user_id_id_key",
+    "indexdef": "CREATE UNIQUE INDEX habit_entries_user_id_id_key ON public.habit_entries USING btree (user_id, id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "habit_pauses",
+    "indexname": "habit_pauses_owner_interval_idx",
+    "indexdef": "CREATE INDEX habit_pauses_owner_interval_idx ON public.habit_pauses USING btree (user_id, habit_id, starts_on, ends_on)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "habit_pauses",
+    "indexname": "habit_pauses_pkey",
+    "indexdef": "CREATE UNIQUE INDEX habit_pauses_pkey ON public.habit_pauses USING btree (id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "habit_pauses",
+    "indexname": "habit_pauses_user_id_id_key",
+    "indexdef": "CREATE UNIQUE INDEX habit_pauses_user_id_id_key ON public.habit_pauses USING btree (user_id, id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "habits",
+    "indexname": "habits_global_search_idx",
+    "indexdef": "CREATE INDEX habits_global_search_idx ON public.habits USING gin (search_terms)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "habits",
+    "indexname": "habits_global_substring_idx",
+    "indexdef": "CREATE INDEX habits_global_substring_idx ON public.habits USING gin (search_document gin_trgm_ops)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "habits",
+    "indexname": "habits_owner_active_idx",
+    "indexdef": "CREATE INDEX habits_owner_active_idx ON public.habits USING btree (user_id, created_at, id) WHERE (archived_at IS NULL)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "habits",
+    "indexname": "habits_pkey",
+    "indexdef": "CREATE UNIQUE INDEX habits_pkey ON public.habits USING btree (id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "habits",
+    "indexname": "habits_user_id_id_key",
+    "indexdef": "CREATE UNIQUE INDEX habits_user_id_id_key ON public.habits USING btree (user_id, id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "knowledge_notebooks",
+    "indexname": "knowledge_notebooks_pkey",
+    "indexdef": "CREATE UNIQUE INDEX knowledge_notebooks_pkey ON public.knowledge_notebooks USING btree (id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "knowledge_notebooks",
+    "indexname": "knowledge_notebooks_project_idx",
+    "indexdef": "CREATE INDEX knowledge_notebooks_project_idx ON public.knowledge_notebooks USING btree (user_id, project_id) WHERE (project_id IS NOT NULL)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "knowledge_notebooks",
+    "indexname": "knowledge_notebooks_user_id_id_key",
+    "indexdef": "CREATE UNIQUE INDEX knowledge_notebooks_user_id_id_key ON public.knowledge_notebooks USING btree (user_id, id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "knowledge_pages",
+    "indexname": "knowledge_pages_global_search_idx",
+    "indexdef": "CREATE INDEX knowledge_pages_global_search_idx ON public.knowledge_pages USING gin (search_terms)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "knowledge_pages",
+    "indexname": "knowledge_pages_global_substring_idx",
+    "indexdef": "CREATE INDEX knowledge_pages_global_substring_idx ON public.knowledge_pages USING gin (search_document gin_trgm_ops)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "knowledge_pages",
+    "indexname": "knowledge_pages_live_title_idx",
+    "indexdef": "CREATE UNIQUE INDEX knowledge_pages_live_title_idx ON public.knowledge_pages USING btree (user_id, normalized_title) WHERE (deleted_at IS NULL)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "knowledge_pages",
+    "indexname": "knowledge_pages_notebook_idx",
+    "indexdef": "CREATE INDEX knowledge_pages_notebook_idx ON public.knowledge_pages USING btree (user_id, notebook_id, parent_id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "knowledge_pages",
+    "indexname": "knowledge_pages_pkey",
+    "indexdef": "CREATE UNIQUE INDEX knowledge_pages_pkey ON public.knowledge_pages USING btree (id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "knowledge_pages",
+    "indexname": "knowledge_pages_search_idx",
+    "indexdef": "CREATE INDEX knowledge_pages_search_idx ON public.knowledge_pages USING gin (search_vector)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "knowledge_pages",
+    "indexname": "knowledge_pages_user_id_id_key",
+    "indexdef": "CREATE UNIQUE INDEX knowledge_pages_user_id_id_key ON public.knowledge_pages USING btree (user_id, id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "knowledge_pages",
+    "indexname": "knowledge_pages_user_id_origin_capture_id_key",
+    "indexdef": "CREATE UNIQUE INDEX knowledge_pages_user_id_origin_capture_id_key ON public.knowledge_pages USING btree (user_id, origin_capture_id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "links",
+    "indexname": "links_from_idx",
+    "indexdef": "CREATE INDEX links_from_idx ON public.links USING btree (user_id, from_type, from_id, to_type, to_id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "links",
+    "indexname": "links_pkey",
+    "indexdef": "CREATE UNIQUE INDEX links_pkey ON public.links USING btree (id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "links",
+    "indexname": "links_to_idx",
+    "indexdef": "CREATE INDEX links_to_idx ON public.links USING btree (user_id, to_type, to_id, from_type, from_id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "links",
+    "indexname": "links_user_id_from_type_from_id_to_type_to_id_key",
+    "indexdef": "CREATE UNIQUE INDEX links_user_id_from_type_from_id_to_type_to_id_key ON public.links USING btree (user_id, from_type, from_id, to_type, to_id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "page_refs",
+    "indexname": "page_refs_backlinks_idx",
+    "indexdef": "CREATE INDEX page_refs_backlinks_idx ON public.page_refs USING btree (user_id, target_id, page_id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "page_refs",
+    "indexname": "page_refs_pending_idx",
+    "indexdef": "CREATE UNIQUE INDEX page_refs_pending_idx ON public.page_refs USING btree (user_id, page_id, normalized_alias) WHERE (target_id IS NULL)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "page_refs",
+    "indexname": "page_refs_pkey",
+    "indexdef": "CREATE UNIQUE INDEX page_refs_pkey ON public.page_refs USING btree (id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "page_refs",
+    "indexname": "page_refs_resolved_idx",
+    "indexdef": "CREATE UNIQUE INDEX page_refs_resolved_idx ON public.page_refs USING btree (user_id, page_id, target_id) WHERE (target_id IS NOT NULL)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "profiles",
+    "indexname": "profiles_pkey",
+    "indexdef": "CREATE UNIQUE INDEX profiles_pkey ON public.profiles USING btree (user_id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "projects",
+    "indexname": "projects_global_search_idx",
+    "indexdef": "CREATE INDEX projects_global_search_idx ON public.projects USING gin (search_terms)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "projects",
+    "indexname": "projects_global_substring_idx",
+    "indexdef": "CREATE INDEX projects_global_substring_idx ON public.projects USING gin (search_document gin_trgm_ops)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "projects",
+    "indexname": "projects_pkey",
+    "indexdef": "CREATE UNIQUE INDEX projects_pkey ON public.projects USING btree (id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "projects",
+    "indexname": "projects_user_id_id_key",
+    "indexdef": "CREATE UNIQUE INDEX projects_user_id_id_key ON public.projects USING btree (user_id, id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "tasks",
+    "indexname": "tasks_category_idx",
+    "indexdef": "CREATE INDEX tasks_category_idx ON public.tasks USING btree (user_id, category_id) WHERE (category_id IS NOT NULL)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "tasks",
+    "indexname": "tasks_global_search_idx",
+    "indexdef": "CREATE INDEX tasks_global_search_idx ON public.tasks USING gin (search_terms)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "tasks",
+    "indexname": "tasks_global_substring_idx",
+    "indexdef": "CREATE INDEX tasks_global_substring_idx ON public.tasks USING gin (search_document gin_trgm_ops)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "tasks",
+    "indexname": "tasks_pkey",
+    "indexdef": "CREATE UNIQUE INDEX tasks_pkey ON public.tasks USING btree (id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "tasks",
+    "indexname": "tasks_project_idx",
+    "indexdef": "CREATE INDEX tasks_project_idx ON public.tasks USING btree (user_id, project_id) WHERE (project_id IS NOT NULL)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "tasks",
+    "indexname": "tasks_user_created_idx",
+    "indexdef": "CREATE INDEX tasks_user_created_idx ON public.tasks USING btree (user_id, created_at, id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "tasks",
+    "indexname": "tasks_user_id_client_id_key",
+    "indexdef": "CREATE UNIQUE INDEX tasks_user_id_client_id_key ON public.tasks USING btree (user_id, client_id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "tasks",
+    "indexname": "tasks_user_id_id_key",
+    "indexdef": "CREATE UNIQUE INDEX tasks_user_id_id_key ON public.tasks USING btree (user_id, id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "tasks",
+    "indexname": "tasks_user_id_origin_capture_id_key",
+    "indexdef": "CREATE UNIQUE INDEX tasks_user_id_origin_capture_id_key ON public.tasks USING btree (user_id, origin_capture_id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "user_entitlements",
+    "indexname": "user_entitlements_granted_by_idx",
+    "indexdef": "CREATE INDEX user_entitlements_granted_by_idx ON public.user_entitlements USING btree (granted_by) WHERE (granted_by IS NOT NULL)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "user_entitlements",
+    "indexname": "user_entitlements_pkey",
+    "indexdef": "CREATE UNIQUE INDEX user_entitlements_pkey ON public.user_entitlements USING btree (user_id, feature_key)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "user_moderation",
+    "indexname": "user_moderation_changed_by_idx",
+    "indexdef": "CREATE INDEX user_moderation_changed_by_idx ON public.user_moderation USING btree (changed_by) WHERE (changed_by IS NOT NULL)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "user_moderation",
+    "indexname": "user_moderation_pkey",
+    "indexdef": "CREATE UNIQUE INDEX user_moderation_pkey ON public.user_moderation USING btree (user_id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "user_modules",
+    "indexname": "user_modules_pkey",
+    "indexdef": "CREATE UNIQUE INDEX user_modules_pkey ON public.user_modules USING btree (user_id, module_key)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "user_preferences",
+    "indexname": "user_preferences_pkey",
+    "indexdef": "CREATE UNIQUE INDEX user_preferences_pkey ON public.user_preferences USING btree (user_id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "user_roles",
+    "indexname": "user_roles_granted_by_idx",
+    "indexdef": "CREATE INDEX user_roles_granted_by_idx ON public.user_roles USING btree (granted_by) WHERE (granted_by IS NOT NULL)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "user_roles",
+    "indexname": "user_roles_pkey",
+    "indexdef": "CREATE UNIQUE INDEX user_roles_pkey ON public.user_roles USING btree (user_id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "vault_items",
+    "indexname": "vault_items_owner_idx",
+    "indexdef": "CREATE INDEX vault_items_owner_idx ON public.vault_items USING btree (user_id, id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "vault_items",
+    "indexname": "vault_items_pkey",
+    "indexdef": "CREATE UNIQUE INDEX vault_items_pkey ON public.vault_items USING btree (id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "vault_items",
+    "indexname": "vault_items_user_id_id_key",
+    "indexdef": "CREATE UNIQUE INDEX vault_items_user_id_id_key ON public.vault_items USING btree (user_id, id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "vault_master_keys",
+    "indexname": "vault_master_keys_pkey",
+    "indexdef": "CREATE UNIQUE INDEX vault_master_keys_pkey ON public.vault_master_keys USING btree (user_id)"
+  }
+]

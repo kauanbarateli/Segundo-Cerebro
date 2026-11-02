@@ -4,7 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const version = "0.1.6";
+const version = "0.1.18";
 const skillScripts = path.join(root, ".agents", "skills", "impeccable", "scripts");
 const declaredVersion = readFileSync(path.join(skillScripts, "VERSION"), "utf8").trim();
 if (declaredVersion !== version) throw new Error(`Engine Impeccable inesperado: ${declaredVersion}; esperado ${version}. Revise o portão antes de atualizar.`);

@@ -64,24 +64,21 @@ async function attach(page: Page, theme: "light" | "dark", answers: { hold?: Pro
   });
   return trace;
 }
-async function mount(page: Page, ready = true, originAvailable = false) {
+async function mount(page: Page, ready = true) {
   await page.goto(origin + "/configuracoes");
   await page.addStyleTag({ content: styles }); await page.addScriptTag({ content: THEME_INIT_SCRIPT }); await page.addScriptTag({ content: bundle });
-  await page.evaluate(({ actor, access, originAvailable: enabled }) => (globalThis as unknown as { __startIssue34SettingsSql(user: string, policy: AccessPolicy, hidden: boolean, originAvailable: boolean): void }).__startIssue34SettingsSql(actor, access, false, enabled), { actor: owner, access: policy, originAvailable });
+  await page.evaluate(({ actor, access }) => (globalThis as unknown as { __startIssue34SettingsSql(user: string, policy: AccessPolicy, hidden: boolean): void }).__startIssue34SettingsSql(actor, access, false), { actor: owner, access: policy });
   await expect(page.locator('[data-application-mode="connected"]')).toBeVisible();
   if (ready) await expect(page.locator('.settings-workspace[data-access="allowed"]')).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
 }
-test("origem de cadastro: retirada acessível não mostra valores de campanha", async ({page})=>{
+test("Configurações não mostra ou consulta origem de cadastro", async ({page})=>{
   await page.setViewportSize({width:390,height:844});
   const originTracker={reads:0,writes:0}, trace=await attach(page,"dark",[{answer:{status:200,view:listed}}],[200],originTracker);
-  await mount(page,true,true);
-  const section=page.getByRole("region",{name:"Origem do cadastro"});
-  await expect(section.getByText(/Permitido até/)).toBeVisible();
-  const button=section.getByRole("button",{name:"Retirar consentimento"});await button.focus();await expect(button).toBeFocused();await button.press("Enter");
-  await expect(section.getByText("Não há origem de cadastro ativa.")).toBeVisible();
-  expect(originTracker).toEqual({reads:1,writes:1});expect(trace.unexpected).toEqual([]);expect(trace.errors).toEqual([]);
-  await expect(section).not.toContainText(/utm_|campanha=/i);
+  await mount(page);
+  await expect(page.getByRole("region",{name:"Origem do cadastro"})).toHaveCount(0);
+  await expect(page.getByRole("button",{name:"Retirar consentimento"})).toHaveCount(0);
+  expect(originTracker).toEqual({reads:0,writes:0});expect(trace.unexpected).toEqual([]);expect(trace.errors).toEqual([]);
 });
 const clean = (report: VisualReport) => {
   expect(report.overflow, describeVisualFailures(report, "overflow")).toEqual([]);

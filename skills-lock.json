@@ -278,18 +278,15 @@
       "treeHash": "8b7445a7dd54a6be57c43fca59cf1ede430d654d1bc67414d87cbb75494bfa7b"
     },
     "impeccable": {
-      "source": "planning/.agents/skills/impeccable",
-      "sourceType": "local",
-      "sourceVersion": "4.4.0",
-      "launcherVersion": "0.1.6",
+      "source": "npm:impeccable",
+      "sourceType": "npm",
+      "sourceVersion": "4.8.0",
+      "launcherVersion": "0.1.18",
       "skillPath": ".agents/skills/impeccable/SKILL.md",
       "importedFrom": "approved-planning-snapshot-2026-09-29",
-      "computedHash": "6eeec6ef2028388a17de9f17a56c9cb7dbc7c8e7e1a8c15b831b0ba3e42168ac",
-      "treeHash": "12269370c21d8a2a8a455ecfcc6265e69f159600d53a938b4eba39258074f84b",
-      "localPatches": [
-        "reference/degraded/asset-producer.md: correct relative component-review link from ../reference/component-review.md to ../component-review.md",
-        "reference/extract.md, reference/harden.md, reference/optimize.md: remove trailing spaces and excess final blank lines without semantic changes"
-      ]
+      "computedHash": "fab04b31f946573b00a8559db1fc070f8ea5825254d491c2b13156e5661a86d7",
+      "treeHash": "eb8242836aaf70e6e1abe216a847156f2c10387647a5e36d770518c274ff6200",
+      "localPatches": []
     }
   },
   "contentNormalization": "Installed text files are UTF-8 with LF line endings, matching .gitattributes. Source provenance and upstreamRecordedHash are preserved."

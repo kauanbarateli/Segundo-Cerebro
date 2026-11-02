@@ -20,6 +20,7 @@ describe("auth configuration fails closed", () => {
 describe("auth boundary policy", () => {
   it.each(["//evil.test", "https://evil.test", "/\\evil.test", "/%2f%2fevil.test", "/%5cevil.test", "/auth/callback?code=secret", "/entrar", "/api/private", "/x\r\nLocation:bad", "/%xx"])("rejects return destination %s", (path) => { expect(safeReturnTo(path)).toBe("/"); });
   it("keeps a same-origin task deep link", () => { expect(safeReturnTo("/tarefas?task=a#detalhes")).toBe("/tarefas?task=a#detalhes"); });
+  it("keeps the fixed privacy withdrawal destination after login", () => { expect(safeReturnTo("/privacidade/origem-cadastro")).toBe("/privacidade/origem-cadastro"); });
   it("requires a matching full Origin for mutations", () => { expect(sameOrigin(null, env.APP_URL)).toBe(false); expect(sameOrigin("https://evil.test", env.APP_URL)).toBe(false); expect(sameOrigin(env.APP_URL, env.APP_URL)).toBe(true); expect(sameOrigin(`${env.APP_URL}/path`, env.APP_URL)).toBe(false); });
   it("checks the bcrypt byte ceiling without truncation or rejecting Unicode", () => { expect(validNewPassword("a".repeat(72))).toBe(true); expect(validNewPassword("a".repeat(73))).toBe(false); expect(validNewPassword("🙂".repeat(18))).toBe(true); expect(validNewPassword("🙂".repeat(19))).toBe(false); expect(validNewPassword("🙂".repeat(6))).toBe(false); expect(validNewPassword("valid-password\n")).toBe(false); });
   it("accepts only authoritative DTOs belonging to getUser identity", () => {

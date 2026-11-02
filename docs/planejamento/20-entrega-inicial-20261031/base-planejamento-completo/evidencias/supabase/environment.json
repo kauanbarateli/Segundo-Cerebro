@@ -1,0 +1,126 @@
+[
+  {
+    "postgres_version": "17.11",
+    "read_only": "on",
+    "schemas": [
+      "app_private",
+      "auth",
+      "cron",
+      "extensions",
+      "graphql",
+      "graphql_public",
+      "public",
+      "realtime",
+      "storage",
+      "supabase_migrations",
+      "vault"
+    ],
+    "default_acl": [
+      {
+        "acl": "{postgres=rwU/supabase_admin,anon=rwU/supabase_admin,authenticated=rwU/supabase_admin,service_role=rwU/supabase_admin}",
+        "role": "supabase_admin",
+        "type": "S",
+        "schema": "public"
+      },
+      {
+        "acl": "{postgres=arwdDxtm/supabase_admin,anon=arwdDxtm/supabase_admin,authenticated=arwdDxtm/supabase_admin,service_role=arwdDxtm/supabase_admin}",
+        "role": "supabase_admin",
+        "type": "r",
+        "schema": "public"
+      },
+      {
+        "acl": "{postgres=X/supabase_admin,anon=X/supabase_admin,authenticated=X/supabase_admin,service_role=X/supabase_admin}",
+        "role": "supabase_admin",
+        "type": "f",
+        "schema": "public"
+      },
+      {
+        "acl": "{postgres=arwdDxtm/postgres,anon=arwdDxtm/postgres,authenticated=arwdDxtm/postgres,service_role=arwdDxtm/postgres}",
+        "role": "postgres",
+        "type": "r",
+        "schema": "storage"
+      },
+      {
+        "acl": "{postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+        "role": "postgres",
+        "type": "f",
+        "schema": "storage"
+      },
+      {
+        "acl": "{postgres=rwU/postgres,anon=rwU/postgres,authenticated=rwU/postgres,service_role=rwU/postgres}",
+        "role": "postgres",
+        "type": "S",
+        "schema": "storage"
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "role": "postgres",
+        "type": "f",
+        "schema": null
+      },
+      {
+        "acl": "{postgres=arwdDxtm/postgres}",
+        "role": "postgres",
+        "type": "r",
+        "schema": "public"
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "role": "postgres",
+        "type": "f",
+        "schema": "public"
+      },
+      {
+        "acl": "{postgres=rwU/postgres}",
+        "role": "postgres",
+        "type": "S",
+        "schema": "public"
+      }
+    ],
+    "event_triggers": [
+      {
+        "name": "issue_graphql_placeholder",
+        "event": "sql_drop",
+        "enabled": "O",
+        "function": "set_graphql_placeholder()"
+      },
+      {
+        "name": "pgrst_ddl_watch",
+        "event": "ddl_command_end",
+        "enabled": "O",
+        "function": "pgrst_ddl_watch()"
+      },
+      {
+        "name": "pgrst_drop_watch",
+        "event": "sql_drop",
+        "enabled": "O",
+        "function": "pgrst_drop_watch()"
+      },
+      {
+        "name": "issue_pg_cron_access",
+        "event": "ddl_command_end",
+        "enabled": "O",
+        "function": "grant_pg_cron_access()"
+      },
+      {
+        "name": "issue_pg_net_access",
+        "event": "ddl_command_end",
+        "enabled": "O",
+        "function": "grant_pg_net_access()"
+      },
+      {
+        "name": "issue_pg_graphql_access",
+        "event": "ddl_command_end",
+        "enabled": "O",
+        "function": "grant_pg_graphql_access()"
+      },
+      {
+        "name": "ensure_rls",
+        "event": "ddl_command_end",
+        "enabled": "O",
+        "function": "rls_auto_enable()"
+      }
+    ],
+    "configured_api_schemas": null
+  }
+]

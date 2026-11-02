@@ -1,0 +1,59 @@
+{
+  "audit_date_local": "2026-10-31",
+  "timezone": "America/Fortaleza",
+  "evidence_recorded_utc": "2026-11-01T00:11:26.852929+00:00",
+  "project_ref": "rishenjoikgmfubmnfiu",
+  "project_url": "https://rishenjoikgmfubmnfiu.supabase.co",
+  "connection": "Codex local MCP supabase; OAuth authenticated; project scoped",
+  "repository_commit": "bd35288404c493d1b03f7a1a0208f808cc2079a2",
+  "origin_main_reconfirmed": true,
+  "postgres_version": "17.11",
+  "all_custom_sql_read_only": true,
+  "data_mutations": false,
+  "user_content_read": false,
+  "schemas_reviewed": [
+    "public",
+    "app_private",
+    "storage",
+    "auth metadata only (users triggers; sessions schema/ACL)",
+    "cron metadata only"
+  ],
+  "application_tables": 67,
+  "application_tables_rls_enabled": 67,
+  "routines": 357,
+  "policies_application_storage": 33,
+  "constraints_application": 408,
+  "indexes_application": 191,
+  "triggers_application_auth": 98,
+  "migrations_repository": 27,
+  "migrations_ledger": 5,
+  "release_catalog": {
+    "ok": false,
+    "checks": 2512,
+    "version": 1,
+    "deviations": [
+      {
+        "check": "onboarding_function",
+        "object": "public.onboarding_call(uuid,uuid,text,jsonb)"
+      }
+    ]
+  },
+  "patch_matches_versioned_operation_crlf": true,
+  "private_buckets": 2,
+  "edge_functions": 0,
+  "dedicated_new_feature_scan_matches": 0,
+  "cron_jobs": 1,
+  "cron_onboarding_runs_24h": 96,
+  "cron_onboarding_successes_24h": 96,
+  "release_query_sha256": "19b5f158dfd2003fa89285df99f4ab2e0287ee411b07b9a6b0bc7e6fb82f6e9e",
+  "not_verified": [
+    "Full Supabase Auth/provider/SMTP configuration",
+    "effective Data API exposed schemas",
+    "backup/PITR and restoration",
+    "QA project",
+    "Vercel/GitHub scheduler execution",
+    "end-to-end user flows",
+    "runtime isolation tests with two users",
+    "origin/provenance of 22 unregistered migrations"
+  ]
+}

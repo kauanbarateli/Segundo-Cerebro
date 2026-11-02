@@ -6,9 +6,11 @@ vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 vi.mock("../../src/lib/auth/config", () => ({ readAuthConfiguration: mocks.config }));
 vi.mock("../../src/lib/auth/runtime", () => ({ requestAuthServices: mocks.services }));
 import { getAuthFormAvailability, getPasswordFormContext, readAuthState, requireFeature, requireMaster, requireUser } from "../../src/lib/auth/guards";
+import { LEGAL_DOCUMENTS } from "../../src/lib/legal/documents";
 const identity: AuthenticatedIdentity = { userId: "user-a", sessionId: "session-a", mustChangePassword: false, role: "user", entitlements: {} };
 beforeEach(() => { vi.resetAllMocks(); mocks.config.mockReturnValue({ mode: "supabase" }); mocks.identity.mockResolvedValue(identity); mocks.flow.mockReturnValue(null); mocks.services.mockResolvedValue({ gateway: { readIdentity: mocks.identity }, flows: { get: mocks.flow } }); });
 describe("guards keep authentication independent of UI visibility", () => {
+  it("keeps an existing authenticated session usable after the privacy policy changes", async () => { expect(LEGAL_DOCUMENTS.privacidade.version).toBe("0.5 · origem de cadastro"); expect(await requireUser()).toEqual(identity); expect(mocks.identity).toHaveBeenCalledOnce(); });
   it("demo reads no SDK and never supplies a fake authenticated user", async () => { mocks.config.mockReturnValue({ mode: "demo" }); expect(await readAuthState()).toEqual({ mode: "demo" }); await expect(requireUser()).rejects.toMatchObject({ code: "demo" }); expect(mocks.services).not.toHaveBeenCalled(); expect(await getAuthFormAvailability()).toBe(false); });
   it("bad real configuration is unavailable, without pretending demo identity", async () => { mocks.config.mockImplementation(() => { throw new Error("configuration"); }); expect(await getAuthFormAvailability()).toBe(false); await expect(readAuthState()).rejects.toThrow("configuration"); expect(mocks.services).not.toHaveBeenCalled(); });
   it("missing current identity redirects to sign in", async () => { mocks.identity.mockResolvedValue(null); await expect(requireUser()).rejects.toThrow("redirect:/entrar?notice=session-required"); });
