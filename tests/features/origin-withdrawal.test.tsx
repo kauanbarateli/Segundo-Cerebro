@@ -50,10 +50,10 @@ describe("retirada da origem pelo titular", () => {
     const after = app.render(); expect(text(after)).toContain("Não foi possível confirmar"); expect(text(after)).not.toContain("Consentimento retirado."); expect(text(after)).not.toContain("privado"); app.unmount();
   });
   it("resultado incerto não repete POST e exige consultar o estado antes de nova ação", async () => {
-    let reads = 0, writes = 0;
+    let writes = 0;
     const app = fixture(async (_path, init) => {
       if (init?.method === "POST") { writes++; throw new DOMException("timeout", "TimeoutError"); }
-      reads++; return active();
+      return active();
     });
     app.render(); await settle(); click(app.render(), "Retirar consentimento"); await settle();
     let tree = app.render(); expect(text(tree)).toContain("Não foi possível confirmar"); expect(writes).toBe(1);
