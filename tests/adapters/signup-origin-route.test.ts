@@ -29,4 +29,12 @@ describe("origem de cadastro privada", () => {
     fake.rpc.mockResolvedValue({ status: "absent", expiresAt: null, utm_source: "não deve sair" });
     expect((await GET(get())).status).toBe(503);
   });
+  it("recusa cada valor UTM no retorno de Configurações, inclusive se a origem estiver ativa", async () => {
+    for (const field of ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"]) {
+      fake.rpc.mockResolvedValueOnce({ status: "active", expiresAt: "2027-10-31T00:00:00Z", [field]: "valor-privado" });
+      const response = await GET(get());
+      expect(response.status, field).toBe(503);
+      expect(await response.text(), field).not.toContain("valor-privado");
+    }
+  });
 });
