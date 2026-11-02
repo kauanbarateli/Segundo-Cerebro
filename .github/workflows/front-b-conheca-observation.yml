@@ -1,0 +1,47 @@
+name: Repetição focalizada da landing
+
+on:
+  push:
+    branches:
+      - codex/front-b-diagnosticos-ci
+    paths:
+      - .github/workflows/front-b-conheca-observation.yml
+
+permissions:
+  contents: read
+
+jobs:
+  landing:
+    if: github.repository == 'kauanbarateli/Segundo-Cerebro'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:bc6ab0d6d44ff4826e4cb8c1e6d801e185bfc42bb0753f8e2a30efc70db054c7
+      options: --ipc=host
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version-file: .nvmrc
+      - name: Conferir commit e dependências
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          npm ci
+          PLAYWRIGHT_BROWSERS_PATH=/ms-playwright node scripts/verification/check-ci-browser-runtime.mjs
+      - name: Gerar aplicação em demonstração
+        run: |
+          env -i PATH="$PATH" HOME="$RUNNER_TEMP" LANG=C.UTF-8 LC_ALL=C.UTF-8 TZ=UTC CI=true APP_MODE=demo NEXT_TELEMETRY_DISABLED=1 PLAYWRIGHT_BROWSERS_PATH=/ms-playwright npm run build
+      - name: Repetir testes existentes da landing
+        run: |
+          env -i PATH="$PATH" HOME="$RUNNER_TEMP" LANG=C.UTF-8 LC_ALL=C.UTF-8 TZ=UTC CI=true APP_MODE=demo NEXT_TELEMETRY_DISABLED=1 PLAYWRIGHT_BROWSERS_PATH=/ms-playwright node node_modules/playwright/cli.js test tests/e2e/conheca.spec.ts --workers=2 --retries=0
+      - name: Guardar evidências demo em caso de falha
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: landing-focused-evidence
+          path: test-results
+          retention-days: 3
+          if-no-files-found: warn

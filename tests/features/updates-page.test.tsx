@@ -2,14 +2,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
 const guards = vi.hoisted(() => ({ requireUser: vi.fn() }));
+const capabilities = vi.hoisted(() => ({ frontB: vi.fn() }));
 vi.mock("@/lib/auth/guards", () => ({ requireUser: guards.requireUser }));
+vi.mock("@/lib/auth/config", () => ({ readAuthConfiguration: () => ({ mode: "supabase" }) }));
+vi.mock("@/lib/access/front-b-capabilities-server", () => ({ frontBCapabilities: capabilities.frontB }));
 import UpdatesPage from "../../src/app/(workspace)/atualizacoes/page";
 import { UpdatesBoard } from "../../src/components/features/atualizacoes/updates-board";
 import { updateEvidenceHref, validateUpdateEntries, type UpdateItem } from "../../src/components/features/atualizacoes/content";
 import { readFileSync } from "node:fs";
 
 describe("atualizações autenticadas", () => {
-  beforeEach(() => { guards.requireUser.mockReset(); });
+  beforeEach(() => { guards.requireUser.mockReset(); capabilities.frontB.mockReturnValue({ schema: false, feedback: false }); });
 
   it("recusa a página quando a sessão é recusada", async () => {
     guards.requireUser.mockRejectedValue(new Error("redirect:/entrar"));
@@ -38,6 +41,14 @@ describe("atualizações autenticadas", () => {
     expect(css).toContain(".field.updates-filter--ready");
     expect(css).toContain(".field.updates-filter--ready:focus-within");
     expect(css).not.toMatch(/(?:^|})\s*\.updates-column\[data-active="false"\]\s*\{\s*display:\s*none/m);
+  });
+
+  it("oferece sugestões apenas quando o feedback está disponível", async () => {
+    guards.requireUser.mockResolvedValue({ userId: "test-user" });
+    capabilities.frontB.mockReturnValue({ schema: true, feedback: true });
+    const html = renderToStaticMarkup(await UpdatesPage());
+    expect(html).toContain('href="/feedback"');
+    expect(html).toContain("Enviar sugestão");
   });
 
   it("liga entregas lançadas à evidência segura", () => {

@@ -1,0 +1,43 @@
+# DRAFT ONLY: no workflow installed or executed. Review pins before integration.
+name: Frente B — observação de concorrência PG17
+on:
+  push:
+    branches:
+      - codex/front-b-135-pg17-races
+    paths:
+      - .github/workflows/front-b-135-pg17-races.yml
+      - .nvmrc
+      - scripts/verification/front-b-135-pg17/**
+      - scripts/verification/front-b-signup-reservation-draft/candidate-reservation.sql.txt
+      - scripts/verification/auth-local-ci.mjs
+      - tests/e2e-auth-local/identity-data-api-contract.mjs
+      - tests/e2e-auth-local/capture-task-persistence-contract.mjs
+      - tests/e2e-auth-local/qualified-chromium.mjs
+      - tests/e2e-auth-local/browser-process-environment.mjs
+      - tests/e2e-auth-local/auth-local-lifecycle-contract.mjs
+      - tests/helpers/canonical-release-source.mjs
+      - tests/helpers/canonical-front-b-source.mjs
+permissions:
+  contents: read
+jobs:
+  race:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version-file: .nvmrc
+      - name: Verificar commit
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Contratos puros
+        run: node --test scripts/verification/front-b-135-pg17/{runner,session,race,qualify,cleanup,offline-contract}.test.mjs
+      - name: Observação PG17 isolada
+        run: |
+          node_runtime="$(command -v node)"
+          case "$node_runtime" in /opt/hostedtoolcache/node/24.*/*/bin/node) ;; *) exit 1 ;; esac
+          "$node_runtime" -e "if (!process.versions.node.startsWith('24.')) process.exit(1)"
+          env -i PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" LANG=C.UTF-8 LC_ALL=C.UTF-8 TZ=UTC CI=true GITHUB_ACTIONS=true GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" GITHUB_REF="$GITHUB_REF" RUNNER_TEMP="$RUNNER_TEMP" GITHUB_SHA="$GITHUB_SHA" SC_FRONT_B_PG17_RACE=1 "$node_runtime" scripts/verification/front-b-135-pg17/runner.mjs --execute

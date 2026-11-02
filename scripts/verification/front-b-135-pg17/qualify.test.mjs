@@ -1,0 +1,6 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises';import {qualifySources} from './qualify.mjs';
+const f=await readFile(new URL('./fixture.sql',import.meta.url)),c=await readFile(new URL('./reservation.sql.txt',import.meta.url));
+const integrated=new URL('.',import.meta.url).pathname.endsWith('/scripts/verification/front-b-135-pg17/');
+const original=await readFile(integrated?new URL('../front-b-signup-reservation-draft/candidate-reservation.sql.txt',import.meta.url):new URL('../Segundo-Cerebro/scripts/verification/front-b-signup-reservation-draft/candidate-reservation.sql.txt',import.meta.url));
+test('corrected candidate equals the explicit derivation of pinned original; guards stay in files',()=>{const q=qualifySources(f,c,original);assert.match(c.toString(),/UNREVIEWED SCRATCH SQL: DO NOT APPLY/);assert.match(original.toString(),/UNREVIEWED SCRATCH SQL: DO NOT APPLY/);assert.doesNotMatch(q.candidate.toString(),/UNREVIEWED SCRATCH SQL: DO NOT APPLY/);assert.notEqual(q.candidate,c);});
+test('any fixture, original or corrected-candidate drift is refused',()=>{for(const [a,b,o] of [[Buffer.concat([f,Buffer.from('x')]),c,original],[f,Buffer.concat([c,Buffer.from('x')]),original],[f,c,Buffer.concat([original,Buffer.from('x')])]])assert.throws(()=>qualifySources(a,b,o),{message:'SOURCE_REFUSED'});});

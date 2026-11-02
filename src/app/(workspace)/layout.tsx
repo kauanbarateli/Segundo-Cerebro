@@ -8,6 +8,8 @@ import { resolveStorageOrigin } from "@/lib/files/storage-origin-server";
 import type { StorageOrigin } from "@/lib/files/storage-origin";
 import { requireUser } from "@/lib/auth/guards";
 import type { AccessPolicy } from "@/core/access/resolve-access";
+import { resolveAccess } from "@/core/access/resolve-access";
+import { frontBCapabilities } from "@/lib/access/front-b-capabilities-server";
 import { settingsPreferences } from "@/core/configuracoes";
 import { accountPresentation } from "@/adapters/db/account-presentation";
 
@@ -30,5 +32,8 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
     avatarId = account?.user_id === identity.userId ? account.profile.avatar_file_id : null;
     displayName = account?.user_id === identity.userId ? account.profile.display_name : null;
   }
-  return <DemoAccessProvider serverPolicy={serverPolicy}><DemoApplicationProvider serverUserId={serverUserId} accountValuesHidden={valuesHidden} storageOrigin={storageOrigin}><WorkspaceShell avatarId={avatarId} displayName={displayName} destinations={{ ...readOptionalDestinations(), updates: config.mode === "supabase" }}>{children}</WorkspaceShell></DemoApplicationProvider></DemoAccessProvider>;
+  const capabilities=frontBCapabilities();
+  const destinations=config.mode==='supabase' ? {feedback:capabilities.feedback,updates:capabilities.updates} : readOptionalDestinations();
+  const metricsAvailable=!!serverPolicy && capabilities.schema && resolveAccess('admin',serverPolicy).allowed;
+  return <DemoAccessProvider serverPolicy={serverPolicy}><DemoApplicationProvider serverUserId={serverUserId} accountValuesHidden={valuesHidden} storageOrigin={storageOrigin}><WorkspaceShell avatarId={avatarId} displayName={displayName} destinations={destinations} metricsAvailable={metricsAvailable}>{children}</WorkspaceShell></DemoApplicationProvider></DemoAccessProvider>;
 }

@@ -20,10 +20,11 @@ import { OwnSessionsSection } from "./own-sessions-section";
 import { createOwnSessionsReader } from "./own-sessions-reader";
 import { SettingsLegalSection } from "./settings-legal-section";
 import { SettingsFocusSection } from "./settings-focus-section";
+import { SignupOriginSetting } from "./signup-origin-setting";
 import { reconcilePreferenceDraft } from "./preference-draft";
 import "./settings.css";
 
-export function SettingsConnectedWorkspace() {
+export function SettingsConnectedWorkspace({originAvailable=false}:{originAvailable?:boolean}) {
   const router = useRouter();
   const app = useDemoApplication(), { policy, applyAccountPreferences } = useDemoAccess(), theme = useTheme();
   const readSessions = useMemo(() => createOwnSessionsReader(app.userId), [app.userId]);
@@ -115,6 +116,7 @@ export function SettingsConnectedWorkspace() {
       <Button variant="primary" loading={saving} onClick={() => void save("settings.modules.update", { modules })}>Salvar módulos</Button>
     </Collapsible></section>
     <OwnSessionsSection scopeKey={app.userId} read={readSessions} />
+    {originAvailable && <div className="settings-panel"><SignupOriginSetting key={app.userId} userId={app.userId} /></div>}
     <SettingsLegalSection />
   </div>;
 }

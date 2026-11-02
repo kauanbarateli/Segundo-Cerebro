@@ -213,6 +213,7 @@ export const CURRENT27_EXPECTED_SOURCES=Object.freeze([
   "tests/e2e-auth-local/identity-data-api-contract.mjs",
   "tests/e2e-auth-local/qualified-chromium.mjs",
   "tests/fixtures/supabase-auth-local/config.toml",
+  "tests/helpers/canonical-front-b-source.mjs",
   "tests/helpers/canonical-release-source.d.mts",
   "tests/helpers/canonical-release-source.mjs",
   "tests/scripts/finance-goals-current27-insufficiency-ci.test.mjs",
@@ -238,7 +239,7 @@ export async function current27SourceClosure(root,seeds=CURRENT27_RESOURCE_SEEDS
   const imported=await import("typescript"),ts=imported.default??imported,seen=new Set();
   async function visit(path) {
     if(seen.has(path))return;need(validPath(path)&&!path.startsWith("node_modules/")&&seen.size<512);
-    const bytes=await current27Canonical(root,path);seen.add(path);
+    const bytes=await current27Canonical(root,path);if(path==="tests/helpers/canonical-front-b-source.mjs")need(bytes.length===6638&&createHash("sha256").update(bytes).digest("hex")==="fcdbeb291832d3025d3551d42e47fb8b20ecbf1b7fe294990b6be25d41202040","SOURCE_REFUSED");seen.add(path);
     if(!/\.(?:[cm]?ts|tsx|mjs)$/.test(path)||path.endsWith(".d.mts"))return;
     const refs=current27References(ts,path,bytes.toString("utf8"));
     for(const ref of refs){

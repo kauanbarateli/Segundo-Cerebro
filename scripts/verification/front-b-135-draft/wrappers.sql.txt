@@ -1,0 +1,40 @@
+-- UNREVIEWED SCRATCH. NEVER APPLY. Depends on guarded reservation and transactional drafts.
+BEGIN;
+DO $scratch_guard$ BEGIN RAISE EXCEPTION 'UNREVIEWED SCRATCH SQL: DO NOT APPLY'; END $scratch_guard$;
+
+CREATE FUNCTION public.signup_fence_reserve(p_user uuid,p_session uuid,p_intent uuid,p_subject_hash text,p_request uuid,p_terms text,p_privacy text,p_accept_origin boolean,p_origin_version text) RETURNS jsonb
+LANGUAGE sql SECURITY DEFINER SET search_path='' AS $$ SELECT app_private.draft_reserve_completion(p_user,p_session,p_intent,p_subject_hash,p_request,p_terms,p_privacy,p_accept_origin,p_origin_version) $$;
+REVOKE ALL ON FUNCTION public.signup_fence_reserve(uuid,uuid,uuid,text,uuid,text,text,boolean,text) FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION public.signup_fence_reserve(uuid,uuid,uuid,text,uuid,text,text,boolean,text) TO service_role;
+
+CREATE FUNCTION public.signup_fence_start(p_user uuid,p_session uuid,p_intent uuid,p_subject_hash text,p_request uuid,p_generation uuid) RETURNS boolean
+LANGUAGE sql SECURITY DEFINER SET search_path='' AS $$ SELECT app_private.draft_start_completion(p_user,p_session,p_intent,p_subject_hash,p_request,p_generation) $$;
+REVOKE ALL ON FUNCTION public.signup_fence_start(uuid,uuid,uuid,text,uuid,uuid) FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION public.signup_fence_start(uuid,uuid,uuid,text,uuid,uuid) TO service_role;
+
+CREATE FUNCTION public.signup_fence_uncertain(p_user uuid,p_session uuid,p_intent uuid,p_subject_hash text,p_request uuid,p_generation uuid) RETURNS boolean
+LANGUAGE sql SECURITY DEFINER SET search_path='' AS $$ SELECT app_private.draft_mark_uncertain(p_user,p_session,p_intent,p_subject_hash,p_request,p_generation) $$;
+REVOKE ALL ON FUNCTION public.signup_fence_uncertain(uuid,uuid,uuid,text,uuid,uuid) FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION public.signup_fence_uncertain(uuid,uuid,uuid,text,uuid,uuid) TO service_role;
+
+CREATE FUNCTION public.signup_fence_ack(p_user uuid,p_session uuid,p_intent uuid,p_subject_hash text,p_request uuid,p_generation uuid) RETURNS boolean
+LANGUAGE sql SECURITY DEFINER SET search_path='' AS $$ SELECT app_private.draft_ack_with_proof(p_user,p_session,p_intent,p_subject_hash,p_request,p_generation) $$;
+REVOKE ALL ON FUNCTION public.signup_fence_ack(uuid,uuid,uuid,text,uuid,uuid) FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION public.signup_fence_ack(uuid,uuid,uuid,text,uuid,uuid) TO service_role;
+
+CREATE FUNCTION public.signup_fence_finish(p_user uuid,p_session uuid,p_intent uuid,p_subject_hash text,p_request uuid,p_generation uuid,p_current_terms text,p_current_privacy text,p_current_origin text) RETURNS boolean
+LANGUAGE sql SECURITY DEFINER SET search_path='' AS $$ SELECT app_private.draft_finish_fenced(p_user,p_session,p_intent,p_subject_hash,p_request,p_generation,p_current_terms,p_current_privacy,p_current_origin) $$;
+REVOKE ALL ON FUNCTION public.signup_fence_finish(uuid,uuid,uuid,text,uuid,uuid,text,text,text) FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION public.signup_fence_finish(uuid,uuid,uuid,text,uuid,uuid,text,text,text) TO service_role;
+
+CREATE FUNCTION public.signup_fence_confirm(p_user uuid,p_session uuid,p_intent uuid) RETURNS boolean
+LANGUAGE sql SECURITY DEFINER SET search_path='' AS $$ SELECT app_private.draft_confirm_complete(p_user,p_session,p_intent) $$;
+REVOKE ALL ON FUNCTION public.signup_fence_confirm(uuid,uuid,uuid) FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION public.signup_fence_confirm(uuid,uuid,uuid) TO service_role;
+
+CREATE FUNCTION public.signup_fence_withdraw(p_user uuid,p_session uuid) RETURNS jsonb
+LANGUAGE sql SECURITY DEFINER SET search_path='' AS $$ SELECT app_private.draft_withdraw_current(p_user,p_session) $$;
+REVOKE ALL ON FUNCTION public.signup_fence_withdraw(uuid,uuid) FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION public.signup_fence_withdraw(uuid,uuid) TO service_role;
+
+COMMIT;

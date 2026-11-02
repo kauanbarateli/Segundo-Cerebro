@@ -1,0 +1,79 @@
+-- RASCUNHO DE CONTRATO / NÃO EXECUTÁVEL: todas as linhas são comentários.
+-- Nenhuma migration, objeto, grant ou política é criada por este arquivo.
+-- Os nomes são propostos e devem ser reconciliados com o esquema real.
+--
+-- CREATE TABLE app_private.signup_completion_fences (
+--   user_id uuid PRIMARY KEY,
+--   intent_id uuid NOT NULL UNIQUE,
+--   owner_session_id uuid NOT NULL,
+--   request_id uuid NOT NULL,
+--   generation uuid NOT NULL,
+--   terms_version text NOT NULL,
+--   privacy_version text NOT NULL,
+--   origin_accepted boolean NOT NULL,
+--   origin_consent_version text,
+--   origin_withdrawn boolean NOT NULL DEFAULT false,
+--   state text NOT NULL CHECK (state IN (
+--     'reserved', 'auth_in_flight', 'uncertain',
+--     'password_acknowledged', 'complete'
+--   )),
+--   created_at timestamptz NOT NULL DEFAULT pg_catalog.now(),
+--   updated_at timestamptz NOT NULL DEFAULT pg_catalog.now()
+-- );
+-- Exigir versões legais não vazias e origem aceita somente com versão válida;
+-- não salvar nenhuma UTM nesta tabela. Snapshot legal e decisão inicial são
+-- imutáveis. origin_withdrawn é monotônico (false -> true) e prevalece sobre
+-- o aceite anterior, com descarte de origem sob o mesmo lock por usuário.
+-- ALTER TABLE app_private.signup_completion_fences ENABLE ROW LEVEL SECURITY;
+-- REVOKE ALL ON app_private.signup_completion_fences FROM PUBLIC, anon, authenticated;
+--
+-- A ausência deliberada de FKs neste esboço NÃO aprova falta de integridade:
+-- escolher FKs, exclusão e tombstones após rever o ciclo real de exclusão.
+-- Em particular, não permitir cascata de sessão/intenção que elimine uma
+-- reserva enquanto uma chamada externa possa produzir efeito.
+--
+-- RPC reserve: transação com autorização privilegiada, revalidação de usuário,
+-- sessão, intenção, configuração, consentimento e moderação. Adquirir locks
+-- na ordem consistente definida pelo projeto, incluindo lock por usuário e
+-- intenção FOR UPDATE. Verificar identidade por evidência confiável do servidor.
+-- Depois do lock, criar apenas se ainda não existe reserva:
+--
+-- INSERT INTO app_private.signup_completion_fences
+--   (user_id, intent_id, owner_session_id, request_id, generation, state,
+--    terms_version, privacy_version, origin_accepted, origin_consent_version)
+-- VALUES (v_user_id, v_intent_id, v_session_id, v_request_id,
+--         v_generation_gerada_no_servidor, 'reserved', v_terms, v_privacy,
+--         v_aceite_efetivo, v_versao_origem_ou_null)
+-- ON CONFLICT DO NOTHING
+-- RETURNING request_id, generation;
+--
+-- Uma linha retornada significa adquirida; zero significa bloqueada. O resultado
+-- só é usado após confirmação do COMMIT. Uma exceção ou resposta perdida não
+-- permite presumir que não houve commit, nem lançar chamada externa.
+--
+-- RPC mark_auth_starting: uma transição condicional atômica e commit confirmado.
+-- Os vínculos a seguir são validados novamente dentro da mesma transação.
+-- UPDATE app_private.signup_completion_fences
+-- SET state = 'auth_in_flight', updated_at = pg_catalog.now()
+-- WHERE user_id = v_user_id AND intent_id = v_intent_id
+--   AND owner_session_id = v_session_id AND request_id = v_request_id
+--   AND generation = v_generation AND state = 'reserved'
+-- RETURNING generation;
+-- Apenas a transição efetiva confirmada autoriza UMA chamada de Auth; a RPC
+-- não devolve autorização novamente se chamada quando já está em voo.
+--
+-- mark_uncertain: somente transição condicional da mesma geração em voo;
+-- caso falhe, a linha em auth_in_flight já continua impedindo nova chamada.
+-- acknowledge: somente mesma geração em voo com resposta e identidade
+-- verificadas. finish: somente geração reconhecida, admitindo e marcando
+-- complete na mesma transação. Nunca repetir Auth a partir desses estados.
+--
+-- Proteger todas as funções de escrita: SECURITY DEFINER somente se necessário,
+-- search_path fixo e seguro, nomes qualificados, REVOKE EXECUTE de PUBLIC,
+-- anon e authenticated; conceder apenas ao executor servidor explicitamente
+-- autorizado. Revisar RLS e service_role na configuração real; testes de
+-- isolamento devem verificar acesso direto, indireto e funções antigas.
+--
+-- Não implementar desbloqueio automático ou TTL. Uma recuperação separada
+-- exige prova de encerramento sem efeitos tardios ou fencing/idempotência
+-- comprovados do provedor, auditoria e validação; sem prova manter bloqueio.

@@ -1,0 +1,55 @@
+-- DRAFT ONLY. Depends on the reviewed admission/origin candidate; not a migration.
+begin;
+create function public.signup_metrics(p_actor uuid,p_session uuid,p_start date,p_end date,p_zone text,p_bucket text)
+returns jsonb language plpgsql security definer set search_path='' as $$
+declare result jsonb;
+begin
+ perform app_private.admin_require_master(p_actor,p_session);
+ if p_start is null or p_end is null or p_end<p_start or p_end-p_start>365
+   or p_zone not in ('America/Fortaleza','UTC') or p_zone is null
+   or p_bucket not in ('day','week','month') or p_bucket is null then
+  raise exception 'Invalid reporting period.' using errcode='22023';
+ end if;
+ with population as materialized (
+  select a.admitted_at, case when o.expires_at>now() then o.origin else null end as origin
+  from app_private.user_admission a
+  left join app_private.signup_origins o on o.user_id=a.user_id
+  where a.state='admitted' and a.origin='public'
+   and a.admitted_at >= (p_start::timestamp at time zone p_zone)
+   and a.admitted_at < ((p_end+1)::timestamp at time zone p_zone)
+ ), totals as (select count(*)::int as n from population),
+ counts as (
+  select date_trunc(p_bucket, admitted_at at time zone p_zone)::date as period, count(*)::int as n
+  from population group by 1
+ ), periods as (
+  select generate_series(date_trunc(p_bucket,p_start::timestamp),date_trunc(p_bucket,p_end::timestamp),
+   case p_bucket when 'day' then interval '1 day' when 'week' then interval '1 week' else interval '1 month' end)::date as period
+ ), dimensions(name) as (values ('utm_source'),('utm_medium'),('utm_campaign'),('utm_term'),('utm_content')),
+ grouped as (
+  select d.name, p.origin->>d.name as value, count(*)::int as n
+  from dimensions d cross join population p group by d.name,p.origin->>d.name
+ ), ranked as (
+  select *, row_number() over(partition by name order by n desc,value asc nulls last) as ranking from grouped
+ ), normalized as (
+  select name,case when n<5 or ranking>100 then 'other' when value is null then 'not-informed' else 'value' end as kind,
+   case when n<5 or ranking>100 then null else value end as value,n from ranked
+ ), merged as (select name,kind,value,sum(n)::int as n from normalized group by name,kind,value),
+ distributions as (
+  select d.name,coalesce(jsonb_agg(jsonb_build_object('kind',m.kind,'value',m.value,'count',m.n)
+   order by m.n desc,m.kind,m.value) filter(where m.kind is not null),'[]'::jsonb) as entries
+  from dimensions d left join merged m on m.name=d.name group by d.name
+ )
+ select jsonb_build_object('totalPublic',t.n,'start',p_start,'end',p_end,'zone',p_zone,'bucket',p_bucket,
+  'series',(select coalesce(jsonb_agg(jsonb_build_object('period',p.period,'count',coalesce(c.n,0)) order by p.period),'[]'::jsonb) from periods p left join counts c using(period)),
+  'distributions',(select jsonb_object_agg(name,entries) from distributions),
+  'stock',(select jsonb_build_object('total',count(*)::int,'legacy',count(*) filter(where a.origin='legacy')::int,
+   'admin',count(*) filter(where a.origin='admin')::int,'public',count(*) filter(where a.origin='public')::int,
+   'unclassified',count(*) filter(where a.origin is null or a.origin='unclassified')::int)
+   from public.profiles p join auth.users u on u.id=p.user_id and u.deleted_at is null and not u.is_anonymous
+   left join app_private.user_admission a on a.user_id=p.user_id and a.state='admitted'))
+ into result from totals t;
+ return result;
+end $$;
+revoke all on function public.signup_metrics(uuid,uuid,date,date,text,text) from public,anon,authenticated,service_role;
+grant execute on function public.signup_metrics(uuid,uuid,date,date,text,text) to service_role;
+commit;
