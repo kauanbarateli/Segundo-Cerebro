@@ -25,6 +25,15 @@ function namedInputs(html: string) {
 describe("estados renderizados dos formulários de autenticação", () => {
   beforeEach(() => { actionResult.state = { status: "idle" }; actionResult.pending = false; });
 
+  it("mostra criação de conta apenas quando a capacidade do servidor está disponível", () => {
+    const closed=render({kind:"sign-in",available:true});
+    expect(closed).toContain("O cadastro é fechado");
+    const open=render({kind:"sign-in",available:true,signupAvailable:true});
+    expect(open).toContain('href="/criar-conta"');
+    expect(open).toContain("Criar conta gratuita");
+    expect(open).not.toContain("O cadastro é fechado");
+  });
+
   it.each(["change", "reset"] as const)("retoma %s pelo contexto do servidor sem pedir outra senha", (kind) => {
     const html = render({ kind, available: true, completionPending: true, requiresCurrentPassword: true });
     expect(html).toContain("Concluir proteção da conta");
@@ -97,11 +106,16 @@ describe("estados renderizados dos formulários de autenticação", () => {
     expect(checkbox).toContain('name="legalAcknowledgement"');
     expect(checkbox).toMatch(/\brequired(?:=|\s|>)/);
     expect(checkbox).not.toMatch(/\bchecked(?:=|\s|>)/);
-    expect(html).toContain("Li os Termos de Serviço e a Política de Privacidade.");
-    for (const href of ["/termos-de-servico", "/privacidade"]) {
-      const link = [...html.matchAll(/<a\b[^>]*>/g)].find(([anchor]) => anchor.includes(`href="${href}"`))?.[0];
+    const label = html.match(/<label\b[^>]*auth-legal-check[^>]*>[\s\S]*?<\/label>/)?.[0] ?? "";
+    expect(label.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim()).toBe("Li os Termos de Serviço e a Política de Privacidade.");
+    // Os dois links ficam no texto da própria caixa e abrem em outra aba, preservando o formulário.
+    for (const [href, text] of [["/termos-de-servico", "Termos de Serviço"], ["/privacidade", "Política de Privacidade"]] as const) {
+      const link = [...label.matchAll(/<a\b[^>]*>[^<]*<\/a>/g)].map(([anchor]) => anchor).find(anchor => anchor.includes(`href="${href}"`));
+      expect(link).toBeDefined();
       expect(link).toContain('target="_blank"');
       expect(link).toContain('rel="noopener noreferrer"');
+      expect(link).toContain(`>${text}</a>`);
+      expect(link).not.toContain("aria-label");
     }
     expect(html).not.toMatch(/consentimento|marketing/i);
   });

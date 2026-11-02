@@ -5,7 +5,7 @@ export default defineConfig({
   resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
   oxc: { jsx: { runtime: "automatic" } },
   test: {
-    include: ["tests/**/*.test.{ts,tsx}"],
+    include: ["tests/**/*.test.{ts,tsx}", "tests/front-b-135/*.test.mjs"],
     testTimeout: 30_000,
   },
 });

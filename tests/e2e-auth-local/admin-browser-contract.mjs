@@ -81,7 +81,9 @@ export const ADMIN_BROWSER_GOALS_SOURCE_PATHS = Object.freeze([
 // projections) and adds document-reader, vault-secret-field, preference-draft
 // and task-refusal, then the single RichLink document-link schema. The Drive route, server/schema sources,18 explicit extras,
 // binary control and61 dependency bindings remain; no range or fallback.
-export const ADMIN_BROWSER_SOURCE_COUNTS = Object.freeze({git:543,dependencies:61});
+// The reviewed historical reader adds one transitive Source, not an extra capability.
+export const ADMIN_BROWSER_SOURCE_COUNTS = Object.freeze({git:556,dependencies:61});
+export const ADMIN_BROWSER_HISTORICAL_READER_SOURCE = Object.freeze({path:"tests/helpers/canonical-front-b-source.mjs",bytes:6638,sha256:"fcdbeb291832d3025d3551d42e47fb8b20ecbf1b7fe294990b6be25d41202040"});
 export const ADMIN_BROWSER_STAGES = Object.freeze({
   BLOCK_LIVE_BROWSER: Object.freeze(["fixtures", "browser-bound", "master-bound", "own-sessions-bound", "admin-fence", "admin-terminal", "live-sessions-denied", "actor-intact", "cleanup-inventory", "cleanup-revoked", "cleanup-retained", "contexts-closed"]),
   FIRST_FORCED_BROWSER: Object.freeze(["fixtures", "browser-bound", "master-bound", "admin-fence", "created-fence", "admin-terminal", "forced-login", "pages-denied", "apis-denied", "password-terminal", "credentials-changed", "own-sessions-bound", "actor-intact", "cleanup-inventory", "cleanup-revoked", "cleanup-retained", "contexts-closed"]),
@@ -202,6 +204,7 @@ export function validateAdminBrowserCiReport(input) {
   for (const [i,rows] of [v.sourceHashes, v.dependencyHashes].entries()) {
     if (!Array.isArray(rows) || rows.length !== (sourcesAbsent?0:i===0?ADMIN_BROWSER_SOURCE_COUNTS.git:ADMIN_BROWSER_SOURCE_COUNTS.dependencies) || new Set(rows.map(r => r.path)).size !== rows.length || rows.some(r => !exact(r, ["path", "sha256", "bytes"]) || !/^[A-Za-z0-9_@()./-]+$/.test(r.path) || r.path.includes("..") || r.path.startsWith("/") || r.path.startsWith("node_modules/")!==(i===1) || !/^[a-f0-9]{64}$/.test(r.sha256) || !integer(r.bytes, 16777216) || (r.path==="node_modules/server-only/empty.js"?r.bytes!==0||r.sha256!=="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855":r.bytes===0))) fail();
   }
+  if(!sourcesAbsent){const pin=ADMIN_BROWSER_HISTORICAL_READER_SOURCE,row=v.sourceHashes.find(item=>item.path===pin.path);if(!row||row.bytes!==pin.bytes||row.sha256!==pin.sha256)fail();}
   for (let i = 0; i < 2; i++) {
     const e = v.cases[i];
     const entryKeys = ["case", "report", "infrastructure", "migrationsApplied", "catalogueChecks", "nextStopSignal"];

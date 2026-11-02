@@ -32,10 +32,13 @@ describe("conteúdo da apresentação /conheca", () => {
     for (const proibido of [/\bDrive\b/, /intelig[eê]ncia artificial/i, /\bIA\b/, /\bpre[çc]os?\b/i, /\bassinatura\b/i, /\bcheckout\b/i, /\bdesconto\b/i, /\bgr[aá]tis\b/i, /\bgarantia\b/i, /\bcupom\b/i, /\bofflines?\b/i]) {
       expect(publicado, String(proibido)).not.toMatch(proibido);
     }
-    expect(conteudo).toContain('tipo: "aviso"');
-    expect(conteudo).toContain("O acesso ainda não está aberto ao público.");
-    expect(pagina).toContain('href="/entrar" prefetch={false}');
+    // Cadastro fechado por padrão: o acesso é Entrar; Criar conta só chega pelo contrato do servidor.
+    expect(conteudo).toContain("export function acessoPara(cadastroAberto: boolean)");
+    expect(conteudo).toContain("A criação de novas contas ainda não está aberta");
+    expect(pagina).toContain("cadastroAberto = false");
     expect(pagina).toContain("<LegalLinks />");
+    expect(pagina).not.toContain("ThemeSelector");
+    expect(pagina).not.toContain("/configuracoes");
   });
 
   it("apresenta somente Captura, Agenda e Projetos com âncoras únicas e prévia Kanban", () => {
@@ -45,10 +48,9 @@ describe("conteúdo da apresentação /conheca", () => {
     expect(pagina).toContain('<ProjectPreview');
     expect(pagina).toContain('kanban={<ProductShot tela={previaKanban}');
     expect(pagina).not.toMatch(/id="(?:dispersao|conexoes)"/);
-    expect(conteudo).toContain("Cofre cifrado no navegador");
-    expect(conteudo).toContain("Painel administrativo sem conteúdo");
-    expect(conteudo).toContain("Agenda somente leitura");
-    expect(conteudo).toContain("financeiro e Cofre no mesmo espaço pessoal");
+    expect(conteudo).not.toContain("principios");
+    expect(pagina).not.toContain('id="principios"');
+    expect(conteudo).toContain("somente leitura");
   });
 
   it("mantém indexação fechada, demonstração declarada e hero prioritária", () => {

@@ -1,0 +1,51 @@
+-- INERT proposal, not a migration or deployment hook. QA only after independent
+-- project identity and separate authorization; same SQL is NOT production approval.
+-- Work with a reviewed execution copy, never this guarded versioned source.
+begin;
+do $draft_only$ begin raise exception 'DRAFT_ONLY: separately review destination and operation.'; end $draft_only$;
+do $toggle$
+declare
+ desired_active boolean:=null; -- choose true for activation, false for rollback; null refuses
+ target_id bigint;
+ reviewed_prune boolean;
+ job_name constant text:='sc-signup-origin-retention-v1';
+ job_schedule constant text:='*/5 * * * *';
+ job_command constant text:='SET statement_timeout = ''20s''; SET lock_timeout = ''250ms''; SELECT app_private.signup_prune();';
+begin
+ if desired_active is null then raise exception 'Choose an explicitly authorized operation.'; end if;
+ if current_user<>'postgres' or current_database()<>'postgres' then raise exception 'Operational database and role required.' using errcode='42501'; end if;
+ if to_regprocedure('cron.alter_job(bigint,text,text,text,text,boolean)') is null then raise exception 'Reviewed pg_cron API required.'; end if;
+ -- Disable remains possible when the function has drifted. Activation requires
+ -- the exact qualified catalogue and ACL; separately audit inherited members.
+ if desired_active then
+  select coalesce(bool_and(
+   pg_catalog.pg_get_userbyid(p.proowner)='postgres' and p.prokind='f' and p.pronargs=0 and p.pronargdefaults=0
+   and pg_catalog.pg_get_function_result(p.oid)='jsonb' and p.prosecdef and not p.proisstrict
+   and not p.proretset and not p.proleakproof and p.provolatile='v' and p.proparallel='u'
+   and l.lanname='plpgsql' and p.proconfig=ARRAY['search_path=""']::text[]
+   and pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(pg_catalog.replace(p.prosrc,E'\r\n',E'\n'),'UTF8')),'hex')='cbd79d7ec1fbb93605616e7aa742c8b20ec741e098b7058b244f559add32d726'
+   and pg_catalog.has_function_privilege(pg_catalog.to_regrole('anon'),p.oid,'EXECUTE') is false
+   and pg_catalog.has_function_privilege(pg_catalog.to_regrole('authenticated'),p.oid,'EXECUTE') is false
+   and pg_catalog.has_function_privilege(pg_catalog.to_regrole('service_role'),p.oid,'EXECUTE') is true
+   and (select count(*) from pg_catalog.aclexplode(coalesce(p.proacl,pg_catalog.acldefault('f',p.proowner))) a
+        where a.privilege_type='EXECUTE' and not a.is_grantable and a.grantor=p.proowner
+        and a.grantee in (p.proowner,pg_catalog.to_regrole('service_role')::oid))=2
+   and not exists(select 1 from pg_catalog.aclexplode(coalesce(p.proacl,pg_catalog.acldefault('f',p.proowner))) a
+        where a.privilege_type<>'EXECUTE' or a.is_grantable or a.grantor<>p.proowner
+        or a.grantee not in (p.proowner,pg_catalog.to_regrole('service_role')::oid))
+  ),false) into reviewed_prune from pg_catalog.pg_proc p join pg_catalog.pg_language l on l.oid=p.prolang
+  where p.oid=pg_catalog.to_regprocedure('app_private.signup_prune()');
+  if reviewed_prune is distinct from true then raise exception 'Retention function differs from reviewed draft.'; end if;
+ end if;
+ if (select count(*) from cron.job where jobname=job_name)<>1 then raise exception 'Missing or ambiguous job; no change.'; end if;
+ select jobid into target_id from cron.job where jobname=job_name and username=current_user
+  and database=current_database() and schedule=job_schedule and command=job_command for update;
+ if not found then raise exception 'Job identity or command mismatch; no change.'; end if;
+ perform cron.alter_job(target_id,active:=desired_active);
+ if not exists(select 1 from cron.job where jobid=target_id and jobname=job_name and username=current_user
+  and database=current_database() and schedule=job_schedule and command=job_command and active=desired_active)
+  then raise exception 'Job state not confirmed.'; end if;
+end $toggle$;
+-- Leave the transaction rolled back unless the separately authorized, reviewed
+-- execution copy deliberately replaces this final statement with COMMIT.
+rollback;

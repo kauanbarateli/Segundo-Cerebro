@@ -22,6 +22,23 @@ const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 const requireThat=(v,code="SOURCE_REFUSED")=>{if(!v)nativeRefuse(code);};
 const SDK_MODULES=Object.freeze(ADMIN_NATIVE_MODULES.filter(p=>p.startsWith("node_modules/")));
 const HISTORICAL026_CATALOGUE="tests/fixtures/schema-release-026/release-catalog.sql",HISTORICAL026_CATALOGUE_BYTES=82143,HISTORICAL026_CATALOGUE_SHA256="4557741f008d48ea60ad8a3e2d5a41667630543c3bf2ab0682ec2b33ad97e297";
+// These are Source evidence only; they do not expand the runtime bundle graph.
+// Type declarations are explicit seeds because the AST resolver follows the
+// .mjs import, not its sibling declaration file.
+export const GOAL_NATIVE_CANONICAL_SOURCE_SEEDS=Object.freeze([
+  "tests/helpers/canonical-front-b-source.mjs",
+  "tests/helpers/canonical-front-b-source.d.mts",
+  "tests/helpers/canonical-release-source.d.mts",
+]);
+export const GOAL_NATIVE_CANONICAL_SOURCE_CLOSURE=Object.freeze([
+  "tests/helpers/canonical-front-b-source.d.mts",
+  "tests/helpers/canonical-front-b-source.mjs",
+  "tests/helpers/canonical-release-source.d.mts",
+  "tests/helpers/canonical-release-source.mjs",
+]);
+export function assertGoalNativeCanonicalSourceClosure(paths){
+  requireThat(Array.isArray(paths)&&same(paths,GOAL_NATIVE_CANONICAL_SOURCE_CLOSURE));
+}
 // Closed maximum for the entry. Type-only files may be erased; no other local
 // module is permitted by moduleParsed, even if it is inside this repository.
 export const GOAL_NATIVE_ENTRY_SOURCES=Object.freeze([
@@ -106,7 +123,7 @@ async function strictRun(command,args,options){
   }
   const buffer=Buffer.concat(pieces);try{return{stdout:new TextDecoder("utf-8",{fatal:true}).decode(buffer),groupConfirmed:true};}finally{buffer.fill(0);for(const piece of pieces)piece.fill(0);}
 }
-async function sourceClosure(seeds){
+export async function sourceClosure(seeds){
   const seen=new Set();
   async function visit(path){
     if(seen.has(path))return;
@@ -150,7 +167,8 @@ async function collectSources(run,sha,migrations){
   const wrappers=GOAL_NATIVE_ENTRY_SOURCES.filter(p=>p.endsWith("-candidate-source.ts")).map(p=>p.replace("-candidate-source.ts","-candidate-sql.ts"));
   requireThat(migrations.length===27);
   const installationCopies=migrations.map(({file},index)=>"supabase/sql-editor/installation/"+String(index+1).padStart(3,"0")+"_"+file);
-  const seeds=[...OWN_PATHS,...GOAL_NATIVE_ENTRY_SOURCES,...wrappers,...proposals,"package.json","package-lock.json","tsconfig.json",".nvmrc","supabase/sql-editor/manifest.json","supabase/tests/release-catalog.sql",HISTORICAL026_CATALOGUE,"tests/fixtures/schema-release-026/manifest.json","tests/helpers/canonical-release-source.d.mts","tests/fixtures/supabase-auth-local/config.toml",...migrations.map(m=>"supabase/migrations/"+m.file),...installationCopies];
+  assertGoalNativeCanonicalSourceClosure(await sourceClosure(GOAL_NATIVE_CANONICAL_SOURCE_SEEDS));
+  const seeds=[...OWN_PATHS,...GOAL_NATIVE_ENTRY_SOURCES,...wrappers,...proposals,...GOAL_NATIVE_CANONICAL_SOURCE_SEEDS,"package.json","package-lock.json","tsconfig.json",".nvmrc","supabase/sql-editor/manifest.json","supabase/tests/release-catalog.sql",HISTORICAL026_CATALOGUE,"tests/fixtures/schema-release-026/manifest.json","tests/fixtures/supabase-auth-local/config.toml",...migrations.map(m=>"supabase/migrations/"+m.file),...installationCopies];
   const sources=[];for(const path of await sourceClosure(seeds)){const bytes=await canonical(path),git=(await run("git",["rev-parse",sha+":"+path],15000)).stdout.trim();requireThat(git===createHash("sha1").update("blob "+bytes.length+"\0").update(bytes).digest("hex"));sources.push({path,sha256:hash(bytes),bytes:bytes.length});}
   const lock=JSON.parse((await canonical("package-lock.json")).toString("utf8")),dependencies=[];
   for(const path of SDK_MODULES){const bytes=await canonical(path);let folder=dirname(resolve(ROOT,path)),verified=false;while(folder.startsWith(resolve(ROOT,"node_modules")+"/")){const key=normal(relative(ROOT,folder));let pkgBytes;try{pkgBytes=await canonical(key+"/package.json");}catch(error){if(error.code!=="ENOENT")throw error;folder=dirname(folder);continue;}const pkg=JSON.parse(pkgBytes.toString("utf8"));if(key==="node_modules/tslib/modules"){verifyAdminTslibScope(key+"/package.json",pkgBytes,JSON.parse((await canonical("node_modules/tslib/package.json")).toString("utf8")),lock.packages["node_modules/tslib"]);folder=dirname(folder);continue;}const pin=lock.packages[key];requireThat(pin&&pkg.version===pin.version&&pkg.name===key.slice(13)&&/^https:\/\/registry\.npmjs\.org\//.test(pin.resolved)&&/^sha512-/.test(pin.integrity));verified=true;break;}requireThat(verified);dependencies.push({path,sha256:hash(bytes),bytes:bytes.length});}

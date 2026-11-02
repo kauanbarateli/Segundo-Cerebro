@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { rolldown } from "rolldown";
 import type { KnowledgeFixtureOptions, KnowledgeFixtureState } from "./fixtures/knowledge-workspace-context";
+import { openFormatting } from "./helpers/editor";
 let bundle: string, styles: string;
 test.beforeAll(async () => {
   const fixtureContext = resolve("tests/e2e/fixtures/knowledge-workspace-context.tsx").replaceAll("\\", "/");
@@ -56,10 +57,33 @@ test("leitura não monta o editor nem escreve; retomar conserva o rascunho", asy
   await page.screenshot({ path: info.outputPath("doc18-conhecimento-retomado-1280-light.png"), fullPage: true });
 });
 
+test("A03: menu Formatação abre sob demanda, aplica sobre a seleção e não desmonta o editor nem grava", async ({ page }) => {
+  await mount(page, "light");
+  const editor = page.getByRole("textbox", { name: "Conteúdo da página", exact: true });
+  const toggle = page.getByRole("button", { name: "Formatação", exact: true });
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await expect(page.getByRole("toolbar", { name: "Formatação do texto", exact: true })).toHaveCount(0);
+  await editor.fill("Texto selecionado"); await editor.press("ControlOrMeta+A");
+  await editor.evaluate(element => { (element as HTMLElement & { __kept?: boolean }).__kept = true; });
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await page.getByRole("button", { name: "Negrito", exact: true }).click();
+  await expect(editor.locator("strong")).toHaveText("Texto selecionado");
+  await page.keyboard.press("Escape");
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await expect(editor).toBeFocused();
+  await expect(editor.locator("strong")).toHaveText("Texto selecionado");
+  expect(await editor.evaluate(element => (element as HTMLElement & { __kept?: boolean }).__kept)).toBe(true);
+  await editor.press("ControlOrMeta+B");
+  await expect(editor.locator("strong")).toHaveCount(0);
+  expect((await state(page)).writes).toHaveLength(0);
+});
+
 test("limpar formatação preserva link e permite desfazer sem salvar automaticamente", async ({ page }) => {
   await mount(page, "light");
   const editor = page.getByRole("textbox", { name: "Conteúdo da página", exact: true });
   await editor.fill("Texto formatado"); await editor.press("ControlOrMeta+A");
+  await openFormatting(page);
   await page.getByRole("button", { name: "Negrito", exact: true }).click();
   await page.getByRole("button", { name: "Link", exact: true }).click();
   const link = page.getByRole("group", { name: "Editar link", exact: true });
@@ -78,6 +102,7 @@ for (const width of [320, 390]) for (const theme of ["light", "dark"] as const) 
     await page.setViewportSize({ width, height: 900 }); await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" }); await mount(page, theme, {}, info);
     const editor = page.getByRole("textbox", { name: "Conteúdo da página", exact: true });
     await editor.fill("Item formatado"); await editor.press("ControlOrMeta+A");
+    await openFormatting(page);
     await page.getByRole("button", { name: "Negrito", exact: true }).click();
     await expect(editor.locator("strong")).toHaveText("Item formatado");
     await page.getByLabel("Alinhamento do parágrafo", { exact: true }).selectOption("center");

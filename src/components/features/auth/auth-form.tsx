@@ -33,15 +33,15 @@ function PasswordField({ name, label, autoComplete, disabled, error }: {
   </div>;
 }
 
-export function AuthForm({ kind, available, requiresCurrentPassword = false, completionPending = false, notice, returnTo }: {
-  kind: AuthFormKind; available: boolean; requiresCurrentPassword?: boolean; completionPending?: boolean; notice?: string; returnTo?: string;
+export function AuthForm({ kind, available, signupAvailable = false, requiresCurrentPassword = false, completionPending = false, notice, returnTo }: {
+  kind: AuthFormKind; available: boolean; signupAvailable?: boolean; requiresCurrentPassword?: boolean; completionPending?: boolean; notice?: string; returnTo?: string;
 }) {
   const action = kind === "sign-in" ? signInAction : kind === "recovery" ? recoverPasswordAction : updatePasswordAction;
   const [state, formAction, pending] = useActionState(action, initialState);
   const [email, setEmail] = useState("");
   const [legalAcknowledged, setLegalAcknowledged] = useState(false);
   const legalAcknowledgedRef = useRef(false);
-  const legalId = useId();
+  const legalId = useId(), newTabId = useId();
   const formRef = useRef<HTMLFormElement>(null), feedbackRef = useRef<HTMLDivElement>(null);
   const words = copy[kind], fixedNotice = authNotice(notice, kind);
   const passwordChange = kind === "change" || kind === "reset";
@@ -97,12 +97,13 @@ export function AuthForm({ kind, available, requiresCurrentPassword = false, com
             }} />
             <span className="auth-legal-mark" aria-hidden="true"><Icons.Check /></span>
           </span>
-          <span>Li os Termos de Serviço e a Política de Privacidade.</span>
+          <span>Li os{" "}
+            <Link className="auth-legal-link" href="/termos-de-servico" target="_blank" rel="noopener noreferrer" aria-describedby={newTabId}>Termos de Serviço</Link>
+            {" "}e a{" "}
+            <Link className="auth-legal-link" href="/privacidade" target="_blank" rel="noopener noreferrer" aria-describedby={newTabId}>Política de Privacidade</Link>.
+          </span>
         </label>
-        <div className="auth-policy-links">
-          <Link href="/termos-de-servico" aria-label="Ler os Termos de Serviço (abre em nova aba)" target="_blank" rel="noopener noreferrer">Ler termos <Icons.ArrowUpRight /></Link>
-          <Link href="/privacidade" aria-label="Ler a Política de Privacidade (abre em nova aba)" target="_blank" rel="noopener noreferrer">Ler política <Icons.ArrowUpRight /></Link>
-        </div>
+        <span id={newTabId} className="auth-legal-hint">Os documentos abrem em uma nova aba; o formulário continua como está.</span>
       </div>}
       <Button type="submit" variant="primary" loading={pending} disabled={!available}>{finishing ? pending ? "Concluindo…" : "Concluir proteção da conta" : pending ? words.pending : words.submit}</Button>
     </form>}
@@ -110,6 +111,6 @@ export function AuthForm({ kind, available, requiresCurrentPassword = false, com
       {kind === "sign-in" ? <Link href="/recuperar-senha">Esqueci a senha</Link> : <Link href="/entrar">Voltar para entrar</Link>}
       {kind === "reset" && <Link href="/recuperar-senha">Solicitar outro link</Link>}
     </nav>
-    {kind === "sign-in" && <p className="auth-registration">O cadastro é fechado. Para solicitar acesso, fale com quem administra o Segundo Cérebro.</p>}
+    {kind === "sign-in" && <p className="auth-registration">{signupAvailable ? <>Ainda não tem conta? <Link href="/criar-conta">Criar conta gratuita</Link></> : "O cadastro é fechado. Para solicitar acesso, fale com quem administra o Segundo Cérebro."}</p>}
   </>;
 }

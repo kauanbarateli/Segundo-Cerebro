@@ -7,4 +7,7 @@ export async function beginKnowledgeEdit(page: Page) {
   await expect(editor.or(enter)).toBeVisible();
   if (await enter.isVisible()) await enter.click();
   await expect(editor).toBeVisible();
+  // Notebook, parent page and links live in the on-demand "Configurações da nota" panel.
+  const settings = page.getByRole("button", { name: "Configurações da nota", exact: true });
+  if ((await settings.getAttribute("aria-expanded")) === "false") await settings.click();
 }

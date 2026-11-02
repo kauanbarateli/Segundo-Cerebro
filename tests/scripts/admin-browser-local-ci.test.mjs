@@ -12,8 +12,8 @@ import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { assertQualifiedBrowserVersion } from "../e2e-auth-local/qualified-chromium.mjs";
 import { createQuiescenceFence } from "../../scripts/verification/browser-quiescence-fence-probe.mjs";
-import { requireAdminBrowserCi, createAdminBrowserNextProcess, vetoAdminBrowserNextFailure, drainAdminBrowserNextReadiness, adminBrowserPreflightDiagnostic, deriveAdminBrowserSourcePaths, collectAdminBrowserSources, ADMIN_BROWSER_NEW_PATHS, ADMIN_BROWSER_SOURCE_SEEDS, main } from "../../scripts/verification/admin-browser-local-ci.mjs";
-import { ADMIN_BROWSER_CASES, ADMIN_BROWSER_INFRA_KEYS, ADMIN_BROWSER_LIMITATIONS, ADMIN_BROWSER_STAGES, ADMIN_BROWSER_PASS_COUNTS, ADMIN_BROWSER_SOURCE_COUNTS, ADMIN_BROWSER_SERIES_SOURCE_PATHS, ADMIN_BROWSER_GOALS_SOURCE_PATHS, blankAdminBrowserCase, validateAdminBrowserCase, validateAdminBrowserCiReport, ADMIN_AUTH_CHECKPOINTS, isAdminAuthActionRequest, acceptAdminAuthActionResponse, runAdminAuthCheckpoint, ADMIN_HTTP_PENDING_CODES } from "../e2e-auth-local/admin-browser-contract.mjs";
+import { requireAdminBrowserCi, createAdminBrowserNextProcess, vetoAdminBrowserNextFailure, drainAdminBrowserNextReadiness, adminBrowserPreflightDiagnostic, deriveAdminBrowserSourcePaths, collectAdminBrowserSources, assertAdminBrowserSourcePaths, ADMIN_BROWSER_NEW_PATHS, ADMIN_BROWSER_SOURCE_SEEDS, main } from "../../scripts/verification/admin-browser-local-ci.mjs";
+import { ADMIN_BROWSER_CASES, ADMIN_BROWSER_INFRA_KEYS, ADMIN_BROWSER_LIMITATIONS, ADMIN_BROWSER_STAGES, ADMIN_BROWSER_PASS_COUNTS, ADMIN_BROWSER_SOURCE_COUNTS, ADMIN_BROWSER_HISTORICAL_READER_SOURCE, ADMIN_BROWSER_SERIES_SOURCE_PATHS, ADMIN_BROWSER_GOALS_SOURCE_PATHS, blankAdminBrowserCase, validateAdminBrowserCase, validateAdminBrowserCiReport, ADMIN_AUTH_CHECKPOINTS, isAdminAuthActionRequest, acceptAdminAuthActionResponse, runAdminAuthCheckpoint, ADMIN_HTTP_PENDING_CODES } from "../e2e-auth-local/admin-browser-contract.mjs";
 import { ADMIN_BROWSER_APP, ADMIN_BROWSER_INSPECTION_ORDER, createAdminBrowserState, createBrowserRequestOriginTracker,createBrowserProtocolObserver, closedBrowserOperation, adminBrowserRefuse, adminBrowserPageReleaseCode, adminBrowserPendingCode, adminBrowserHttpPendingCode, waitForAdminBrowserIoQuiet, acceptAdminBrowserRequest, isAdminBrowserReadCancellationRequest, isAdminBrowserParkableAuthRead, isAdminCanonicalHmrGet, classifyAdminBrowserHttpRequest } from "../e2e-auth-local/admin-browser-support.mjs";
 
 const root=new URL("../../",import.meta.url),read=path=>readFile(new URL(path,root),"utf8");
@@ -21,8 +21,15 @@ const sourceSha="a".repeat(40),hash="b".repeat(64);
 // Original doc18:08f542 - five Drive UI + four imports =541; RichLink adds
 // only document-link ->542, independently derived from HEAD blobs/current AST.
 const authThemeAddedPaths=["src/components/features/auth/auth-theme-switcher.tsx"];
+// Frente A (fase 1): real imports added by the header quick capture, the extracted composer and optional destinations;
+// the retired calendar views and the settings install card are no longer reachable from the bound pages.
+const frenteAAddedPaths=["src/components/features/capturar/capture-settings.tsx","src/components/features/capturar/image-preview.tsx","src/components/features/capturar/quick-capture.tsx","src/components/features/capturar/use-image-attachments.ts","src/lib/navigation/optional-destinations.ts"];
+const frenteARemovedPaths=["src/components/features/calendario/calendar-agenda.tsx","src/components/features/calendario/calendar-month.tsx","src/components/pwa/install-help.tsx","src/components/pwa/pwa.css"];
 const doc18AddedPaths=["src/components/editor/document-reader.tsx","src/components/features/cofre/vault-secret-field.tsx","src/components/features/configuracoes/preference-draft.ts","src/components/features/projetos/task-refusal.ts","src/components/editor/document-link.ts"];
 const doc18UnreachableDrivePaths=["src/components/features/drive/drive-client.ts","src/components/features/drive/drive-connected-workspace.tsx","src/components/features/drive/drive-workspace.tsx","src/components/features/drive/drive.css","src/components/features/drive/projections.ts"];
+const frontABAddedPaths=["src/components/features/capturar/capture-settings.tsx","src/components/features/capturar/image-preview.tsx","src/components/features/capturar/quick-capture.tsx","src/components/features/capturar/use-image-attachments.ts","src/components/features/configuracoes/signup-origin-setting.css","src/components/features/configuracoes/signup-origin-setting.tsx","src/lib/access/front-b-capabilities-server.ts","src/lib/auth/signup-http.ts","src/lib/navigation/optional-destinations.ts"];
+const signupFenceAddedPaths=["src/core/acquisition/signup-origin.ts","src/lib/auth/signup-checkpoint.ts","src/lib/auth/signup-completion-service.ts","src/lib/auth/signup-fence-wire.ts","src/lib/feedback/reconciliation-gate.ts"];
+const frontABUnreachablePaths=["src/components/features/calendario/calendar-agenda.tsx","src/components/features/calendario/calendar-month.tsx","src/components/pwa/install-help.tsx","src/components/pwa/pwa.css"];
 const protocolUnavailable={identity:"unavailable",order:"unavailable",terminal:"unavailable",publicTerminal:"unavailable",managerEntry:"unavailable",sessionRegistered:"unavailable"};
 const preflightBeforeMarkers=["before-free-port-3117","before-free-port-54320","before-free-port-54321","before-free-port-54322","before-temp-root","before-root-mode","before-home-directory","before-project-directory","before-config-render-and-write"];
 test("Admin preflight diagnostic exports only a closed last-before marker, never an operation or cleanup proof",()=>{
@@ -426,7 +433,7 @@ test("Admin actual request events feed POST proof; login keeps destination/UI/se
   assert.match(spec,/catch \{ if\(observed\(\)\) state\.unknown\(\)/);
   for(const code of ADMIN_AUTH_CHECKPOINTS)assert.match(spec,new RegExp('checkpoint\\(state,"'+code+'"'));
 });
-test("complete543+61 collector includes doc18, Goals image host, Finance series, onboarding, Kanban, effect contract, SSR decoder and original JPEG with text-only Git stdout",async()=>{
+test("complete556+61 collector includes doc18, Goals image host, Finance series, onboarding, Kanban, effect contract, SSR decoder and original JPEG with text-only Git stdout",async()=>{
   const image="src/components/layout/illustrative-avatar.jpg",bytes=await readFile(new URL(image,root));
   assert.equal(bytes.equals(Buffer.from(bytes.toString("utf8"))),false);
   const oid=createHash("sha1").update("blob "+bytes.length+"\0").update(bytes).digest("hex");
@@ -439,14 +446,14 @@ test("complete543+61 collector includes doc18, Goals image host, Finance series,
     return{stdout:badBlob?"0".repeat(40):createHash("sha1").update("blob "+file.length+"\0").update(file).digest("hex")+"\n",groupConfirmed:true};
   };
   const collected=await collectAdminBrowserSources(gitTextSeam(false),sourceSha);
-  assert.equal(collected.sourceHashes.length,543);assert.equal(collected.sourceHashes.filter(row=>row.path==="supabase/migrations/20261023061901_onboarding_foundation.sql").length,1);assert.equal(collected.sourceHashes.filter(row=>row.path==="src/lib/environment/application-destination.ts").length,1);assert.equal(collected.dependencyHashes.length,61);
+  assert.equal(collected.sourceHashes.length,ADMIN_BROWSER_SOURCE_COUNTS.git);assert.equal(collected.sourceHashes.filter(row=>row.path==="supabase/migrations/20261023061901_onboarding_foundation.sql").length,1);assert.equal(collected.sourceHashes.filter(row=>row.path==="src/lib/environment/application-destination.ts").length,1);assert.equal(collected.dependencyHashes.length,61);
   // Fifteen real transitive imports added by Home, Settings, Projects and OAuth.
   // The native collector still binds every committed HEAD:path blob itself.
   const onboardingPaths=["src/adapters/db/onboarding-commands.ts","src/adapters/db/onboarding-gateway.ts","src/adapters/db/onboarding-oauth.ts","src/adapters/db/onboarding-protocol.ts","src/adapters/db/onboarding-runtime.ts","src/adapters/db/onboarding-store.ts","src/components/features/configuracoes/settings-focus-section.tsx","src/components/features/projetos/project-context-section.tsx","src/components/layout/onboarding-attribute-select.css","src/components/layout/onboarding-attribute-select.tsx","src/core/onboarding/reserved-client.ts","src/core/onboarding/server-planning.ts","src/core/onboarding/types.ts","src/core/onboarding/validation.ts","src/lib/onboarding-attributes-client.ts"];
   const derived=await deriveAdminBrowserSourcePaths();
   // Preserve the historical doc18+Link542 delta, then add the single Auth theme
   // import derived independently from abb and HEAD. Drive remains a tombstone.
-  assert.equal(542-doc18UnreachableDrivePaths.length+doc18AddedPaths.length+authThemeAddedPaths.length,543);
+  assert.equal(542-doc18UnreachableDrivePaths.length+doc18AddedPaths.length+authThemeAddedPaths.length+frenteAAddedPaths.length-frenteARemovedPaths.length,544);
   for(const path of [...doc18AddedPaths,...authThemeAddedPaths]){
     assert.equal(derived.includes(path),true,path);
     const bytes=await readFile(new URL(path,root));
@@ -454,6 +461,12 @@ test("complete543+61 collector includes doc18, Goals image host, Finance series,
     await assert.rejects(collectAdminBrowserSources(gitTextSeam(path),sourceSha),{message:"SOURCE_REFUSED"},path);
   }
   for(const path of doc18UnreachableDrivePaths){assert.equal(derived.includes(path),false,path);assert.equal(collected.sourceHashes.some(row=>row.path===path),false,path);}
+  for(const path of frontABAddedPaths){assert.equal(derived.includes(path),true,path);const bytes=await readFile(new URL(path,root));assert.deepEqual(collected.sourceHashes.filter(row=>row.path===path),[{path,sha256:createHash("sha256").update(bytes).digest("hex"),bytes:bytes.length}],path);}
+  for(const path of signupFenceAddedPaths){assert.equal(derived.includes(path),true,path);const bytes=await readFile(new URL(path,root));assert.deepEqual(collected.sourceHashes.filter(row=>row.path===path),[{path,sha256:createHash("sha256").update(bytes).digest("hex"),bytes:bytes.length}],path);}
+  for(const path of frontABUnreachablePaths){assert.equal(derived.includes(path),false,path);assert.equal(collected.sourceHashes.some(row=>row.path===path),false,path);}
+  await assert.rejects(collectAdminBrowserSources(gitTextSeam("src/lib/access/front-b-capabilities-server.ts"),sourceSha),{message:"SOURCE_REFUSED"});
+  await assert.rejects(collectAdminBrowserSources(gitTextSeam("src/components/features/configuracoes/signup-origin-setting.tsx"),sourceSha),{message:"SOURCE_REFUSED"});
+  await assert.rejects(collectAdminBrowserSources(gitTextSeam(ADMIN_BROWSER_HISTORICAL_READER_SOURCE.path),sourceSha),{message:"SOURCE_REFUSED"});
   assert.equal(derived.includes("src/app/(workspace)/drive/page.tsx"),true);
   assert.equal(ADMIN_BROWSER_NEW_PATHS.length,18);
   for(const path of onboardingPaths){
@@ -501,7 +514,7 @@ test("connected own-session proof cannot pass without both real SDK reads, UI vi
     const unknown=structuredClone(full);unknown.status="failed";unknown.code="AUTH_NOT_PROVEN";unknown.writeOutcomeUncertain=true;assert.equal(validateAdminBrowserCase(unknown).writeOutcomeUncertain,true);assert.throws(()=>validateAdminBrowserCase({...unknown,status:"passed",code:"PASSED"}));
   }
 });
-const report=()=>({schemaVersion:1,scenario:"admin-browser-local-ci",sourceSha,status:"passed",code:"PASSED",sourceHashes:Array.from({length:ADMIN_BROWSER_SOURCE_COUNTS.git},(_,i)=>({path:"synthetic/file-"+String(i).padStart(4,"0")+".ts",sha256:hash,bytes:10})),dependencyHashes:Array.from({length:ADMIN_BROWSER_SOURCE_COUNTS.dependencies},(_,i)=>({path:"node_modules/synthetic-"+String(i).padStart(4,"0")+"/package.json",sha256:hash,bytes:10})),cases:ADMIN_BROWSER_CASES.map(kind=>({case:kind,report:fullCase(kind),infrastructure:Object.fromEntries(ADMIN_BROWSER_INFRA_KEYS.map(k=>[k,true])),migrationsApplied:26,catalogueChecks:1720,nextStopSignal:"SIGTERM"})),limitations:Object.fromEntries(ADMIN_BROWSER_LIMITATIONS.map(k=>[k,false])),writeOutcomeUncertain:false});
+const report=()=>({schemaVersion:1,scenario:"admin-browser-local-ci",sourceSha,status:"passed",code:"PASSED",sourceHashes:[...Array.from({length:ADMIN_BROWSER_SOURCE_COUNTS.git-1},(_,i)=>({path:"synthetic/file-"+String(i).padStart(4,"0")+".ts",sha256:hash,bytes:10})),{...ADMIN_BROWSER_HISTORICAL_READER_SOURCE}],dependencyHashes:Array.from({length:ADMIN_BROWSER_SOURCE_COUNTS.dependencies},(_,i)=>({path:"node_modules/synthetic-"+String(i).padStart(4,"0")+"/package.json",sha256:hash,bytes:10})),cases:ADMIN_BROWSER_CASES.map(kind=>({case:kind,report:fullCase(kind),infrastructure:Object.fromEntries(ADMIN_BROWSER_INFRA_KEYS.map(k=>[k,true])),migrationsApplied:26,catalogueChecks:1720,nextStopSignal:"SIGTERM"})),limitations:Object.fromEntries(ADMIN_BROWSER_LIMITATIONS.map(k=>[k,false])),writeOutcomeUncertain:false});
 test("dedicated runner refuses Windows, missing sterile dual opt-in and mismatching source before a service",()=>{for(const env of [{},{SC_ADMIN_BROWSER_LOCAL_CI_RUN:"1",GITHUB_SHA:sourceSha},{SC_ADMIN_BROWSER_LOCAL_CI_RUN:"0",GITHUB_SHA:sourceSha}])assert.throws(()=>requireAdminBrowserCi(env,"win32"));});
 test("help/invalid arguments never start a service or disclose provider errors",async()=>{const values=[];assert.equal(await main(["--help"],{},v=>values.push(v)),0);assert.equal(values[0].code,"NO_SERVICE_STARTED");assert.equal(await main(["--bad"],{},v=>values.push(v)),1);assert.deepEqual(values[1],{schemaVersion:1,scenario:"admin-browser-local-ci",status:"failed",code:"ENVIRONMENT_REFUSED"});});
 test("functional and infra checkpoints are independent; process or namespace teardown never promotes FAIL",()=>{assert.equal(validateAdminBrowserCiReport(report()).status,"passed");for(const alter of [r=>r.cases[0].infrastructure.workerExitZero=false,r=>r.cases[0].infrastructure.workerGroupConfirmed=false,r=>r.cases[0].infrastructure.nextGroupConfirmed=false,r=>r.cases[0].infrastructure.ioQuiet=false,r=>r.cases[0].infrastructure.namespaceRemoved=false,r=>r.cases[0].nextStopSignal="UNCONFIRMED",r=>r.cases[1].migrationsApplied=17,r=>r.cases[1].migrationsApplied=22,r=>r.cases[1].migrationsApplied=25,r=>r.cases[1].migrationsApplied=27,r=>r.cases[0].catalogueChecks=0,r=>r.cases[0].catalogueChecks=1428,r=>r.cases[0].catalogueChecks=1534,r=>r.writeOutcomeUncertain=true,r=>r.limitations.personalAdminFactoryCertified=true,r=>r.private="SYNTHETIC_CANARY"]){const r=report();alter(r);assert.throws(()=>validateAdminBrowserCiReport(r),{message:"REPORT_REFUSED"});}});
@@ -597,15 +610,36 @@ test("Next oversize output is discarded in RAM and failed group never becomes a 
 test("Next output failure after readiness vetoes an otherwise passed worker and remains failed after successful teardown",async()=>{const d=processDouble(),r=report();r.cases[1]={case:ADMIN_BROWSER_CASES[1],report:blankAdminBrowserCase(ADMIN_BROWSER_CASES[1]),infrastructure:Object.fromEntries(ADMIN_BROWSER_INFRA_KEYS.map(k=>[k,false])),migrationsApplied:0,catalogueChecks:0,nextStopSignal:"NONE"};assert.equal(vetoAdminBrowserNextFailure(r,d.next.metadata()),false);assert.equal(r.writeOutcomeUncertain,false);d.child.stderr.emit("data",Buffer.alloc(2097153));assert.equal(vetoAdminBrowserNextFailure(r,d.next.metadata()),true);assert.equal(await d.next.stop(),true);assert.equal(d.next.metadata().groupConfirmed,true);assert.equal(vetoAdminBrowserNextFailure(r,d.next.metadata()),true);assert.equal(r.cases[0].report.status,"passed");const projected=validateAdminBrowserCiReport(r);assert.equal(projected.status,"failed");assert.equal(projected.code,"PROCESS_UNCONFIRMED");assert.equal(projected.writeOutcomeUncertain,true);assert.equal(projected.cases[1].report.status,"not-run");});
 test("Next spawn failure remains closed and failed without retaining raw details",async()=>{const d=createAdminBrowserNextProcess({}, {spawnProcess:()=>{throw Error("SYNTHETIC_PRIVATE_CANARY");}});assert.equal(d.metadata().failed,true);assert.equal(d.metadata().closed,true);assert.equal(JSON.stringify(d.metadata()).includes("CANARY"),false);assert.equal(await d.stop(),true);});
 test("source closure derives real imports and preserves all eighteen finite declared paths and guards",async()=>{const paths=await deriveAdminBrowserSourcePaths();assert.equal(paths.length,ADMIN_BROWSER_SOURCE_COUNTS.git);assert.equal(ADMIN_BROWSER_NEW_PATHS.length,18);assert.equal(new Set(paths).size,paths.length);assert.deepEqual(paths,[...paths].sort());for(const p of ADMIN_BROWSER_SOURCE_SEEDS)assert.equal(paths.includes(p),true,p);for(const p of ["src/lib/auth/runtime.ts","src/lib/auth/actions.ts","src/lib/auth/service.ts","src/app/(workspace)/layout.tsx","src/middleware.ts","src/components/features/auth/auth-form.tsx","supabase/migrations/20261010044217_finance_monthly_plan.sql","src/components/features/configuracoes/settings-legal-section.tsx","src/components/ui/legal-links.tsx","src/components/ui/legal-links.css"])assert.equal(paths.includes(p),true,p);assert.equal(paths.some(p=>p.startsWith("node_modules/")||p.includes("..")),false);});
-test("doc18 source closure preserves prior changes and binds the Auth theme import",async()=>{
+test("doc18 source closure preserves prior changes, binds the Auth theme import and the Frente A delta",async()=>{
   const paths=await deriveAdminBrowserSourcePaths();
-  assert.equal(ADMIN_BROWSER_SOURCE_COUNTS.git,542-doc18UnreachableDrivePaths.length+doc18AddedPaths.length+authThemeAddedPaths.length);
-  assert.equal(paths.length,543);assert.equal(ADMIN_BROWSER_SOURCE_COUNTS.dependencies,61);
+  assert.equal(ADMIN_BROWSER_SOURCE_COUNTS.git,542-doc18UnreachableDrivePaths.length+doc18AddedPaths.length+authThemeAddedPaths.length+frontABAddedPaths.length-frontABUnreachablePaths.length+signupFenceAddedPaths.length+3);
+  assert.equal(paths.length,556);assert.equal(ADMIN_BROWSER_SOURCE_COUNTS.dependencies,61);
   for(const path of [...doc18AddedPaths,...authThemeAddedPaths])assert.equal(paths.includes(path),true,path);
   for(const path of doc18UnreachableDrivePaths)assert.equal(paths.includes(path),false,path);
+  for(const path of frenteAAddedPaths)assert.equal(paths.includes(path),true,path);
+  for(const path of frenteARemovedPaths)assert.equal(paths.includes(path),false,path);
+  for(const path of frontABAddedPaths)assert.equal(paths.includes(path),true,path);
+  for(const path of signupFenceAddedPaths)assert.equal(paths.includes(path),true,path);
+  for(const path of frontABUnreachablePaths)assert.equal(paths.includes(path),false,path);
   assert.equal(paths.includes("tests/e2e/fixtures/auth-sign-in-acknowledgement.tsx"),false);
   for(const path of ["src/app/(workspace)/drive/page.tsx","src/adapters/db/files-runtime.ts","supabase/migrations/20261009152822_private_storage_drive.sql","src/components/layout/illustrative-avatar.jpg",...ADMIN_BROWSER_NEW_PATHS])assert.equal(paths.includes(path),true,path);
   assert.equal(ADMIN_BROWSER_NEW_PATHS.length,18);
+});
+test("historical reader and five added imports remain pinned, with no same-count replacement",async()=>{
+  const paths=await deriveAdminBrowserSourcePaths(),pin=ADMIN_BROWSER_HISTORICAL_READER_SOURCE,provisional="src/lib/auth/signup-provisional.ts",beforeProvisional=paths.filter(path=>path!==provisional),qaTypes="src/lib/supabase/database.front-b-qa028.ts",beforeQaTypes=beforeProvisional.filter(path=>path!==qaTypes),previous=beforeQaTypes.filter(path=>path!==pin.path);
+  assert.equal(paths.filter(path=>path===pin.path).length,1);assert.equal(previous.length,553);
+  const digest=values=>createHash("sha256").update(values.join("\n")+"\n").digest("hex");
+  assert.equal(digest(previous.filter(path=>!signupFenceAddedPaths.includes(path))),"268eed43002ca0b46bac739049e911a4a023a6e09e795edfa794d8ecbeb0d001");
+  assert.equal(digest(previous),"5cbb1a063ccc9cee96a462b1bb7bc12daa3ff4962435b13ef27e84afcf69d0a0");
+  assert.equal(digest(beforeQaTypes),"ad93fb418e68102fa814fb6642b46323535e9ef3d1cde9258608e5d00fd733fb");
+  assert.equal(paths.filter(path=>path===provisional).length,1);assert.equal(digest(beforeProvisional),"72d05c8f1d4b4ddcd9747dae9fd9043263bf561f1c1b8998b8454fa11b23d6d8");
+  assert.equal(digest(paths),"80a56792536f74cb645801b1d1cc80ec995e499b5ddae674023a5867c4aeed33");
+  assert.doesNotThrow(()=>assertAdminBrowserSourcePaths(paths));
+  for(const altered of [beforeProvisional,beforeQaTypes,previous,[...paths].reverse(),[...previous,"tests/helpers/unreviewed.mjs"].sort()])assert.throws(()=>assertAdminBrowserSourcePaths(altered),{message:"SOURCE_REFUSED"});
+  const bytes=await readFile(new URL(pin.path,root));assert.equal(bytes.length,pin.bytes);assert.equal(createHash("sha256").update(bytes).digest("hex"),pin.sha256);
+  const file=ts.createSourceFile("local-canonical-sql.ts",await read("tests/helpers/local-canonical-sql.ts"),ts.ScriptTarget.Latest,true,ts.ScriptKind.TS);
+  assert.equal(file.statements.some(node=>ts.isImportDeclaration(node)&&ts.isStringLiteral(node.moduleSpecifier)&&node.moduleSpecifier.text==="./canonical-front-b-source.mjs"),true);
+  for(const mode of ["omission","hash","bytes"]){const r=report(),i=r.sourceHashes.findIndex(row=>row.path===pin.path);assert.ok(i>=0);if(mode==="omission")r.sourceHashes[i]={...r.sourceHashes[i],path:"synthetic/unreviewed.ts"};if(mode==="hash")r.sourceHashes[i].sha256="0".repeat(64);if(mode==="bytes")r.sourceHashes[i].bytes++;assert.equal(r.sourceHashes.length,ADMIN_BROWSER_SOURCE_COUNTS.git);assert.throws(()=>validateAdminBrowserCiReport(r),{message:"REPORT_REFUSED"});}
 });
 test("sources unavailable preserve a closed failed projection and never permit an executed or passed case",()=>{const r=report();r.status="failed";r.code="SOURCE_REFUSED";r.sourceHashes=[];r.dependencyHashes=[];for(const e of r.cases){e.report=blankAdminBrowserCase(e.case);e.infrastructure=Object.fromEntries(ADMIN_BROWSER_INFRA_KEYS.map(k=>[k,false]));e.migrationsApplied=0;e.catalogueChecks=0;e.nextStopSignal="NONE";}assert.equal(validateAdminBrowserCiReport(r).code,"SOURCE_REFUSED");r.cases[0].report=fullCase(ADMIN_BROWSER_CASES[0]);assert.throws(()=>validateAdminBrowserCiReport(r));});
 test("privacy config disables artifacts and original UI spec has no Locator/Frame expect or DOM export",async()=>{const config=await read("playwright.admin-browser-local.config.ts"),spec=await read("tests/e2e-auth-local/admin-browser-local.spec.ts");assert.equal(config.includes('reporter:[["./tests/e2e-auth-local/next-stop-reporter.mjs"]]'),true);assert.match(config,/preserveOutput:"never"/);for(const mode of ["trace","video","screenshot"])assert.match(config,new RegExp(mode+':"off"'));assert.match(config,/browserProcessEnvironment/);assert.doesNotMatch(spec,/\.ariaSnapshot\(|\.content\(|\.textContent\(|\.innerText\(|console\.|test\.info\(|\.attach\(/);const ast=ts.createSourceFile("spec.ts",spec,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS);let unsafe=0,polls=0;const walk=n=>{if(ts.isCallExpression(n)&&ts.isIdentifier(n.expression)&&n.expression.text==="expect")unsafe++;if(ts.isCallExpression(n)&&ts.isPropertyAccessExpression(n.expression)&&n.expression.expression.getText(ast)==="expect"&&n.expression.name.text==="poll")polls++;ts.forEachChild(n,walk);};walk(ast);assert.equal(unsafe,0);assert.equal(polls,1);assert.match(spec,/Promise\.allSettled/);assert.match(spec,/liveRequests/);assert.match(spec,/bytes\.fill\(0\)/);});
@@ -784,7 +818,7 @@ test("Admin permits the canonical harness only as an explicit hash seed and refu
 });
 
 
-// CURRENT27/doc18/Auth: git543 follows the original AST getter and independent
+// CURRENT27/doc18/Auth/Frente A: git544 follows the original AST getter and independent
 // Git-blob walker agreement on the exact +5/-5 UI delta above; runtime
 // qualification remains separate from these pure source controls.
 test("Admin Browser selects historical026 after full current27 byte qualification", async () => {

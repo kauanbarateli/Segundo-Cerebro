@@ -28,7 +28,7 @@ test.beforeAll(async () => { const built = await buildSettingsBrowser(); bundle 
 
 type Answer = { status: 200; view: OwnSessionsView } | { status: 401 | 409 | 503 };
 function gate() { let open!: () => void; const promise = new Promise<void>(done => { open = done; }); return { promise, open }; }
-async function attach(page: Page, theme: "light" | "dark", answers: { hold?: Promise<void>; answer: Answer }[], settingsStatuses: (200 | 503)[] = [200]) {
+async function attach(page: Page, theme: "light" | "dark", answers: { hold?: Promise<void>; answer: Answer }[], settingsStatuses: (200 | 503)[] = [200], originTracker?: {reads:number;writes:number}) {
   const settings: AccountSettings = { user_id: owner, profile: { display_name: "Pessoa de exemplo", email: "pessoa@example.invalid", avatar_file_id: null },
     preferences: { theme, default_calendar_view: "month", values_hidden: false, meeting_reminders_enabled: true, meeting_reminder_minutes: 10 }, modules: [] };
   const trace = { documents: 0, settingsReads: 0, sessionsReads: 0, unexpected: [] as string[], errors: [] as string[] };
@@ -56,18 +56,33 @@ async function attach(page: Page, theme: "light" | "dark", answers: { hold?: Pro
       if (next.answer.status === 200) await json(next.answer.view); else await json({ code: { 401: "UNAUTHENTICATED", 409: "SESSION_CHANGED", 503: "UNAVAILABLE" }[next.answer.status] }, next.answer.status);
       return;
     }
+    if (originTracker && url.pathname === "/api/signup-origin" && !url.search && owned) {
+      if (request.method() === "GET") { originTracker.reads++; await json({ok:true,result:{status:"active",expiresAt:"2027-10-31T12:00:00Z"}}); return; }
+      if (request.method() === "POST" && request.postData() === "{}") { originTracker.writes++; await json({ok:true,result:{status:"withdrawn"}}); return; }
+    }
     trace.unexpected.push(request.method() + " " + url.pathname + url.search); await route.abort();
   });
   return trace;
 }
-async function mount(page: Page, ready = true) {
+async function mount(page: Page, ready = true, originAvailable = false) {
   await page.goto(origin + "/configuracoes");
   await page.addStyleTag({ content: styles }); await page.addScriptTag({ content: THEME_INIT_SCRIPT }); await page.addScriptTag({ content: bundle });
-  await page.evaluate(({ actor, access }) => (globalThis as unknown as { __startIssue34SettingsSql(user: string, policy: AccessPolicy, hidden: boolean): void }).__startIssue34SettingsSql(actor, access, false), { actor: owner, access: policy });
+  await page.evaluate(({ actor, access, originAvailable: enabled }) => (globalThis as unknown as { __startIssue34SettingsSql(user: string, policy: AccessPolicy, hidden: boolean, originAvailable: boolean): void }).__startIssue34SettingsSql(actor, access, false, enabled), { actor: owner, access: policy, originAvailable });
   await expect(page.locator('[data-application-mode="connected"]')).toBeVisible();
   if (ready) await expect(page.locator('.settings-workspace[data-access="allowed"]')).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
 }
+test("origem de cadastro: retirada acessível não mostra valores de campanha", async ({page})=>{
+  await page.setViewportSize({width:390,height:844});
+  const originTracker={reads:0,writes:0}, trace=await attach(page,"dark",[{answer:{status:200,view:listed}}],[200],originTracker);
+  await mount(page,true,true);
+  const section=page.getByRole("region",{name:"Origem do cadastro"});
+  await expect(section.getByText(/Permitido até/)).toBeVisible();
+  const button=section.getByRole("button",{name:"Retirar consentimento"});await button.focus();await expect(button).toBeFocused();await button.press("Enter");
+  await expect(section.getByText("Não há origem de cadastro ativa.")).toBeVisible();
+  expect(originTracker).toEqual({reads:1,writes:1});expect(trace.unexpected).toEqual([]);expect(trace.errors).toEqual([]);
+  await expect(section).not.toContainText(/utm_|campanha=/i);
+});
 const clean = (report: VisualReport) => {
   expect(report.overflow, describeVisualFailures(report, "overflow")).toEqual([]);
   expect(report.targets, describeVisualFailures(report, "targets")).toEqual([]);
@@ -172,10 +187,10 @@ for (const width of [320, 390, 768, 1440]) for (const theme of ["light", "dark"]
     await page.keyboard.press("Enter");
     await expect(panel).toHaveAttribute("aria-expanded", "true"); await expect(list.getByRole("listitem")).toHaveCount(2);
     if (width <= 600) {
-      // Layout Codex: the header theme control is a named 44×44 icon over the native select.
+      // The header theme control is a named 44×44 icon button that swaps light and dark in one click.
       const theme = await page.locator(".shell-topbar .theme-toggle").boundingBox();
       expect(theme?.width).toBeGreaterThanOrEqual(44); expect(theme?.height).toBeGreaterThanOrEqual(44);
-      await expect(page.locator(".shell-topbar").getByRole("combobox", { name: "Tema", exact: true })).toHaveValue(/light|dark|system/);
+      await expect(page.locator(".shell-topbar").getByRole("button", { name: /^Ativar tema (claro|escuro)$/ })).toBeVisible();
       // Bottom labels stay on one line and end with an ellipsis instead of breaking letters.
       await expect(page.getByRole("navigation", { name: "Navegação no celular", exact: true }).locator(".shell-bottom-link > span").first()).toHaveCSS("text-overflow", "ellipsis");
     }

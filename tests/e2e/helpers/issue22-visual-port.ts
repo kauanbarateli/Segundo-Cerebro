@@ -93,14 +93,20 @@ const convergenceHashes: Readonly<Record<string, string>> = Object.freeze({
   "src/components/features/capturar/capture.css": "32377227eb4d9808d6dc19482dbb533b2e41737a5059b55546fc8fa4b986feee",
   "src/components/features/tarefas/tasks.css": "9a153d412d69e3f190cfb17595af877c3c3c44be2d21b789fcca38af2588379d",
 });
+// Frente A, fase 1 (A01 #128): DESIGN.md drops the retired landing "princípios" section from the
+// Material line. One reviewed blob qualifies C's provenance; no other stable source changes.
+const frenteAHashes: Readonly<Record<string, string>> = Object.freeze({
+  "DESIGN.md": "50a267aee63986b33eb733c6587886911a7dcec08a80d63e5db8f3c4b21449c1",
+});
 /** The caller computes the hash from the exact Git blob, never a manifest hint. */
-export function qualifyVisualStableSource(tree: VisualTree, path: string, sha256: string): "baseline" | "landing" | "layout" | "planning" | "convergence" {
+export function qualifyVisualStableSource(tree: VisualTree, path: string, sha256: string): "baseline" | "landing" | "layout" | "planning" | "convergence" | "frente-a" {
   if (!["B", "P", "C"].includes(tree) || !Object.hasOwn(stableHashes, path)) throw new Error("VISUAL_STABLE_SOURCE_CHANGED:" + path);
   if (sha256 === stableHashes[path]) return "baseline";
   if (tree === "C" && Object.hasOwn(landingHashes, path) && sha256 === landingHashes[path]) return "landing";
   if (tree === "C" && Object.hasOwn(layoutHashes, path) && sha256 === layoutHashes[path]) return "layout";
   if (tree === "C" && Object.hasOwn(planningHashes, path) && sha256 === planningHashes[path]) return "planning";
   if (tree === "C" && Object.hasOwn(convergenceHashes, path) && sha256 === convergenceHashes[path]) return "convergence";
+  if (tree === "C" && Object.hasOwn(frenteAHashes, path) && sha256 === frenteAHashes[path]) return "frente-a";
   throw new Error("VISUAL_STABLE_SOURCE_CHANGED:" + path);
 }
 /** Full historical JSON equality after removing only the three approved fields. */

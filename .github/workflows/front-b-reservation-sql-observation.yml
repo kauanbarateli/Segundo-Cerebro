@@ -1,0 +1,33 @@
+name: Diagnóstico sintético da reserva de cadastro
+
+on:
+  push:
+    branches:
+      - codex/front-b-integracao-consolidada
+    paths:
+      - .github/workflows/front-b-reservation-sql-observation.yml
+
+permissions:
+  contents: read
+
+jobs:
+  reservation-diagnostic:
+    if: github.repository == 'kauanbarateli/Segundo-Cerebro'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version-file: .nvmrc
+      - name: Conferir commit da execução
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Instalar dependências fixadas
+        run: npm ci
+      - name: Contratos puros
+        run: node --test tests/scripts/front-b-reservation-guard.test.mjs
+      - name: Diagnóstico PGlite em memória
+        run: |
+          env -i PATH="$PATH" HOME="$RUNNER_TEMP" LANG=C.UTF-8 LC_ALL=C.UTF-8 TZ=UTC FRONT_B_RUN_RESERVATION_PGLITE=1 node --test tests/scripts/front-b-reservation-opt-in.test.mjs

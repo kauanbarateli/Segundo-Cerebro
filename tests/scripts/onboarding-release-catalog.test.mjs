@@ -5,7 +5,8 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {registerHooks} from 'node:module';
-import {readCurrent27CanonicalMigrations,readHistorical026CanonicalMigrations} from '../helpers/canonical-release-source.mjs';
+import {fileURLToPath} from 'node:url';
+import {readHistorical027FromReviewedFrontB,readHistorical026FromReviewedFrontB} from '../helpers/canonical-front-b-source.mjs';
 const candidateHelperUrl=new URL('../../tests/helpers/onboarding-candidate-sql.ts',import.meta.url);
 const canonicalHelperUrl=new URL('../../tests/helpers/local-canonical-sql.ts',import.meta.url);
 function resolveCandidateLocalImport(specifier,context,nextResolve){
@@ -34,9 +35,10 @@ test('026 catalogue preserves historical checks and refuses new authority, shape
  assert.equal(metadata.functions.length,29);assert.equal(metadata.tables.length,9);
  assert.equal(metadata.pg17Compatibility.notNullConstraintRowsExcluded,62);
  assert.equal(metadata.tables.flatMap(table=>table.constraints).some(item=>item.definition.startsWith('NOT NULL ')),false);
- const current=await readCurrent27CanonicalMigrations(),historical=await readHistorical026CanonicalMigrations();
- assert.equal(current.length,27);assert.equal(current.at(-1).file,'20261024130000_finance_mvp_vertical.sql');assert.equal(historical.length,26);
- for(let index=0;index<26;index++){assert.equal(historical[index].file,current[index].file);assert.equal(historical[index].source.equals(current[index].source),true);}
+ const reviewRoot=fileURLToPath(new URL('../../',import.meta.url));
+ const historical027=await readHistorical027FromReviewedFrontB(reviewRoot),historical=await readHistorical026FromReviewedFrontB(reviewRoot);
+ assert.equal(historical027.length,27);assert.equal(historical027.at(-1).file,'20261024130000_finance_mvp_vertical.sql');assert.equal(historical.length,26);
+ for(let index=0;index<26;index++){assert.equal(historical[index].file,historical027[index].file);assert.equal(historical[index].source.equals(historical027[index].source),true);}
  const source=await readFile(new URL('../fixtures/schema-release-026/release-catalog.sql',import.meta.url),'utf8');
  assert.equal(Buffer.byteLength(source),82143);assert.equal(createHash('sha256').update(source).digest('hex'),'4557741f008d48ea60ad8a3e2d5a41667630543c3bf2ab0682ec2b33ad97e297');
  assert.match(source,/^-- T028/);assert.match(source,/begin transaction read only;/);assert.match(source,/rollback;\s*$/);

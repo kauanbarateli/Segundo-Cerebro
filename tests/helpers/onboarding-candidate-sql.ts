@@ -5,7 +5,7 @@ import {resolve} from "node:path";
 import {fileURLToPath} from "node:url";
 import {createHash} from "node:crypto";
 import {createHistorical026CanonicalSql} from "./local-canonical-sql";
-import {readHistorical026CanonicalMigrations} from "./canonical-release-source.mjs";
+import {readHistorical026FromReviewedFrontB} from "./canonical-front-b-source.mjs";
 const root=fileURLToPath(new URL("../../",import.meta.url));
 const promoted="20261023061901_onboarding_foundation.sql";
 const files=[
@@ -42,15 +42,15 @@ export async function prepareOnboardingCandidateSql():Promise<{sql:string;sha256
  const sql="-- Reviewed disposable candidate, composed from three inert proposals. No Cron.\nbegin;\n"+parts.join("\n")+"\ncommit;\n";
  return {sql,sha256:createHash("sha256").update(sql).digest("hex")};
 }
-/** CURRENT27 is fully qualified before selecting the explicit026 prefix.
+/** The complete reviewed 27/30 source chain is qualified before selecting the explicit026 prefix.
  * The composed025-to-026 candidate must equal canonical026; neither026 nor027
  * is applied a second time to this historical testbed. */
-export async function createOnboardingCandidateSql() {
- const migrations=await readHistorical026CanonicalMigrations(root),last=migrations.at(-1);
+export async function createOnboardingCandidateSql(reviewRoot=root) {
+ const migrations=await readHistorical026FromReviewedFrontB(reviewRoot),last=migrations.at(-1);
  if(migrations.length!==26||!last||last.file!==promoted)throw new Error("Historical026 boundary changed; inspect before candidate validation.");
  const candidate=await prepareOnboardingCandidateSql();
  if(normalize(last.source.toString("utf8"))!==candidate.sql)throw new Error("Promoted026 differs from reviewed candidate bytes.");
- return createHistorical026CanonicalSql();
+ return createHistorical026CanonicalSql(reviewRoot);
 }
 export async function runOnboardingCandidateAssertions(db:Awaited<ReturnType<typeof createOnboardingCandidateSql>>):Promise<void> {
  const catalog=exactlyOnce(normalize(await readFile(resolve(root,"proposals/onboarding-catalog-assertions.sql"),"utf8")),"do $draft_only$ begin raise exception 'DRAFT_ONLY: review catalog assertions before authorized isolated execution.';end $draft_only$;\n","");

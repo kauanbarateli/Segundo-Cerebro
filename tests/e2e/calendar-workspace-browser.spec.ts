@@ -243,140 +243,81 @@ for (const [width, theme] of [[320, "light"], [390, "dark"], [1440, "light"], [1
     expect(trace.unexpected).toEqual([]); expect(trace.errors).toEqual([]);
   });
 }
-// Layout Codex: all-day bars span the covered day columns (one continuous bar), so a day
-// lists the bars that overlap its column; timed buttons read as "time|title".
-const timelineDays = (page: Page) => page.locator(".calendar-time-day").evaluateAll(sections => {
-  const bars = [...document.querySelectorAll(".calendar-all-day-event")].map(bar => ({ rect: bar.getBoundingClientRect(), title: bar.querySelector("strong")?.textContent ?? "" }));
-  return sections.map(section => {
-    const column = section.getBoundingClientRect();
-    return {
-      day: section.getAttribute("data-day") ?? "",
-      allDay: bars.filter(bar => bar.rect.left < column.right - 1 && bar.rect.right > column.left + 1).map(bar => bar.title),
-      timed: [...section.querySelectorAll(".calendar-timeline .calendar-event")].map(node => (node.querySelector(".calendar-event-time")?.textContent ?? "") + "|" + (node.querySelector("strong")?.textContent ?? "")),
-    };
-  });
-});
-const monthDays = (page: Page) => page.locator(".calendar-month-day").evaluateAll(sections => sections.map(section => ({
-  day: section.querySelector("h3 button")?.getAttribute("aria-label") ?? "",
-  outside: section.hasAttribute("data-outside"),
-  events: [...section.querySelectorAll(".calendar-event strong")].map(node => node.textContent ?? ""),
-})));
-const titlesIn = (days: { events: string[] }[], title: string) => days.flatMap((value, index) => value.events.includes(title) ? [index] : []);
+const listRows = (page: Page) => page.locator(".calendar-list-event").evaluateAll(nodes => nodes.map(node => ({ day: node.getAttribute("data-day") ?? "", title: node.querySelector(".calendar-list-content > strong")?.textContent ?? "" })));
 
-test("calendário montado: Dia/Semana/Mês, evento de três dias e expansão da janela sem reload", async ({ page }, info) => {
+test("calendário montado: lista única, evento de três dias e expansão da janela sem reload", async ({ page }, info) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   const trace = await attach(page, { theme: "light" });
-  const marker = await mount(page, "/calendario?date=2026-10-10&view=week");
+  const marker = await mount(page, "/calendario?date=2026-10-01&view=week");
   const sync = page.getByRole("button", { name: "Sincronizar período", exact: true });
   await expect.poll(() => trace.reads.length).toBeGreaterThanOrEqual(1);
   expect(trace.reads[0]).toEqual({ window: { start_day: "2026-08-26", end_day: "2027-04-08" }, ids: [lateId, retreatId] });
   // Layout Codex heading: the module h1 with its approved subtitle.
   await expect(page.locator(".shell-page-heading h1")).toHaveText("Calendário");
-
-  // Week 05–11/10: inside the cursor window, so no sync is requested.
-  await expect(page.getByRole("button", { name: "Semana", exact: true })).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByRole("region", { name: "Grade semanal com rolagem interna" })).toBeVisible();
-  // The week title names the visible range (layout Codex: year and ISO week below it);
-  // pt-BR only capitalizes its first letter.
+  // A legacy view=week link opens the list at the same date and drops the parameter.
+  await expect.poll(() => query(page)).toEqual({ date: "2026-10-01" });
+  for (const name of ["Dia", "Semana", "Mês", "Lista"]) await expect(page.getByRole("button", { name, exact: true })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Próximos eventos" })).toBeVisible();
   const period = page.locator(".calendar-period h2");
-  await expect(period).toHaveText("5–11 de outubro");
-  await expect(page.locator(".calendar-period-title p")).toHaveText("2026 · Semana 41");
+  await expect(period).toHaveText("outubro");
+  await expect(page.locator(".calendar-period-title p")).toHaveText("2026");
   expect(await period.evaluate(node => [getComputedStyle(node).textTransform, getComputedStyle(node, "::first-letter").textTransform])).toEqual(["none", "uppercase"]);
   await settled(page); expect(trace.syncs).toEqual([]);
   // Settings names the calendar section #lembretes ("Calendário e lembretes").
   await expect(page.getByRole("link", { name: "Preferências da agenda", exact: true })).toHaveAttribute("href", "/configuracoes#lembretes");
-  let week = await timelineDays(page);
-  expect(week.map(value => value.day)).toEqual([5, 6, 7, 8, 9, 10, 11].map(day => "2026-10-" + String(day).padStart(2, "0")));
-  expect(week.flatMap((value, index) => value.allDay.includes("Retiro de três dias") ? [index] : [])).toEqual([4, 5, 6]);
-  await expect(page.locator(".calendar-all-day-event")).toHaveCount(1);
-  expect(week.flatMap((value, index) => value.timed.some(text => text.includes("Revisão noturna")) ? [index] : [])).toEqual([2]);
-  expect(week[2]!.timed).toEqual(["22:00 – 23:00|Revisão noturna"]);
+  // The three-day all-day event is one row (no false day for Google's exclusive end on 12/10).
+  expect(await listRows(page)).toEqual([{ day: "2026-10-07", title: "Revisão noturna" }, { day: "2026-10-09", title: "Retiro de três dias" }]);
 
-  // Next week starts on 12/10, the exclusive end of the all-day event.
+  // From the 10th the ongoing event is shown once, at the selected day.
+  await page.getByRole("button", { name: /^Selecionar 10 de outubro/ }).click();
+  await expect.poll(() => query(page)).toEqual({ date: today });
+  expect(await listRows(page)).toEqual([{ day: today, title: "Retiro de três dias" }]);
+  await expect(page.getByText("Em andamento · desde 9 de outubro", { exact: false })).toBeVisible();
+  await settled(page); expect(trace.syncs).toEqual([]);
+
+  // Next month is inside the cursor window and empty: honest empty state, no sync.
   await page.getByRole("button", { name: "Próximo período" }).click();
-  expect(query(page)).toEqual({ date: "2026-10-17", view: "week" });
-  await expect(period).toHaveText("12–18 de outubro");
-  week = await timelineDays(page);
-  expect(week[0]!.day).toBe("2026-10-12");
-  expect(week.some(value => value.allDay.length || value.timed.length)).toBe(false);
+  await expect.poll(() => query(page)).toEqual({ date: "2026-11-01" });
   await expect(page.getByRole("heading", { name: "Nenhum compromisso neste período" })).toBeVisible();
   await settled(page); expect(trace.syncs).toEqual([]);
-
-  // Day view through the real controls: 07 (São Paulo evening), 08 empty, 09–11 all-day, 12 empty.
   await page.getByRole("button", { name: "Período anterior" }).click();
-  await page.getByRole("button", { name: "Dia", exact: true }).click();
-  expect(query(page)).toEqual({ date: "2026-10-10", view: "day" });
-  await expect(page.getByRole("region", { name: "Agenda do dia", exact: true })).toBeVisible();
-  const expectations: [string, string, string[], string[]][] = [["2026-10-07", "quarta-feira, 7 de outubro", [], ["22:00 – 23:00|Revisão noturna"]], ["2026-10-08", "quinta-feira, 8 de outubro", [], []],
-    ["2026-10-09", "sexta-feira, 9 de outubro", ["Retiro de três dias"], []], ["2026-10-10", "sábado, 10 de outubro", ["Retiro de três dias"], []],
-    ["2026-10-11", "domingo, 11 de outubro", ["Retiro de três dias"], []], ["2026-10-12", "segunda-feira, 12 de outubro", [], []]];
-  for (let step = 0; step < 3; step++) await page.getByRole("button", { name: "Período anterior" }).click();
-  for (const [index, [date, heading, allDay, timed]] of expectations.entries()) {
-    if (index) await page.getByRole("button", { name: "Próximo período" }).click();
-    expect(query(page)).toEqual({ date, view: "day" });
-    await expect(page.locator(".calendar-period h2")).toHaveText(heading);
-    const single = await page.locator(".calendar-large .calendar-linear-agenda").evaluate(section => ({
-      allDay: [...section.querySelectorAll('.calendar-linear-row[data-all-day="true"]')].map(row => row.querySelector(".calendar-appointment-title")!.textContent),
-      timed: [...section.querySelectorAll('.calendar-linear-row:not([data-all-day])')].map(row => {
-        const time = row.querySelector(".calendar-linear-time")!;
-        return time.querySelector("time")!.textContent + " – " + time.querySelector("span")!.textContent + "|" + row.querySelector(".calendar-appointment-title")!.textContent;
-      }),
-    }));
-    expect({ date, allDay: single.allDay, timed: single.timed }).toEqual({ date, allDay, timed });
-    await expect(page.getByRole("heading", { name: "Nada agendado para este dia" })).toHaveCount(allDay.length || timed.length ? 0 : 1);
-  }
-  await settled(page); expect(trace.syncs).toEqual([]);
-
-  // Month view: the grid keeps 9–11 and leaves the exclusive 12 empty.
-  await page.getByRole("button", { name: "Hoje", exact: true }).click();
-  await page.getByRole("button", { name: "Mês", exact: true }).click();
-  expect(query(page)).toEqual({ date: today, view: "month" });
-  await expect(page.getByLabel("Mês em grade")).toBeVisible();
-  await expect(page.locator(".calendar-period h2")).toHaveText("outubro");
-  await expect(page.locator(".calendar-period-title p")).toHaveText("2026");
-  let month = await monthDays(page);
-  expect(month).toHaveLength(42);
-  expect(titlesIn(month, "Retiro de três dias").map(index => month[index]!.day)).toEqual(["sexta-feira, 9 de outubro", "sábado, 10 de outubro", "domingo, 11 de outubro"]);
-  expect(titlesIn(month, "Revisão noturna").map(index => month[index]!.day)).toEqual(["quarta-feira, 7 de outubro"]);
-  await settled(page); expect(trace.syncs).toEqual([]);
+  await expect.poll(() => query(page)).toEqual({ date: "2026-10-01" });
 
   // The all-day detail names the exclusive end and closes back to the same control.
-  const retreat = page.locator(".calendar-month-day").filter({ has: page.getByRole("button", { name: "sábado, 10 de outubro", exact: true }) }).getByRole("button", { name: /Retiro de três dias/ });
+  const retreat = page.getByRole("button", { name: /^Retiro de três dias,/ });
   await retreat.click();
-  expect(query(page)).toEqual({ date: today, view: "month", event: retreatId });
+  expect(query(page)).toEqual({ date: "2026-10-01", event: retreatId });
   const detail = page.getByRole("dialog", { name: "Retiro de três dias" });
   await expect(detail).toBeVisible();
   await expect(detail).toContainText("Compromisso Google · somente leitura");
-  // Layout Codex detail: the last included day, then Google's exclusive end explained.
   await expect(detail).toContainText("sexta-feira, 9 de outubro até domingo, 11 de outubro");
   await expect(detail).toContainText("Dia inteiro · 3 dias");
   await expect(detail).toContainText("O Google registra o término em 12 de outubro, exclusivo");
   await expect(detail).toContainText("Google Calendar · agenda@example.invalid");
   await page.keyboard.press("Escape");
   await expect(detail).toBeHidden();
-  expect(query(page)).toEqual({ date: today, view: "month" });
+  expect(query(page)).toEqual({ date: "2026-10-01" });
   await expect(retreat).toBeFocused();
 
-  // September (31/08–11/10) still fits the cursor window that starts on 26/08.
+  // September (01/09–30/09) still fits the cursor window that starts on 26/08.
   await page.getByRole("button", { name: "Período anterior" }).click();
-  expect(query(page)).toEqual({ date: "2026-09-01", view: "month" });
-  await expect(page.locator(".calendar-period h2")).toHaveText("setembro");
+  expect(query(page)).toEqual({ date: "2026-09-01" });
+  await expect(period).toHaveText("setembro");
   await settled(page); expect(trace.syncs).toEqual([]);
   const readsBeforeExpansion = trace.reads.length;
   expect(trace.reads.every(read => !read.ids.includes(augustId))).toBe(true);
 
-  // August's grid starts on 27/07: exactly one sync, then a refreshed snapshot.
+  // August starts on 01/08, before the window: exactly one sync, then a refreshed snapshot.
   await page.getByRole("button", { name: "Período anterior" }).click();
-  expect(query(page)).toEqual({ date: "2026-08-01", view: "month" });
+  expect(query(page)).toEqual({ date: "2026-08-01" });
   await expect.poll(() => trace.syncs.length).toBe(1);
-  expect(trace.syncs[0]).toEqual({ clientId: expect.stringMatching(uuid), requested: { start_day: "2026-07-27", end_day: "2026-09-07" }, before: { start_day: "2026-08-26", end_day: "2027-04-08" }, after: { start_day: "2026-07-27", end_day: "2027-04-08" }, refused: false, readsBefore: readsBeforeExpansion });
+  expect(trace.syncs[0]).toEqual({ clientId: expect.stringMatching(uuid), requested: { start_day: "2026-08-01", end_day: "2026-09-01" }, before: { start_day: "2026-08-26", end_day: "2027-04-08" }, after: { start_day: "2026-08-01", end_day: "2027-04-08" }, refused: false, readsBefore: readsBeforeExpansion });
   await expect(page.locator(".calendar-feedback[role=status]")).toHaveText("Agenda atualizada.");
   await expect(sync).toBeEnabled();
-  month = await monthDays(page);
-  expect(titlesIn(month, "Planejamento de agosto").map(index => month[index]!.day)).toEqual(["quinta-feira, 20 de agosto"]);
+  expect(await listRows(page)).toEqual([{ day: "2026-08-20", title: "Planejamento de agosto" }]);
   const refreshed = trace.reads.slice(trace.syncs[0]!.readsBefore);
   expect(refreshed.length).toBeGreaterThan(0);
-  expect(refreshed.every(read => read.window?.start_day === "2026-07-27" && read.ids.includes(augustId))).toBe(true);
+  expect(refreshed.every(read => read.window?.start_day === "2026-08-01" && read.ids.includes(augustId))).toBe(true);
 
   // The extended window covers both months: navigating within it does not resync.
   await page.getByRole("button", { name: "Próximo período" }).click();
@@ -389,7 +330,7 @@ test("calendário montado: Dia/Semana/Mês, evento de três dias e expansão da 
   expect(trace.documents).toBe(1);
   expect(await page.evaluate(() => (globalThis as unknown as FixtureGlobal).__calendarDocument)).toBe(marker);
   const replaced = await page.evaluate(() => (globalThis as unknown as FixtureGlobal).__calendarWorkspaceFixture.replaced());
-  expect(replaced.at(-1)).toBe("/calendario?date=2026-08-01&view=month");
+  expect(replaced.at(-1)).toBe("/calendario?date=2026-08-01");
   expect(replaced.every(href => href.startsWith("/calendario?"))).toBe(true);
   expect(trace.unexpected).toEqual([]);
   expect(trace.errors).toEqual([]);
@@ -399,44 +340,32 @@ test("calendário montado: Dia/Semana/Mês, evento de três dias e expansão da 
   await info.attach("calendar-workspace-trace.json", { path: evidence, contentType: "application/json" });
 });
 
-test("calendário montado a 390px: lista mensal, troca por teclado e guardas visuais", async ({ page }, info) => {
+test("calendário montado a 390px: lista mensal, paginação por teclado e guardas visuais", async ({ page }, info) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
   const trace = await attach(page, { theme: "dark" });
   await mount(page, "/calendario?date=2026-10-10&view=month");
-  await expect(page.getByLabel("Mês em grade")).toBeHidden();
-  const list = page.getByLabel("Agenda do dia selecionado", { exact: true });
+  await expect.poll(() => query(page)).toEqual({ date: today });
+  const list = page.getByRole("region", { name: "Próximos eventos" });
   await expect(list).toBeVisible();
-  // Doc17: month picker preserves all dates, while the linear agenda shows the
-  // selected civil day only, including an ongoing all-day event exactly once.
-  await expect(list.locator(".calendar-appointment-toggle")).toHaveCount(1);
-  await expect(list.locator(".calendar-appointment-toggle")).toHaveAttribute("aria-label", "Retiro de três dias, Dia inteiro, Agenda sintética");
-  const picker = page.getByRole("group", { name: "Selecionar dia do mês", exact: true });
-  await expect(picker.getByRole("button")).toHaveCount(42);
-  await expect(picker.getByRole("button", { name: "sábado, 10 de outubro, 1 compromisso", exact: true })).toHaveAttribute("aria-pressed", "true");
-  await expect(picker.getByRole("button", { name: "segunda-feira, 12 de outubro, 0 compromissos", exact: true })).toBeVisible();
-  // Layout Codex toolbar: the title leads; previous/next became named 44px icon buttons
-  // sharing one row with Hoje (formerly text buttons "Anterior"/"Próximo").
+  // The ongoing all-day event appears exactly once, at the selected day.
+  await expect(list.locator(".calendar-list-event")).toHaveCount(1);
+  await expect(list.locator(".calendar-list-event")).toHaveAttribute("aria-label", /^Retiro de três dias, .*Agenda sintética, Em andamento/);
+  for (const name of ["Dia", "Semana", "Mês", "Lista"]) await expect(page.getByRole("button", { name, exact: true })).toHaveCount(0);
+  // Previous/next are named 44px icon buttons sharing one row with Hoje.
   const row = await page.locator(".calendar-period").evaluate(node => [node.querySelector(".calendar-period-title")!, ...node.querySelectorAll("button")].map(child => ({ text: child.getAttribute("aria-label") ?? child.textContent, top: Math.round(child.getBoundingClientRect().top), left: Math.round(child.getBoundingClientRect().left), width: child.getBoundingClientRect().width, height: child.getBoundingClientRect().height })));
   expect(row.map(item => item.text)).toEqual(["outubro2026", "Período anterior", "Próximo período", "Hoje"]);
   expect(row[0]!.left).toBeLessThan(row[1]!.left);
   expect(new Set(row.slice(1).map(item => item.top)).size).toBe(1);
   for (const control of row.slice(1)) { expect(control.width).toBeGreaterThanOrEqual(44); expect(control.height).toBeGreaterThanOrEqual(44); }
   const reports = [await inspectVisualGuards(page)];
-  await page.screenshot({ path: info.outputPath("calendar-workspace-month-390-dark.png"), fullPage: true });
-
-  // Keyboard reaches the real view controls; Enter switches without pointer input.
-  // Layout Codex: up to 680px every view reads as an agenda of its period.
-  for (const [label, region, view] of [["Semana", "Agenda do dia selecionado", "week"], ["Dia", "Agenda do dia selecionado", "day"], ["Lista", "Próximos eventos", "list"]] as const) {
-    const button = page.getByRole("button", { name: label, exact: true });
-    await button.focus(); await page.keyboard.press("Enter");
-    await expect(button).toHaveAttribute("aria-pressed", "true");
-    await expect(button).toBeFocused();
-    expect(query(page)).toEqual({ date: today, view });
-    await expect(page.getByRole("region", { name: region })).toBeVisible();
-    reports.push(await inspectVisualGuards(page));
-    await page.screenshot({ path: info.outputPath(`calendar-workspace-${view}-390-dark.png`), fullPage: true });
-  }
+  await page.screenshot({ path: info.outputPath("calendar-workspace-list-390-dark.png"), fullPage: true });
+  // Keyboard changes the period without pointer input and keeps focus on the control.
+  const next = page.getByRole("button", { name: "Próximo período", exact: true });
+  await next.focus(); await page.keyboard.press("Enter");
+  await expect.poll(() => query(page)).toEqual({ date: "2026-11-01" });
+  await expect(next).toBeFocused();
+  reports.push(await inspectVisualGuards(page));
   for (const report of reports) {
     expect(report.documentWidth, describeVisualFailures(report, "overflow")).toBeLessThanOrEqual(report.viewportWidth);
     expect(report.overflow, describeVisualFailures(report, "overflow")).toEqual([]);
@@ -454,9 +383,9 @@ test("calendário montado: sincronização recusada não entra em laço e só re
   await page.setViewportSize({ width: 1440, height: 1000 });
   const trace = await attach(page, { theme: "light", refuseSync: true });
   // Opening directly on August asks for the period outside the cursor once.
-  await mount(page, "/calendario?date=2026-08-15&view=month");
+  await mount(page, "/calendario?date=2026-08-01&view=month");
   await expect.poll(() => trace.syncs.length).toBe(1);
-  expect(trace.syncs[0]).toMatchObject({ requested: { start_day: "2026-07-27", end_day: "2026-09-07" }, refused: true, after: null });
+  expect(trace.syncs[0]).toMatchObject({ requested: { start_day: "2026-08-01", end_day: "2026-09-01" }, refused: true, after: null });
   await expect(page.locator(".calendar-feedback[role=status]")).toHaveText("Muitas tentativas em pouco tempo. Aguarde um momento e tente novamente.");
   await settled(page);
   // The refused period is not requested again while browsing back to it.
@@ -465,12 +394,11 @@ test("calendário montado: sincronização recusada não entra em laço e só re
   await page.getByRole("button", { name: "Período anterior" }).click();
   await settled(page);
   expect(trace.syncs).toHaveLength(1);
-  const month = await monthDays(page);
-  expect(titlesIn(month, "Planejamento de agosto")).toEqual([]);
+  expect(await listRows(page)).toEqual([]);
   // The explicit control remains available and sends a new request.
   await page.getByRole("button", { name: "Sincronizar período", exact: true }).click();
   await expect.poll(() => trace.syncs.length).toBe(2);
-  expect(trace.syncs[1]).toMatchObject({ requested: { start_day: "2026-07-27", end_day: "2026-09-07" }, refused: true });
+  expect(trace.syncs[1]).toMatchObject({ requested: { start_day: "2026-08-01", end_day: "2026-09-01" }, refused: true });
   expect(trace.syncs[1]!.clientId).not.toBe(trace.syncs[0]!.clientId);
   await settled(page);
   expect(trace.documents).toBe(1);
@@ -481,22 +409,21 @@ test("calendário montado: sincronização recusada não entra em laço e só re
 test("calendário montado: conta recém-conectada sem cursor sincroniza o período visível uma vez", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   const trace = await attach(page, { theme: "dark", initialWindow: null });
-  await mount(page, "/calendario?date=2026-10-10&view=week");
-  // window:null means no cursor yet, so even the first visible week is requested.
+  await mount(page, "/calendario?date=2026-10-01&view=week");
+  // window:null means no cursor yet, so even the first visible month is requested.
   await expect.poll(() => trace.syncs.length).toBe(1);
   expect(trace.reads[0]).toEqual({ window: null, ids: [] });
-  expect(trace.syncs[0]).toMatchObject({ requested: { start_day: "2026-10-05", end_day: "2026-10-12" }, before: null, after: { start_day: "2026-10-05", end_day: "2026-10-12" }, refused: false });
+  expect(trace.syncs[0]).toMatchObject({ requested: { start_day: "2026-10-01", end_day: "2026-11-01" }, before: null, after: { start_day: "2026-10-01", end_day: "2026-11-01" }, refused: false });
   await expect(page.locator(".calendar-feedback[role=status]")).toHaveText("Agenda atualizada.");
   await expect(page.getByRole("heading", { name: "Nenhum compromisso neste período" })).toHaveCount(0);
   const refreshed = trace.reads.slice(trace.syncs[0]!.readsBefore);
   expect(refreshed.length).toBeGreaterThan(0);
-  expect(refreshed.every(read => JSON.stringify(read) === JSON.stringify({ window: { start_day: "2026-10-05", end_day: "2026-10-12" }, ids: [lateId, retreatId] }))).toBe(true);
-  const week = await timelineDays(page);
-  expect(week.flatMap((value, index) => value.allDay.includes("Retiro de três dias") ? [index] : [])).toEqual([4, 5, 6]);
-  // The next week extends the cursor once; returning stays inside and does not resync.
+  expect(refreshed.every(read => JSON.stringify(read) === JSON.stringify({ window: { start_day: "2026-10-01", end_day: "2026-11-01" }, ids: [lateId, retreatId] }))).toBe(true);
+  expect(await listRows(page)).toEqual([{ day: "2026-10-07", title: "Revisão noturna" }, { day: "2026-10-09", title: "Retiro de três dias" }]);
+  // The next month extends the cursor once; returning stays inside and does not resync.
   await page.getByRole("button", { name: "Próximo período" }).click();
   await expect.poll(() => trace.syncs.length).toBe(2);
-  expect(trace.syncs[1]).toMatchObject({ requested: { start_day: "2026-10-12", end_day: "2026-10-19" }, after: { start_day: "2026-10-05", end_day: "2026-10-19" } });
+  expect(trace.syncs[1]).toMatchObject({ requested: { start_day: "2026-11-01", end_day: "2026-12-01" }, after: { start_day: "2026-10-01", end_day: "2026-12-01" } });
   await settled(page);
   await page.getByRole("button", { name: "Período anterior" }).click();
   await settled(page);
@@ -512,7 +439,7 @@ test("calendário montado: revogação pendente oculta a agenda e Confirmar envi
   const marker = await mount(page, "/calendario?date=2026-10-10&view=month");
   // Layout Codex: sources are the "Meus calendários" checkboxes (formerly switches).
   await expect(page.getByRole("checkbox", { name: "Agenda sintética", exact: true })).toBeVisible();
-  expect(titlesIn(await monthDays(page), "Retiro de três dias")).toHaveLength(3);
+  expect(await listRows(page)).toEqual([{ day: today, title: "Retiro de três dias" }]);
   await settled(page);
 
   await page.getByRole("button", { name: "Desconectar", exact: true }).click();
@@ -537,7 +464,7 @@ test("calendário montado: revogação pendente oculta a agenda e Confirmar envi
   await page.getByRole("button", { name: "Período anterior", exact: true }).click();
   await page.getByRole("button", { name: "Período anterior", exact: true }).click();
   await page.evaluate(() => new Promise<void>(done => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(done, 50)))));
-  expect(query(page)).toEqual({ date: "2026-08-01", view: "month" });
+  expect(query(page)).toEqual({ date: "2026-08-01" });
   expect(trace.syncs).toEqual([]);
   expect(trace.disconnects).toHaveLength(1);
 

@@ -1,0 +1,44 @@
+name: Diagnóstico sintético do catálogo de métricas
+on:
+  push:
+    branches:
+      - codex/front-b-137-pg17-observation
+    paths:
+      - .github/workflows/front-b-metrics-observation.yml
+      - scripts/verification/front-b-137-pg17-harness/**
+      - scripts/verification/front-b-metrics-dictionary-draft/generate.mjs
+      - scripts/verification/front-b-metrics-dictionary-draft/paths.mjs
+      - scripts/verification/front-b-metrics-dictionary-draft/origin-dictionary.json
+      - supabase/operations/candidates/20261101030000_signup_metrics.sql
+      - scripts/verification/auth-local-ci.mjs
+      - tests/e2e-auth-local/identity-data-api-contract.mjs
+      - tests/e2e-auth-local/capture-task-persistence-contract.mjs
+      - tests/e2e-auth-local/qualified-chromium.mjs
+      - tests/e2e-auth-local/browser-process-environment.mjs
+      - tests/e2e-auth-local/auth-local-lifecycle-contract.mjs
+      - tests/helpers/canonical-release-source.mjs
+      - tests/helpers/canonical-front-b-source.mjs
+permissions:
+  contents: read
+jobs:
+  observe:
+    if: github.repository == 'kauanbarateli/Segundo-Cerebro' && github.ref == 'refs/heads/codex/front-b-137-pg17-observation' && github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version-file: .nvmrc
+      - name: Verify checkout
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -z "$(git status --porcelain --untracked-files=all)"
+      - name: Run pure guards
+        run: node --test scripts/verification/front-b-137-pg17-harness/runner.test.mjs scripts/verification/front-b-137-pg17-harness/scenario.test.mjs scripts/verification/front-b-137-pg17-harness/offline-contract.test.mjs scripts/verification/front-b-137-pg17-harness/source-binding.test.mjs
+      - name: Observe disposable synthetic PG17
+        run: |
+          node_binary="$(command -v node)"
+          env -i PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin LANG=C.UTF-8 LC_ALL=C.UTF-8 TZ=UTC CI=true GITHUB_ACTIONS=true RUNNER_TEMP="$RUNNER_TEMP" GITHUB_SHA="$GITHUB_SHA" GITHUB_REF="$GITHUB_REF" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" SC_METRICS_PG17_RUN=1 "$node_binary" scripts/verification/front-b-137-pg17-harness/runner.mjs --execute

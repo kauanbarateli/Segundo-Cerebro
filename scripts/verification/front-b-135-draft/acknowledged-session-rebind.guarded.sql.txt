@@ -1,0 +1,87 @@
+-- GUARDED CANDIDATE. NOT A MIGRATION. NEVER APPLY WITHOUT A SEPARATE REVIEW.
+-- Allows rebind only after a fresh verified email OTP, a committed password
+-- acknowledgement and removal of the old Auth session. Other phases remain closed.
+BEGIN;
+DO $scratch_guard$ BEGIN RAISE EXCEPTION 'UNREVIEWED SCRATCH SQL: DO NOT APPLY'; END $scratch_guard$;
+SET LOCAL lock_timeout = '5s';
+SET LOCAL statement_timeout = '60s';
+
+-- Deploy only with signup paused and old writers drained; do not overwrite a
+-- different proof schema or an existing wrapper. This lock is held until commit.
+LOCK TABLE app_private.signup_password_proofs, app_private.signup_completion_fences_draft IN ACCESS EXCLUSIVE MODE;
+DO $preflight$
+BEGIN
+ IF pg_catalog.to_regprocedure('public.signup_rebind_verified_ack(uuid,uuid,text,text,text)') IS NOT NULL
+ OR pg_catalog.to_regprocedure('app_private.signup_rebind_verified_ack(uuid,uuid,text,text,text)') IS NOT NULL
+ OR NOT EXISTS (
+   SELECT 1 FROM pg_catalog.pg_constraint c
+   WHERE c.conrelid='app_private.signup_password_proofs'::regclass
+    AND c.conname='signup_password_proofs_session_id_fkey' AND c.contype='f'
+    AND c.confrelid='auth.sessions'::regclass AND c.confdeltype='c' AND c.convalidated AND NOT c.condeferrable
+    AND pg_catalog.pg_get_constraintdef(c.oid,false)='FOREIGN KEY (session_id) REFERENCES auth.sessions(id) ON DELETE CASCADE'
+ ) OR NOT EXISTS (
+   SELECT 1 FROM pg_catalog.pg_attribute a
+   WHERE a.attrelid='app_private.signup_password_proofs'::regclass AND a.attname='session_id'
+    AND a.attnotnull AND NOT a.attisdropped
+ ) OR EXISTS (
+   SELECT 1 FROM app_private.signup_completion_fences_draft f
+   LEFT JOIN app_private.signup_password_proofs p ON p.intent_id=f.intent_id
+   WHERE f.phase='password_acknowledged' AND (p.intent_id IS NULL
+     OR p.user_id IS DISTINCT FROM f.user_id OR p.session_id IS DISTINCT FROM f.owner_session_id
+     OR p.consumed_at IS NOT NULL)
+ ) THEN RAISE EXCEPTION 'ACK_REBIND_FOUNDATION_REFUSED'; END IF;
+END $preflight$;
+
+-- Preserve the original unconsumed proof and its original expiry after a
+-- session is revoked. Deleting the user or intent still cascades the proof.
+ALTER TABLE app_private.signup_password_proofs DROP CONSTRAINT signup_password_proofs_session_id_fkey;
+ALTER TABLE app_private.signup_password_proofs ALTER COLUMN session_id DROP NOT NULL;
+ALTER TABLE app_private.signup_password_proofs ADD CONSTRAINT signup_password_proofs_session_id_fkey
+ FOREIGN KEY (session_id) REFERENCES auth.sessions(id) ON DELETE SET NULL;
+
+CREATE FUNCTION app_private.signup_rebind_verified_ack(p_user uuid,p_session uuid,p_subject_hash text,p_terms text,p_privacy text)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE i app_private.signup_intents; f app_private.signup_completion_fences_draft; proof app_private.signup_password_proofs; v_intent_id uuid;
+BEGIN
+ IF p_user IS NULL OR p_session IS NULL OR p_subject_hash IS NULL OR p_subject_hash !~ '^[a-f0-9]{64}$'
+  OR p_terms IS NULL OR p_privacy IS NULL THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ -- The server must obtain p_user/p_session from getUser/getClaims immediately
+ -- after verifyOtp; this service-role-only RPC cannot independently prove OTP.
+ IF NOT EXISTS(SELECT 1 FROM app_private.signup_completion_fences_draft WHERE user_id=p_user) THEN RETURN NULL; END IF;
+ SELECT * INTO i FROM app_private.signup_intents WHERE user_id=p_user AND state='bound';
+ IF NOT FOUND THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ v_intent_id:=i.id;
+ PERFORM app_private.draft_completion_context(p_user,p_session,v_intent_id,p_subject_hash,true,true);
+ SELECT * INTO STRICT i FROM app_private.signup_intents WHERE id=v_intent_id FOR UPDATE;
+ SELECT * INTO f FROM app_private.signup_completion_fences_draft WHERE user_id=p_user AND intent_id=v_intent_id FOR UPDATE;
+ IF NOT FOUND OR f.phase IS DISTINCT FROM 'password_acknowledged'
+  OR f.terms_version IS DISTINCT FROM p_terms OR f.privacy_version IS DISTINCT FROM p_privacy
+  OR i.terms_version IS DISTINCT FROM p_terms OR i.privacy_version IS DISTINCT FROM p_privacy
+  THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ SELECT * INTO proof FROM app_private.signup_password_proofs WHERE intent_id=v_intent_id FOR UPDATE;
+ IF NOT FOUND OR proof.user_id IS DISTINCT FROM p_user OR proof.consumed_at IS NOT NULL
+  OR proof.expires_at<=pg_catalog.clock_timestamp() THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ IF f.owner_session_id IS DISTINCT FROM p_session THEN
+  -- Never take over a live or merely expired session: explicit revocation must
+  -- remove its Auth row, which also clears proof.session_id via the FK.
+  IF EXISTS(SELECT 1 FROM auth.sessions WHERE user_id=p_user AND id<>p_session)
+   OR proof.session_id IS NOT NULL THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+  UPDATE app_private.signup_password_proofs SET session_id=p_session WHERE intent_id=v_intent_id AND session_id IS NULL;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+  UPDATE app_private.signup_completion_fences_draft SET owner_session_id=p_session,updated_at=pg_catalog.now()
+   WHERE user_id=p_user AND intent_id=v_intent_id AND phase='password_acknowledged';
+  IF NOT FOUND THEN RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501'; END IF;
+ ELSIF proof.session_id IS DISTINCT FROM p_session THEN
+  RAISE EXCEPTION 'Signup unavailable.' USING ERRCODE='42501';
+ END IF;
+ RETURN pg_catalog.jsonb_build_object('intentId',i.id,'termsVersion',i.terms_version,'privacyVersion',i.privacy_version,'state',i.state,'originPending',i.origin IS NOT NULL);
+END $$;
+REVOKE ALL ON FUNCTION app_private.signup_rebind_verified_ack(uuid,uuid,text,text,text) FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION app_private.signup_rebind_verified_ack(uuid,uuid,text,text,text) TO service_role;
+CREATE FUNCTION public.signup_rebind_verified_ack(p_user uuid,p_session uuid,p_subject_hash text,p_terms text,p_privacy text)
+RETURNS jsonb LANGUAGE sql SECURITY INVOKER SET search_path='' AS $$
+ SELECT app_private.signup_rebind_verified_ack(p_user,p_session,p_subject_hash,p_terms,p_privacy)
+$$;
+REVOKE ALL ON FUNCTION public.signup_rebind_verified_ack(uuid,uuid,text,text,text) FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION public.signup_rebind_verified_ack(uuid,uuid,text,text,text) TO service_role;
+COMMIT;

@@ -8,7 +8,7 @@ import { createServer } from "node:net";
 import ts from "typescript";
 import { CLI_VERSION, requireCiRunner, assertTempDescendant, assertNoEnvironmentFiles, loadCanonicalMigrations, loadHistorical026Migrations, renderLocalConfig, decodeLocalStatus, localPsqlEnvironment, runBoundedProcess, DATABASE_PREFLIGHT, assertDatabasePreflight, LOCAL_INFRASTRUCTURE_FIXTURE } from "./auth-local-ci.mjs";
 import { ADMIN_INSTANCE_SQL, verifyAdminInstance, acceptAdminContainer, adminMarkerInput, collectAdminSources, decodeAdminSql } from "./admin-native-backend-local-ci.mjs";
-import { ADMIN_BROWSER_CASES, ADMIN_BROWSER_CODES, ADMIN_BROWSER_INFRA_KEYS, ADMIN_BROWSER_LIMITATIONS, ADMIN_BROWSER_SOURCE_COUNTS, blankAdminBrowserCase, validateAdminBrowserCase, validateAdminBrowserCiReport } from "../../tests/e2e-auth-local/admin-browser-contract.mjs";
+import { ADMIN_BROWSER_CASES, ADMIN_BROWSER_CODES, ADMIN_BROWSER_INFRA_KEYS, ADMIN_BROWSER_LIMITATIONS, ADMIN_BROWSER_SOURCE_COUNTS, ADMIN_BROWSER_HISTORICAL_READER_SOURCE, blankAdminBrowserCase, validateAdminBrowserCase, validateAdminBrowserCiReport } from "../../tests/e2e-auth-local/admin-browser-contract.mjs";
 import { ADMIN_BROWSER_PAGES, ADMIN_BROWSER_PROBES, ADMIN_BROWSER_APP, adminBrowserRefuse } from "../../tests/e2e-auth-local/admin-browser-support.mjs";
 import { ADMIN_LOCAL_SOURCE_PATHS } from "../../tests/e2e-auth-local/admin-native-backend-local-ci-contract.mjs";
 import { SOURCE_PINS, qualifyNextStaticRuntime, nextStopEnvironment, createRunnerNextStopRelay } from "../../tests/e2e-auth-local/next-stop-relay.mjs";
@@ -57,12 +57,16 @@ export async function deriveAdminBrowserSourcePaths() {
   for (const seed of ADMIN_BROWSER_SOURCE_SEEDS) await visit(seed);
   return Object.freeze([...paths].sort());
 }
+export function assertAdminBrowserSourcePaths(paths) {
+  if(!Array.isArray(paths)||paths.length!==ADMIN_BROWSER_SOURCE_COUNTS.git||paths.some(path=>typeof path!=="string")||hash(Buffer.from(paths.join("\n")+"\n"))!=="80a56792536f74cb645801b1d1cc80ec995e499b5ddae674023a5867c4aeed33")fail("SOURCE_REFUSED");
+}
 export async function collectAdminBrowserSources(run, sha) {
   const original = await collectAdminSources(run,sha), paths = new Set([...original.sourceHashes.map(r => r.path), ...await deriveAdminBrowserSourcePaths()]);
   const sourceHashes = [];
+  assertAdminBrowserSourcePaths([...paths].sort());
   // Git stdout is UTF-8 text. Compare its ASCII object ID so binary imports
   // retain every byte. SHA-1 identifies the Git blob; reports keep SHA-256.
-  for (const path of [...paths].sort()) { if (!path || path.startsWith("node_modules/")) fail("SOURCE_REFUSED"); const bytes = await canonical(path), oid = (await run("git",["rev-parse","HEAD:"+path],15000)).stdout.trim(), expected = createHash("sha1").update("blob "+bytes.length+"\0").update(bytes).digest("hex"); if (!/^[a-f0-9]{40}$/.test(oid) || oid !== expected) fail("SOURCE_REFUSED"); sourceHashes.push({path,sha256:hash(bytes),bytes:bytes.length}); }
+  for (const path of [...paths].sort()) { if (!path || path.startsWith("node_modules/")) fail("SOURCE_REFUSED"); const bytes = await canonical(path), oid = (await run("git",["rev-parse","HEAD:"+path],15000)).stdout.trim(), expected = createHash("sha1").update("blob "+bytes.length+"\0").update(bytes).digest("hex"); if (!/^[a-f0-9]{40}$/.test(oid) || oid !== expected || path===ADMIN_BROWSER_HISTORICAL_READER_SOURCE.path&&(bytes.length!==ADMIN_BROWSER_HISTORICAL_READER_SOURCE.bytes||hash(bytes)!==ADMIN_BROWSER_HISTORICAL_READER_SOURCE.sha256)) fail("SOURCE_REFUSED"); sourceHashes.push({path,sha256:hash(bytes),bytes:bytes.length}); }
   const dependencyHashes = [...original.dependencyHashes], lock = JSON.parse((await canonical("package-lock.json")).toString("utf8"));
   for (const [name,version] of [["next","15.5.28"],["@supabase/ssr","0.12.7"],["playwright","1.63.0"],["playwright-core","1.63.0"],["@playwright/test","1.63.0"]]) { const path="node_modules/"+name+"/package.json", bytes=await canonical(path), p=JSON.parse(bytes.toString("utf8")), pin=lock.packages["node_modules/"+name]; if(p.name!==name||p.version!==version||pin?.version!==version||!pin.resolved?.startsWith("https://registry.npmjs.org/")||!pin.integrity?.startsWith("sha512-")) fail("SOURCE_REFUSED"); dependencyHashes.push({path,sha256:hash(bytes),bytes:bytes.length}); }
   if(!await qualifyNextStaticRuntime())fail("SOURCE_REFUSED");

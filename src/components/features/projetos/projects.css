@@ -3,9 +3,10 @@
    símbolo 48px, título 24px (20px ≤1270), descrição 14px e rodapé 12px; detalhe com hero e grade 1.2/1.
    RECOMENDADO: progresso feito/total só a partir de tarefas reais; sem prazo/estado inventados. */
 .projects-workspace { min-width: 0; }
-.project-card .project-cover { inline-size: calc(100% + 52px); block-size: 172px; flex: none; margin: -26px -26px 20px; border-radius: var(--radius-panel) var(--radius-panel) 0 0; }
+/* A05 (RECOMENDADO): cover keeps a 16:9 proportion at any card width instead of a fixed 172px height. */
+.project-card .project-cover { inline-size: calc(100% + 52px); block-size: auto; aspect-ratio: 16 / 9; flex: none; margin: -26px -26px 20px; border-radius: var(--radius-panel) var(--radius-panel) 0 0; }
 @media (max-width: 1270px) { .project-card .project-cover { inline-size: calc(100% + 40px); margin: -20px -20px 20px; } }
-@media (max-width: 780px) { .project-card .project-cover { inline-size: calc(100% + 50px); block-size: 164px; margin: -25px -25px 20px; } }
+@media (max-width: 780px) { .project-card .project-cover { inline-size: calc(100% + 50px); margin: -25px -25px 20px; } }
 .project-hero .project-detail-cover { grid-column: 1 / -1; inline-size: calc(100% + 60px); block-size: 240px; margin: -30px -30px 0; }
 .project-image-field { display: grid; gap: var(--space-3); min-inline-size: 0; border: 0; padding: 0; }
 .project-image-field legend { margin-block-end: var(--space-3); font-weight: 500; }
@@ -16,7 +17,8 @@
 .project-form { display: grid; gap: var(--space-4); }
 .project-error { margin-bottom: var(--space-4); color: var(--danger-ink); font-size: var(--type-corpo); overflow-wrap: anywhere; }
 .project-note { color: var(--ink-muted); font-size: var(--type-corpo); line-height: var(--leading-corpo); }
-.projects-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; }
+/* A05 (RECOMENDADO): columns follow the usable width (with or without the sidebar), not fixed breakpoints. */
+.projects-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr)); gap: 22px; }
 .project-card { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; padding: 26px; border-radius: var(--radius-panel); background: var(--surface); color: var(--ink); text-decoration: none; transition: background-color var(--motion-surface) var(--motion-ease); }
 .project-card-top { display: flex; align-items: center; justify-content: space-between; width: 100%; margin-bottom: 28px; color: var(--ink-muted); }
 .project-symbol { display: grid; place-items: center; flex: none; width: 48px; height: 48px; border-radius: 13px; background: var(--surface-muted); color: var(--ink-muted); }
@@ -24,9 +26,9 @@
 .project-symbol.is-personal { color: var(--personal-ink); }
 .project-symbol.is-info { color: var(--info-ink); }
 .project-symbol.is-fin { color: var(--fin-ink); }
-.project-card h2 { margin: 0 0 12px; font-size: 24px; line-height: 1.3; font-weight: var(--weight-section-title); letter-spacing: -0.03em; overflow-wrap: anywhere; }
+.project-card h2 { margin: 0 0 12px; font-size: 24px; line-height: 1.3; font-weight: var(--weight-section-title); letter-spacing: -0.03em; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden; }
 .project-card--trash h2 { margin-top: var(--space-4); }
-.project-card p { max-width: 30ch; min-height: 3.3em; color: var(--ink-muted); font-size: var(--type-corpo); line-height: 1.65; overflow-wrap: anywhere; }
+.project-card p { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; line-clamp: 4; overflow: hidden; max-width: 30ch; min-height: 3.3em; color: var(--ink-muted); font-size: var(--type-corpo); line-height: 1.65; overflow-wrap: anywhere; }
 .project-progress { width: 100%; margin-top: 26px; }
 .project-progress-label { display: flex; justify-content: space-between; gap: var(--space-3); margin-bottom: 10px; color: var(--ink-muted); font-size: var(--type-legenda); font-variant-numeric: tabular-nums; }
 .project-progress-label b { color: var(--ink); font-weight: 500; }
@@ -96,7 +98,8 @@
   .project-card p { min-height: 0; }
 }
 @media (max-width: 780px) {
-  .projects-grid, .project-detail-grid, .project-detail-grid[data-single] > .project-detail-side { grid-template-columns: minmax(0, 1fr); }
+  .project-detail-grid, .project-detail-grid[data-single] > .project-detail-side { grid-template-columns: minmax(0, 1fr); }
+  .projects-grid { grid-template-columns: minmax(0, 1fr); }
   .project-card { padding: 25px; }
   .project-card-top { margin-bottom: 20px; }
   .project-card h2 { font-size: 24px; }
