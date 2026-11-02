@@ -1,0 +1,104 @@
+-- GUARDED QA recovery candidate; NEVER execute before ledger version and review.
+BEGIN;
+DO $manual_guard$ BEGIN RAISE EXCEPTION 'STOP: cancellation not qualified or authorized'; END $manual_guard$;
+DO $external_guard$ BEGIN RAISE EXCEPTION 'STOP: writers and safe recovery not proven'; END $external_guard$;
+SET LOCAL lock_timeout='5s'; SET LOCAL statement_timeout='60s';
+LOCK TABLE app_private.signup_settings,app_private.signup_intents,app_private.signup_origins,app_private.signup_completion_fences_draft IN ACCESS EXCLUSIVE MODE;
+DO $ledger_guard$
+DECLARE
+  actual_quarantine_version constant text := '__QA_QUARANTINE_VERSION_PENDING__';
+  actual_quarantine_name constant text := '__QA_QUARANTINE_NAME_PENDING__';
+BEGIN
+  IF actual_quarantine_version !~ '^[0-9]{14}DO $preflight$ BEGIN
+ IF current_user<>'postgres' OR current_setting('server_version_num')<>'170011' OR NOT EXISTS(SELECT 1 FROM app_private.signup_settings WHERE singleton AND NOT enabled) OR to_regprocedure('public.signup_origin_status_v2(uuid,uuid)') IS NOT NULL OR to_regprocedure('app_private.origin_withdrawal_current_v2(uuid,uuid)') IS NOT NULL OR to_regprocedure('public.signup_fence_finish_origin_v2(uuid,uuid,uuid,text,uuid,uuid,text,text,text)') IS NOT NULL OR EXISTS(SELECT 1 FROM pg_attribute WHERE attrelid IN ('app_private.signup_intents'::regclass,'app_private.signup_origins'::regclass,'app_private.signup_completion_fences_draft'::regclass) AND attname IN ('origin_revision','origin_revision_snapshot','origin_revision_snapshot_set') AND attnum>0 AND NOT attisdropped) OR to_regprocedure('public.signup_origin_withdraw_v2(uuid,uuid,uuid)') IS NOT NULL OR to_regprocedure('public.signup_fence_reserve_origin_v2(uuid,uuid,uuid,text,uuid,text,text,boolean,text,uuid)') IS NOT NULL OR EXISTS(SELECT 1 FROM app_private.signup_intents) OR EXISTS(SELECT 1 FROM app_private.signup_completion_fences_draft) OR EXISTS(SELECT 1 FROM app_private.signup_origins) THEN RAISE EXCEPTION 'STOP: cancellation preconditions differ'; END IF;
+END $preflight$;
+do $freeze_check$ declare fn oid; begin
+ fn:=pg_catalog.to_regprocedure('app_private.sc_cutover_freeze_038f()');
+ if fn is null or not exists(select 1 from pg_catalog.pg_proc p join pg_catalog.pg_language l on l.oid=p.prolang
+  where p.oid=fn and pg_catalog.pg_get_userbyid(p.proowner)='postgres' and p.prokind='f' and not p.prosecdef and not p.proisstrict and p.proconfig=ARRAY['search_path=""']::text[] and l.lanname='plpgsql' and pg_catalog.pg_get_function_result(p.oid)='trigger'
+   and pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(pg_catalog.replace(p.prosrc,E'\r\n',E'\n'),'UTF8')),'hex')='85efc797c669b1550ffebf9402a28c84a9b48c5a0c0ea46f26981f6beea9269d'
+   and not pg_catalog.has_function_privilege(pg_catalog.to_regrole('anon'),p.oid,'EXECUTE')
+   and not pg_catalog.has_function_privilege(pg_catalog.to_regrole('authenticated'),p.oid,'EXECUTE')
+   and not pg_catalog.has_function_privilege(pg_catalog.to_regrole('service_role'),p.oid,'EXECUTE')
+   and not exists(select 1 from pg_catalog.aclexplode(coalesce(p.proacl,pg_catalog.acldefault('f',p.proowner))) a where a.privilege_type<>'EXECUTE' or a.is_grantable or a.grantor<>p.proowner or a.grantee<>p.proowner))
+  or (select count(*) from pg_catalog.pg_trigger t where t.tgfoid=fn and not t.tgisinternal)<>2
+  or not exists(select 1 from pg_catalog.pg_trigger t where t.tgname='sc_cutover_freeze_038f' and t.tgrelid='app_private.signup_intents'::regclass and t.tgfoid=fn and t.tgtype=62 and t.tgenabled='A' and t.tgqual is null and t.tgnargs=0 and t.tgattr=''::pg_catalog.int2vector and t.tgconstraint=0 and not t.tgisinternal)
+  or not exists(select 1 from pg_catalog.pg_trigger t where t.tgname='sc_cutover_freeze_038f' and t.tgrelid='app_private.signup_origins'::regclass and t.tgfoid=fn and t.tgtype=62 and t.tgenabled='A' and t.tgqual is null and t.tgnargs=0 and t.tgattr=''::pg_catalog.int2vector and t.tgconstraint=0 and not t.tgisinternal)
+ then raise exception 'PERSISTENT_FREEZE_NOT_PROVEN'; end if;
+end $freeze_check$;
+DROP TRIGGER sc_cutover_freeze_038f ON app_private.signup_intents;
+DROP TRIGGER sc_cutover_freeze_038f ON app_private.signup_origins;
+DROP FUNCTION app_private.sc_cutover_freeze_038f();
+DO $postcheck$ BEGIN IF to_regprocedure('app_private.sc_cutover_freeze_038f()') IS NOT NULL OR EXISTS(SELECT 1 FROM pg_trigger WHERE tgname='sc_cutover_freeze_038f' AND tgrelid IN ('app_private.signup_intents'::regclass,'app_private.signup_origins'::regclass) AND NOT tgisinternal) THEN RAISE EXCEPTION 'STOP: barrier removal incomplete'; END IF; END $postcheck$;
+COMMIT;
+
+     OR actual_quarantine_version <= '20261101235120'
+     OR actual_quarantine_name = '__QA_QUARANTINE_NAME_PENDING__'
+     OR actual_quarantine_name !~ '^[a-z0-9_]{1,63}DO $preflight$ BEGIN
+ IF current_user<>'postgres' OR current_setting('server_version_num')<>'170011' OR NOT EXISTS(SELECT 1 FROM app_private.signup_settings WHERE singleton AND NOT enabled) OR to_regprocedure('public.signup_origin_status_v2(uuid,uuid)') IS NOT NULL OR to_regprocedure('app_private.origin_withdrawal_current_v2(uuid,uuid)') IS NOT NULL OR to_regprocedure('public.signup_fence_finish_origin_v2(uuid,uuid,uuid,text,uuid,uuid,text,text,text)') IS NOT NULL OR EXISTS(SELECT 1 FROM pg_attribute WHERE attrelid IN ('app_private.signup_intents'::regclass,'app_private.signup_origins'::regclass,'app_private.signup_completion_fences_draft'::regclass) AND attname IN ('origin_revision','origin_revision_snapshot','origin_revision_snapshot_set') AND attnum>0 AND NOT attisdropped) OR to_regprocedure('public.signup_origin_withdraw_v2(uuid,uuid,uuid)') IS NOT NULL OR to_regprocedure('public.signup_fence_reserve_origin_v2(uuid,uuid,uuid,text,uuid,text,text,boolean,text,uuid)') IS NOT NULL OR EXISTS(SELECT 1 FROM app_private.signup_intents) OR EXISTS(SELECT 1 FROM app_private.signup_completion_fences_draft) OR EXISTS(SELECT 1 FROM app_private.signup_origins) THEN RAISE EXCEPTION 'STOP: cancellation preconditions differ'; END IF;
+END $preflight$;
+do $freeze_check$ declare fn oid; begin
+ fn:=pg_catalog.to_regprocedure('app_private.sc_cutover_freeze_038f()');
+ if fn is null or not exists(select 1 from pg_catalog.pg_proc p join pg_catalog.pg_language l on l.oid=p.prolang
+  where p.oid=fn and pg_catalog.pg_get_userbyid(p.proowner)='postgres' and p.prokind='f' and not p.prosecdef and not p.proisstrict and p.proconfig=ARRAY['search_path=""']::text[] and l.lanname='plpgsql' and pg_catalog.pg_get_function_result(p.oid)='trigger'
+   and pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(pg_catalog.replace(p.prosrc,E'\r\n',E'\n'),'UTF8')),'hex')='85efc797c669b1550ffebf9402a28c84a9b48c5a0c0ea46f26981f6beea9269d'
+   and not pg_catalog.has_function_privilege(pg_catalog.to_regrole('anon'),p.oid,'EXECUTE')
+   and not pg_catalog.has_function_privilege(pg_catalog.to_regrole('authenticated'),p.oid,'EXECUTE')
+   and not pg_catalog.has_function_privilege(pg_catalog.to_regrole('service_role'),p.oid,'EXECUTE')
+   and not exists(select 1 from pg_catalog.aclexplode(coalesce(p.proacl,pg_catalog.acldefault('f',p.proowner))) a where a.privilege_type<>'EXECUTE' or a.is_grantable or a.grantor<>p.proowner or a.grantee<>p.proowner))
+  or (select count(*) from pg_catalog.pg_trigger t where t.tgfoid=fn and not t.tgisinternal)<>2
+  or not exists(select 1 from pg_catalog.pg_trigger t where t.tgname='sc_cutover_freeze_038f' and t.tgrelid='app_private.signup_intents'::regclass and t.tgfoid=fn and t.tgtype=62 and t.tgenabled='A' and t.tgqual is null and t.tgnargs=0 and t.tgattr=''::pg_catalog.int2vector and t.tgconstraint=0 and not t.tgisinternal)
+  or not exists(select 1 from pg_catalog.pg_trigger t where t.tgname='sc_cutover_freeze_038f' and t.tgrelid='app_private.signup_origins'::regclass and t.tgfoid=fn and t.tgtype=62 and t.tgenabled='A' and t.tgqual is null and t.tgnargs=0 and t.tgattr=''::pg_catalog.int2vector and t.tgconstraint=0 and not t.tgisinternal)
+ then raise exception 'PERSISTENT_FREEZE_NOT_PROVEN'; end if;
+end $freeze_check$;
+DROP TRIGGER sc_cutover_freeze_038f ON app_private.signup_intents;
+DROP TRIGGER sc_cutover_freeze_038f ON app_private.signup_origins;
+DROP FUNCTION app_private.sc_cutover_freeze_038f();
+DO $postcheck$ BEGIN IF to_regprocedure('app_private.sc_cutover_freeze_038f()') IS NOT NULL OR EXISTS(SELECT 1 FROM pg_trigger WHERE tgname='sc_cutover_freeze_038f' AND tgrelid IN ('app_private.signup_intents'::regclass,'app_private.signup_origins'::regclass) AND NOT tgisinternal) THEN RAISE EXCEPTION 'STOP: barrier removal incomplete'; END IF; END $postcheck$;
+COMMIT;
+ THEN
+    RAISE EXCEPTION 'STOP: actual quarantine version and name not qualified';
+  END IF;
+  IF (SELECT count(*) FROM supabase_migrations.schema_migrations
+      WHERE (version,name) IN (
+        ('20261101172256','m028_front_b_signup_feedback_metrics_qa'),
+        ('20261101234319','m029_front_b_signup_quarantine_038f_qa'),
+        ('20261101234954','m029_front_b_signup_browser_cutover_038f_qa'),
+        ('20261101235120','m029_front_b_signup_thaw_038f_qa')
+      )) <> 4
+     OR NOT EXISTS (SELECT 1 FROM supabase_migrations.schema_migrations
+       WHERE version=actual_quarantine_version AND name=actual_quarantine_name
+         AND cardinality(statements)=1
+         AND encode(sha256(convert_to(statements[1],'UTF8')),'hex')=
+           'fab48cfdf12630643623e4e1d58251b3bcc35bc7c6c0f57d7d93e415514ddb00')
+     OR EXISTS (SELECT 1 FROM supabase_migrations.schema_migrations
+       WHERE version IS NULL OR (version>'20261101235120'
+         AND (version IS DISTINCT FROM actual_quarantine_version OR name IS DISTINCT FROM actual_quarantine_name)))
+     OR EXISTS (SELECT 1 FROM supabase_migrations.schema_migrations
+       WHERE name='sc218_ledger_probe_20261102_5e81f9ab') THEN
+    RAISE EXCEPTION 'STOP: quarantine ledger does not match reviewed record';
+  END IF;
+END;
+$ledger_guard$;
+DO $preflight$ BEGIN
+ IF current_user<>'postgres' OR current_setting('server_version_num')<>'170011' OR NOT EXISTS(SELECT 1 FROM app_private.signup_settings WHERE singleton AND NOT enabled) OR to_regprocedure('public.signup_origin_status_v2(uuid,uuid)') IS NOT NULL OR to_regprocedure('app_private.origin_withdrawal_current_v2(uuid,uuid)') IS NOT NULL OR to_regprocedure('public.signup_fence_finish_origin_v2(uuid,uuid,uuid,text,uuid,uuid,text,text,text)') IS NOT NULL OR EXISTS(SELECT 1 FROM pg_attribute WHERE attrelid IN ('app_private.signup_intents'::regclass,'app_private.signup_origins'::regclass,'app_private.signup_completion_fences_draft'::regclass) AND attname IN ('origin_revision','origin_revision_snapshot','origin_revision_snapshot_set') AND attnum>0 AND NOT attisdropped) OR to_regprocedure('public.signup_origin_withdraw_v2(uuid,uuid,uuid)') IS NOT NULL OR to_regprocedure('public.signup_fence_reserve_origin_v2(uuid,uuid,uuid,text,uuid,text,text,boolean,text,uuid)') IS NOT NULL OR EXISTS(SELECT 1 FROM app_private.signup_intents) OR EXISTS(SELECT 1 FROM app_private.signup_completion_fences_draft) OR EXISTS(SELECT 1 FROM app_private.signup_origins) THEN RAISE EXCEPTION 'STOP: cancellation preconditions differ'; END IF;
+END $preflight$;
+do $freeze_check$ declare fn oid; begin
+ fn:=pg_catalog.to_regprocedure('app_private.sc_cutover_freeze_038f()');
+ if fn is null or not exists(select 1 from pg_catalog.pg_proc p join pg_catalog.pg_language l on l.oid=p.prolang
+  where p.oid=fn and pg_catalog.pg_get_userbyid(p.proowner)='postgres' and p.prokind='f' and not p.prosecdef and not p.proisstrict and p.proconfig=ARRAY['search_path=""']::text[] and l.lanname='plpgsql' and pg_catalog.pg_get_function_result(p.oid)='trigger'
+   and pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(pg_catalog.replace(p.prosrc,E'\r\n',E'\n'),'UTF8')),'hex')='85efc797c669b1550ffebf9402a28c84a9b48c5a0c0ea46f26981f6beea9269d'
+   and not pg_catalog.has_function_privilege(pg_catalog.to_regrole('anon'),p.oid,'EXECUTE')
+   and not pg_catalog.has_function_privilege(pg_catalog.to_regrole('authenticated'),p.oid,'EXECUTE')
+   and not pg_catalog.has_function_privilege(pg_catalog.to_regrole('service_role'),p.oid,'EXECUTE')
+   and not exists(select 1 from pg_catalog.aclexplode(coalesce(p.proacl,pg_catalog.acldefault('f',p.proowner))) a where a.privilege_type<>'EXECUTE' or a.is_grantable or a.grantor<>p.proowner or a.grantee<>p.proowner))
+  or (select count(*) from pg_catalog.pg_trigger t where t.tgfoid=fn and not t.tgisinternal)<>2
+  or not exists(select 1 from pg_catalog.pg_trigger t where t.tgname='sc_cutover_freeze_038f' and t.tgrelid='app_private.signup_intents'::regclass and t.tgfoid=fn and t.tgtype=62 and t.tgenabled='A' and t.tgqual is null and t.tgnargs=0 and t.tgattr=''::pg_catalog.int2vector and t.tgconstraint=0 and not t.tgisinternal)
+  or not exists(select 1 from pg_catalog.pg_trigger t where t.tgname='sc_cutover_freeze_038f' and t.tgrelid='app_private.signup_origins'::regclass and t.tgfoid=fn and t.tgtype=62 and t.tgenabled='A' and t.tgqual is null and t.tgnargs=0 and t.tgattr=''::pg_catalog.int2vector and t.tgconstraint=0 and not t.tgisinternal)
+ then raise exception 'PERSISTENT_FREEZE_NOT_PROVEN'; end if;
+end $freeze_check$;
+DROP TRIGGER sc_cutover_freeze_038f ON app_private.signup_intents;
+DROP TRIGGER sc_cutover_freeze_038f ON app_private.signup_origins;
+DROP FUNCTION app_private.sc_cutover_freeze_038f();
+DO $postcheck$ BEGIN IF to_regprocedure('app_private.sc_cutover_freeze_038f()') IS NOT NULL OR EXISTS(SELECT 1 FROM pg_trigger WHERE tgname='sc_cutover_freeze_038f' AND tgrelid IN ('app_private.signup_intents'::regclass,'app_private.signup_origins'::regclass) AND NOT tgisinternal) THEN RAISE EXCEPTION 'STOP: barrier removal incomplete'; END IF; END $postcheck$;
+COMMIT;
