@@ -25,5 +25,5 @@ test('recovery fixture excludes the race seed that creates an intent',async()=>{
  const runner=await readFile(new URL('./runner.mjs',import.meta.url),'utf8');
  const raceSeed=await readFile(new URL('./same-browser-seed.sql',import.meta.url),'utf8');
  assert.match(raceSeed,/insert into app_private\.signup_intents/i);
- assert.ok(runner.includes("['recovery-ledger-bound','observed-ledger-cutover'].includes(kind)?[sameBrowser.fixture,sameBrowser.foundation,sameBrowser.composition]:[sameBrowser.fixture,sameBrowser.foundation,sameBrowser.composition,sameBrowser.seed]"));
+ assert.ok(runner.includes("['recovery-ledger-bound','observed-ledger-cutover','four-table-lifecycle'].includes(kind)?[sameBrowser.fixture,sameBrowser.foundation,sameBrowser.composition]:[sameBrowser.fixture,sameBrowser.foundation,sameBrowser.composition,sameBrowser.seed]"));
 });
