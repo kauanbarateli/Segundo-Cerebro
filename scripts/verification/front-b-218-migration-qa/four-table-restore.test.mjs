@@ -1,0 +1,22 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises';import {createHash} from 'node:crypto';
+const root=new URL('./',import.meta.url),read=n=>readFile(new URL(n,root));
+const base=await read('cutover-218-observed-ledger.guarded.sql.txt'),ext=await read('extend-freeze-four-tables.guarded.sql.txt'),old=await read('cancel-quarantine-218.guarded.sql.txt'),candidate=await read('restore-two-table-freeze.guarded.sql.txt');
+const sha=x=>createHash('sha256').update(x).digest('hex');
+test('recuperação continua guardada e preserva as verificações das barreiras',()=>{
+ assert.equal(sha(base),'3d00f3b2f81edfff0dcd01b3837a11925ebdcb3ed542ebe8158e2a28e8d0a17c');
+ assert.equal(sha(ext),'eb9cc8f05bb36437689a9c84c6dbd5653845390fc9cabf3f8ad41bf91e636d0e');
+ assert.equal(sha(old),'3b9eb0edcdf9c89cfd387b22382d98a53a4d0eecad961dc0b2d613d6b0dd06ca');
+ assert.equal(sha(candidate),'e4d4912e879bee6edbccfa6a554a6d89d230934051bc447ec000d74e780803a7');
+ const s=candidate.toString(),original=base.toString(),extended=ext.toString(),previous=old.toString();
+ const first=(text,a,b,last=false)=>{const x=last?text.lastIndexOf(a):text.indexOf(a),y=text.indexOf(b,x);assert.ok(x>=0&&y>x);return text.slice(x,y+b.length);};
+ for(const g of ['DO $manual_guard$ BEGIN RAISE EXCEPTION','DO $external_guard$ BEGIN RAISE EXCEPTION'])assert.equal(s.split(g).length-1,1);
+ for(const placeholder of ['__QA_FOUR_FREEZE_VERSION_PENDING__','__QA_FOUR_FREEZE_NAME_PENDING__','__QA_FOUR_FREEZE_HASH_PENDING__'])assert.ok(s.includes(placeholder));
+ assert.ok(s.includes(first(extended,'do $freeze_check$','end $freeze_check$;',true)));
+ assert.ok(s.includes(first(original,'do $freeze_check$','end $freeze_check$;')));
+ assert.ok(s.includes(first(previous,'DO $preflight$','END $preflight$;')));
+ assert.match(s,/LOCK TABLE app_private\.signup_completion_fences_draft,app_private\.signup_intents,app_private\.signup_origins,app_private\.user_admission IN ACCESS EXCLUSIVE MODE/);
+ assert.match(s,/version='20261102100908'/);assert.match(s,/fab48cfdf12630643623e4e1d58251b3bcc35bc7c6c0f57d7d93e415514ddb00/);
+ for(const table of ['signup_completion_fences_draft','user_admission'])assert.equal(s.split(`DROP TRIGGER sc_cutover_freeze_038f ON app_private.${table};`).length-1,1);
+ for(const table of ['signup_intents','signup_origins'])assert.ok(!s.includes(`DROP TRIGGER sc_cutover_freeze_038f ON app_private.${table};`));
+ assert.doesNotMatch(s,/\b(?:DELETE FROM|TRUNCATE TABLE|DROP FUNCTION)\b/i);assert.equal(s.split('COMMIT;').length-1,1);
+});
