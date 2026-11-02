@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseAuthConfig } from "./config";
 import type { FenceArgs } from "./signup-fence-wire";
 import { isTrustedHostedDatabaseOrigin } from "./database-origin-server";
+import { originWithdrawalV2Enabled } from "./origin-withdrawal-v2-gate";
 
 export const signupUnavailable = () => { throw new Error("Signup unavailable."); };
 // Hard gate: only a reviewed code change after the SQL/provider/cutover gates may remove this.
@@ -9,11 +10,17 @@ const TRANSACTIONAL_SIGNUP_RELEASED: boolean = false;
 // Separate release guard: QA/provider version, configuration and duplicate
 // races require qualification. This is not an automatic drift detector.
 const SIGNUP_DUPLICATE_CONTRACT_QUALIFIED: boolean = false;
+// The pending-signup completion/reservation path has not yet been bound to
+// the consent revision. Do not open signup when versioned withdrawal is on.
+const SIGNUP_ORIGIN_V2_COMPLETION_QUALIFIED: boolean = false;
+export function signupOriginV2AllowsCompletion(): boolean {
+  return !originWithdrawalV2Enabled() || SIGNUP_ORIGIN_V2_COMPLETION_QUALIFIED;
+}
 export function signupFenceDeployed(config: SupabaseAuthConfig): boolean {
   return TRANSACTIONAL_SIGNUP_RELEASED && isTrustedHostedDatabaseOrigin(config);
 }
 export function signupEnabled(config: SupabaseAuthConfig): boolean {
-  return signupFenceDeployed(config) && process.env.PUBLIC_SIGNUP_ENABLED === "true";
+  return signupFenceDeployed(config) && signupOriginV2AllowsCompletion() && process.env.PUBLIC_SIGNUP_ENABLED === "true";
 }
 export function signupSameBrowserEnabled(config:SupabaseAuthConfig):boolean {
   return SIGNUP_DUPLICATE_CONTRACT_QUALIFIED && signupEnabled(config);
