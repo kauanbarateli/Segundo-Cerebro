@@ -54,4 +54,3 @@ main { padding-bottom:130px !important; }
 .preview-dock-mobile .fd-group-start { border-top:1px solid var(--line); border-top-left-radius:0; border-top-right-radius:0; margin-top:4px; }
 @supports not (backdrop-filter:blur(20px)) { .fd-dock.preview-dock { background:var(--surface); } }
 @media(min-width:768px) and (max-width:1000px){ .preview-label { bottom:112px; right:16px; } }
-

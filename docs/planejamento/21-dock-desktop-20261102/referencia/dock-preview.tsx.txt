@@ -28,4 +28,3 @@ function PreviewDock() {
 }
 const target = document.getElementById("dock-preview-root");
 if (target) createRoot(target).render(<PreviewDock />);
-

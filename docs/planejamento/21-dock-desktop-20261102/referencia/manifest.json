@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "source": "prototipo-dock-inicio refinado com Impeccable",
+  "source": "prototipo-dock-inicio refinado com Impeccable; fontes normalizados para LF",
   "productBase": "c6cc0065a9e1b70d84b27ca7f82848611ce61ac1",
   "files": [
     {
@@ -15,23 +15,23 @@
     },
     {
       "path": "dock-preview.css.txt",
-      "bytes": 5209,
-      "sha256": "5ded6a1add45384fb7bda78cb2ddc528301c1aa60742b40700bc48891ae837be"
+      "bytes": 5208,
+      "sha256": "bbfb016c3ae242169734fc8abd96840192059ee8920d7e2b14edd0f7f5bee14e"
     },
     {
       "path": "dock-preview.tsx.txt",
-      "bytes": 1673,
-      "sha256": "8387f7b8655ab68014baea605618b306e82764c757551f405c6172fa260766e4"
+      "bytes": 1672,
+      "sha256": "41cfa0835d315afd4a01b81579650ced17c4d831ee5d023f0b04d0de0e48ef59"
     },
     {
       "path": "floating-dock.tsx.txt",
-      "bytes": 15229,
-      "sha256": "f7b5728bb199d98e3f717319a54eed795ea3aeca689f3793565b08c3a4bd8a5c"
+      "bytes": 14763,
+      "sha256": "8534afff06cd606c4012ea89fd462f3ac109b6d616cda28c4a6178ae0f2592a1"
     },
     {
       "path": "index.html.txt",
-      "bytes": 3447,
-      "sha256": "5dd3b61380b029d7c2767d64844bd1b587238e779ec3359568b5c0e4befdcefa"
+      "bytes": 3380,
+      "sha256": "3281a83743b14466ba1022ae2ff4429da41155d60941af5f089542bfa10e221b"
     },
     {
       "path": "MOTION-LICENSE.md",
