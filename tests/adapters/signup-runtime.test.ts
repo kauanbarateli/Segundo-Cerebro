@@ -23,7 +23,7 @@ describe("adaptador servidor para solicitação de cadastro", () => {
     const actual = readFileSync(new URL("../../src/lib/auth/signup-http.ts", import.meta.url), "utf8");
     const fixture = readFileSync(new URL("../fixtures/signup-http-enabled.ts", import.meta.url), "utf8");
     expect(actual).toContain("const TRANSACTIONAL_SIGNUP_RELEASED: boolean = false;");
-    expect(fixture).toBe(actual.replace("const TRANSACTIONAL_SIGNUP_RELEASED: boolean = false;", "const TRANSACTIONAL_SIGNUP_RELEASED: boolean = true;").replace('from "./database-origin-server"', 'from "@/lib/auth/database-origin-server"').replace('from "./config"', 'from "@/lib/auth/config"').replace('from "./signup-fence-wire"', 'from "@/lib/auth/signup-fence-wire"'));
+    expect(fixture).toBe(actual.replace("const TRANSACTIONAL_SIGNUP_RELEASED: boolean = false;", "const TRANSACTIONAL_SIGNUP_RELEASED: boolean = true;").replace('from "./database-origin-server"', 'from "@/lib/auth/database-origin-server"').replace('from "./config"', 'from "@/lib/auth/config"').replace('from "./signup-fence-wire"', 'from "@/lib/auth/signup-fence-wire"').replace('from "../environment/application-destination"', 'from "@/lib/environment/application-destination"'));
   });
   beforeEach(() => {
     vi.stubEnv("PUBLIC_SIGNUP_ENABLED", "true"); doubles.trusted.mockReturnValue(true);
