@@ -1,0 +1,15 @@
+-- Executar antes e depois, no mesmo projeto de QA, por conexão independente.
+SELECT current_database() AS database_name,
+       session_user AS session_role,
+       current_user AS effective_role,
+       clock_timestamp() AS observed_at,
+       to_regclass('supabase_migrations.schema_migrations') IS NOT NULL AS ledger_exists,
+       has_table_privilege(current_user, 'supabase_migrations.schema_migrations', 'SELECT') AS can_read_ledger;
+
+SELECT version, name, coalesce(cardinality(statements), 0) AS statement_count,
+       CASE WHEN cardinality(statements) = 1
+         THEN encode(sha256(convert_to(statements[1], 'UTF8')), 'hex')
+       END AS single_statement_sha256
+FROM supabase_migrations.schema_migrations
+WHERE name = 'sc218_ledger_probe_20261102_5e81f9ab'
+ORDER BY version;

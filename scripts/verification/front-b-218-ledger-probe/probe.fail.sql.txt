@@ -1,0 +1,20 @@
+-- DIAGNÓSTICO DE QA: este SQL termina sempre em erro intencional.
+-- O transporte pode registrar uma linha no ledger mesmo assim. Não executar
+-- sem autorização específica e sem concluir o protocolo README.md.
+DO $probe$
+DECLARE
+  matching_rows bigint;
+BEGIN
+  SELECT count(*) INTO matching_rows
+  FROM supabase_migrations.schema_migrations
+  WHERE name = 'sc218_ledger_probe_20261102_5e81f9ab';
+
+  IF matching_rows = 0 THEN
+    RAISE EXCEPTION USING ERRCODE = 'P2181', MESSAGE = 'SC218_PROBE_ROW_NOT_VISIBLE';
+  ELSIF matching_rows = 1 THEN
+    RAISE EXCEPTION USING ERRCODE = 'P2182', MESSAGE = 'SC218_PROBE_ROW_VISIBLE';
+  ELSE
+    RAISE EXCEPTION USING ERRCODE = 'P2183', MESSAGE = 'SC218_PROBE_MULTIPLE_ROWS';
+  END IF;
+END;
+$probe$;
