@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import "./origin-withdrawal.css";
 
 type State = "loading" | "active" | "absent" | "withdrawn" | "closed" | "error" | "uncertain" | "stale";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

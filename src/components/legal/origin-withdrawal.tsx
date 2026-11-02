@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import "./origin-withdrawal.css";
 
 type State = "loading" | "active" | "absent" | "withdrawn" | "closed" | "error" | "uncertain";
 function result(value: unknown): Record<string, unknown> | null {
