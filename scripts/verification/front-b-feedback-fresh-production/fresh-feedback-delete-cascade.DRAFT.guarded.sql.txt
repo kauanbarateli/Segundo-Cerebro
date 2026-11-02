@@ -88,8 +88,8 @@ CREATE TABLE app_private.feedback_barriers_draft (
 );
 ALTER TABLE app_private.feedback_barriers_draft ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON app_private.feedback_barriers_draft FROM PUBLIC,anon,authenticated,service_role;
--- Deliberately no TTL/cascade or FK: retention, deletion and tombstones require
--- a reviewed design. Never interpret this sketch as an approved policy.
+-- Owner FK cascades on account deletion; no TTL is provided for retained tombstones.
+-- Retention and deletion require review. This sketch is not an approved policy.
 
 -- This helper serializes both operations; PK is the uniqueness constraint.
 -- Hash collisions only over-serialize. Existing writers DO NOT take this lock.

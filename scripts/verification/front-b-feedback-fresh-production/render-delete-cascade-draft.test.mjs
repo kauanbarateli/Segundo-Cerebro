@@ -6,12 +6,14 @@ import {renderDeleteCascade} from './render-delete-cascade-draft.mjs';
 const source=await readFile(new URL('./fresh-feedback-production.DRAFT.guarded.sql.txt',import.meta.url));
 const candidate=await readFile(new URL('./fresh-feedback-delete-cascade.DRAFT.guarded.sql.txt',import.meta.url));
 const hash=b=>createHash('sha256').update(b).digest('hex');
-test('changes only the barrier owner FK and retains guarded bytes',()=>{
+test('changes only the barrier owner FK and its comment while retaining guards',()=>{
  assert.deepEqual(renderDeleteCascade(source),candidate);
- assert.equal(hash(candidate),'8081d72004ac2884a34f5a93a93f051ea737cd118a9eb8d92be3340a8215f1e8');
+ assert.equal(hash(candidate),'7b1ef35061fdfb04512c63c00065b1bc71398be639e0cf3cd425aed71d6951e6');
  const sql=candidate.toString();
  assert.ok(sql.includes('CREATE TABLE app_private.feedback_barriers_draft (\n user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,'));
  assert.ok(sql.includes('PERFORM 1 FROM auth.users WHERE id=p_user FOR SHARE;'));
+ assert.ok(sql.includes('Owner FK cascades on account deletion; no TTL is provided for retained tombstones.'));
+ assert.ok(!sql.includes('Deliberately no TTL/cascade or FK'));
  assert.ok(sql.includes("RAISE EXCEPTION 'UNREVIEWED SCRATCH SQL: DO NOT APPLY'"));
  assert.ok(sql.includes("RAISE EXCEPTION 'DOMAIN_EVENT_CONTRACT_NOT_QUALIFIED'"));
 });

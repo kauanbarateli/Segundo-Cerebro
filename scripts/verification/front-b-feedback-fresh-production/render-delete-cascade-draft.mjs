@@ -12,6 +12,10 @@ export function renderDeleteCascade(source){
  const target='CREATE TABLE app_private.feedback_barriers_draft (\n user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,\n';
  if(s.split(needle).length!==2)throw Error('FEEDBACK_SOURCE_MISMATCH');
  s=s.replace(needle,()=>target);
+ const oldComment='-- Deliberately no TTL/cascade or FK: retention, deletion and tombstones require\n-- a reviewed design. Never interpret this sketch as an approved policy.';
+ const newComment='-- Owner FK cascades on account deletion; no TTL is provided for retained tombstones.\n-- Retention and deletion require review. This sketch is not an approved policy.';
+ if(s.split(oldComment).length!==2)throw Error('FEEDBACK_COMMENT_MISMATCH');
+ s=s.replace(oldComment,()=>newComment);
  for(const guard of ["DO $scratch_guard$ BEGIN RAISE EXCEPTION 'UNREVIEWED SCRATCH SQL: DO NOT APPLY'; END $scratch_guard$;","DO $event_contract_guard$ BEGIN RAISE EXCEPTION 'DOMAIN_EVENT_CONTRACT_NOT_QUALIFIED'; END $event_contract_guard$;"]){if(s.split(guard).length!==2)throw Error('FEEDBACK_GUARD_REFUSED');}
  return Buffer.from(s);
 }
