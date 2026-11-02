@@ -3,6 +3,7 @@
   "git": {
     "deploymentEnabled": {
       "main": false,
+      "codex/front-b-218-migration": false,
       "codex/front-b-218-retirada-duravel": false,
       "codex/front-b-privacidade-retirada": false,
       "codex/paginas-legais-e-checklist-20261018": false,
