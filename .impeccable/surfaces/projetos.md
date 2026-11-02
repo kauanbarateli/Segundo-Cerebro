@@ -18,3 +18,17 @@ VALIDADO: contratos de domínio/adapter/API em Vitest, parser estático e catalo
 ## Layout Codex (D-033, #46)
 
 Composição atual: grade de três cartões com símbolo de 48px (cor de `color_key`), título 24px, descrição e progresso calculado das tarefas reais; detalhe com hero (`.project-heading`, texto em `.project-hero-copy`) e grade 1,2/1. Associação de contêineres, lixeira e restauro preservados. Relatório e desvios: `docs/implementation/layout-codex-ds21/README.md`.
+
+## 02/11/2026 — detalhe com respiro (pedido do mantenedor)
+
+OBSERVADO em produção: “Contexto do projeto” e “Relacionados” ficavam fora de cartões, colados aos blocos vizinhos e sem padding; a coluna de Tarefas terminava antes da lateral.
+
+RECOMENDADO e implementado, só em `projects.css` e na classe do cartão de contexto:
+- Ritmo único de 22px (`--project-gap`, o mesmo vão OBSERVADO da grade) entre capa, contexto, grade e Relacionados.
+- Contexto do projeto e Relacionados viram cartões planos de 16px com padding de 24px (20px até 600px), iguais às seções.
+- Título e ações de cada cartão dividem a mesma linha; em cartão com menos de 26rem as ações descem (container query).
+- Os títulos de contexto e Relacionados usam o título de seção de 18px. O formulário de contexto aparece abaixo de um divisor.
+- Com duas colunas, Tarefas acompanha a altura da lateral e as colunas terminam na mesma linha.
+- Sem cartões aninhados, sem nova cor ou token. Componentes compartilhados (`OnboardingAttributeSelect`, `RelatedPanel`) só mudam dentro de Projetos.
+
+VALIDADO: capturas 1440/1050/390 nos temas claro e escuro, com vãos de 22px medidos, sem transbordo horizontal e sem alvo menor que 44px. O contexto e Relacionados só existem no modo conectado, então foram conferidos com a marcação equivalente sobre o CSS real.
