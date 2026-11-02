@@ -1,0 +1,77 @@
+-- REVIEW ONLY. Not a migration. Does not authorize rollout or remote execution.
+BEGIN;
+DO $guard$ BEGIN RAISE EXCEPTION 'GUARDED: pending consent revision is not qualified'; END $guard$;
+
+-- A fence created before this contract is deliberately unqualified.
+ALTER TABLE app_private.signup_completion_fences_draft ADD COLUMN origin_revision_snapshot uuid;
+ALTER TABLE app_private.signup_completion_fences_draft ADD COLUMN origin_revision_snapshot_set boolean NOT NULL DEFAULT false;
+
+-- A null expected revision means the user was shown an absent origin. The
+-- server must never substitute a freshly read revision for the displayed one.
+CREATE FUNCTION public.signup_fence_reserve_origin_v2(
+ p_user uuid,p_session uuid,p_intent uuid,p_subject_hash text,p_request uuid,
+ p_terms text,p_privacy text,p_accept_origin boolean,p_origin_version text,p_expected_revision uuid
+) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $fn$
+DECLARE current_state jsonb; outcome jsonb; f app_private.signup_completion_fences_draft;
+BEGIN
+ IF p_accept_origin IS NULL THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='42501'; END IF;
+ current_state:=app_private.origin_withdrawal_current_v2(p_user,p_session);
+ IF current_state->>'status' NOT IN ('active','absent') OR current_state->>'status' IS NULL THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='42501'; END IF;
+ IF (current_state->>'status'='active' AND (p_expected_revision IS NULL OR current_state->>'revision' IS DISTINCT FROM p_expected_revision::text))
+  OR (current_state->>'status'='absent' AND p_expected_revision IS NOT NULL) THEN RETURN pg_catalog.jsonb_build_object('status','stale'); END IF;
+ IF p_accept_origin AND current_state->>'status'<>'active' THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='42501'; END IF;
+ -- An existing acknowledged/in-flight fence makes the old reservation return
+ -- early. A refusal must still withdraw the *displayed* revision under the
+ -- same locks; unknown or pre-v2 fences are not allowed to perform it.
+ SELECT * INTO f FROM app_private.signup_completion_fences_draft WHERE user_id=p_user FOR UPDATE;
+ IF FOUND AND NOT p_accept_origin AND current_state->>'status'='active' THEN
+  IF f.intent_id IS DISTINCT FROM p_intent OR f.owner_session_id IS DISTINCT FROM p_session OR NOT f.origin_revision_snapshot_set
+   OR f.origin_accepted IS NOT TRUE OR f.origin_withdrawn IS NOT FALSE OR f.origin_revision_snapshot IS DISTINCT FROM p_expected_revision THEN
+   RAISE EXCEPTION 'Unavailable.' USING ERRCODE='42501';
+  END IF;
+  outcome:=app_private.draft_withdraw_current(p_user,p_session);
+  IF outcome IS DISTINCT FROM pg_catalog.jsonb_build_object('status','withdrawn') THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='42501'; END IF;
+  current_state:=app_private.origin_withdrawal_current_v2(p_user,p_session);
+  IF current_state IS DISTINCT FROM pg_catalog.jsonb_build_object('status','absent','revision',NULL) THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='42501'; END IF;
+ END IF;
+ -- The callee locks the same identity, intent, admission and fence and performs
+ -- the choice and reservation in this transaction. No earlier withdrawal call.
+ outcome:=app_private.draft_reserve_completion(p_user,p_session,p_intent,p_subject_hash,p_request,p_terms,p_privacy,p_accept_origin,p_origin_version);
+ IF outcome->>'status'='acquired' THEN
+  UPDATE app_private.signup_completion_fences_draft SET origin_revision_snapshot=CASE WHEN p_accept_origin THEN p_expected_revision ELSE NULL END,origin_revision_snapshot_set=true
+   WHERE user_id=p_user AND intent_id=p_intent AND owner_session_id=p_session AND request_id=p_request AND generation=(outcome->>'generation')::uuid AND phase='reserved';
+  IF NOT FOUND THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='42501'; END IF;
+ ELSIF outcome->>'status'='acknowledged' THEN
+  SELECT * INTO f FROM app_private.signup_completion_fences_draft WHERE user_id=p_user AND intent_id=p_intent FOR UPDATE;
+  IF NOT FOUND OR NOT f.origin_revision_snapshot_set OR f.owner_session_id IS DISTINCT FROM p_session
+   OR f.request_id IS DISTINCT FROM (outcome->>'requestId')::uuid OR f.generation IS DISTINCT FROM (outcome->>'generation')::uuid
+   OR (((current_state->>'status'='active' AND f.origin_accepted AND NOT f.origin_withdrawn AND f.origin_revision_snapshot=p_expected_revision)
+        OR (current_state->>'status'='absent' AND (NOT f.origin_accepted OR f.origin_withdrawn))) IS NOT TRUE)
+  THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='42501'; END IF;
+ ELSIF outcome->>'status' IS DISTINCT FROM 'pending' THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='42501';
+ END IF;
+ RETURN outcome;
+END $fn$;
+
+CREATE FUNCTION public.signup_fence_finish_origin_v2(
+ p_user uuid,p_session uuid,p_intent uuid,p_subject_hash text,p_request uuid,p_generation uuid,
+ p_current_terms text,p_current_privacy text,p_current_origin text
+) RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $fn$
+DECLARE current_state jsonb; f app_private.signup_completion_fences_draft;
+BEGIN
+ current_state:=app_private.origin_withdrawal_current_v2(p_user,p_session);
+ SELECT * INTO f FROM app_private.signup_completion_fences_draft WHERE user_id=p_user AND intent_id=p_intent FOR UPDATE;
+ IF NOT FOUND OR NOT f.origin_revision_snapshot_set OR f.owner_session_id IS DISTINCT FROM p_session
+  OR f.request_id IS DISTINCT FROM p_request OR f.generation IS DISTINCT FROM p_generation THEN RAISE EXCEPTION 'Unavailable.' USING ERRCODE='42501'; END IF;
+ IF ((current_state->>'status'='active' AND f.origin_accepted AND NOT f.origin_withdrawn AND f.origin_revision_snapshot IS NOT NULL AND current_state->>'revision'=f.origin_revision_snapshot::text)
+      OR (current_state->>'status'='absent' AND (NOT f.origin_accepted OR f.origin_withdrawn))) IS NOT TRUE THEN
+  RAISE EXCEPTION 'Consent revision changed.' USING ERRCODE='40001';
+ END IF;
+ RETURN app_private.draft_finish_fenced(p_user,p_session,p_intent,p_subject_hash,p_request,p_generation,p_current_terms,p_current_privacy,p_current_origin);
+END $fn$;
+REVOKE ALL ON FUNCTION public.signup_fence_reserve_origin_v2(uuid,uuid,uuid,text,uuid,text,text,boolean,text,uuid),public.signup_fence_finish_origin_v2(uuid,uuid,uuid,text,uuid,uuid,text,text,text) FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION public.signup_fence_reserve_origin_v2(uuid,uuid,uuid,text,uuid,text,text,boolean,text,uuid),public.signup_fence_finish_origin_v2(uuid,uuid,uuid,text,uuid,uuid,text,text,text) TO service_role;
+-- Callers already executing old function bodies must also be drained before
+-- any future cutover; REVOKE alone is not a drain.
+REVOKE EXECUTE ON FUNCTION public.signup_fence_reserve(uuid,uuid,uuid,text,uuid,text,text,boolean,text),public.signup_fence_finish(uuid,uuid,uuid,text,uuid,uuid,text,text,text),app_private.draft_reserve_completion(uuid,uuid,uuid,text,uuid,text,text,boolean,text),app_private.draft_finish_fenced(uuid,uuid,uuid,text,uuid,uuid,text,text,text) FROM PUBLIC,anon,authenticated,service_role;
+COMMIT;
