@@ -1,6 +1,7 @@
 import { validEmail, validNewPassword } from "./policy";
 import type { SignupCheckpoint } from "./signup-checkpoint";
 import { SIGNUP_ORIGIN_CONSENT_VERSION } from "../../core/acquisition/signup-origin";
+import { parseSignupOriginForm } from "./signup-origin-snapshot";
 
 type PendingIdentity = { userId: string; sessionId: string; email: string };
 type Intent = { intentId: string; termsVersion: string; privacyVersion: string; state: "bound" | "consumed"; originPending: boolean };
@@ -19,6 +20,9 @@ export interface SignupCompletionPorts {
   newRequestId(): string;
   /** Includes legal/origin snapshot and the atomic discard when origin is refused. */
   reserveCompletion(input: ReservationInput): Promise<unknown>;
+  originRevisionMode?(): boolean;
+  reserveCompletionV2?(input: ReservationInput, expectedRevision:string|null): Promise<unknown>;
+  finishCompletionV2?(fence: CompletionFence, versions: CurrentVersions): Promise<unknown>;
   /** Only a new, committed CAS grants one external call. */
   startCompletion(fence: CompletionFence): Promise<unknown>;
   updatePassword(password: string): Promise<"updated" | "rejected" | "unknown">;
@@ -33,7 +37,7 @@ export interface SignupCompletionPorts {
   confirmFinished(userId:string,sessionId:string,intentId:string): Promise<unknown>;
   clearCheckpoint(): Promise<void>;
 }
-export type SignupCompletionResult = { status: "completed" | "invalid" | "password-invalid" | "rate-limited" | "needs-verification" | "pending-reconciliation" | "unavailable" };
+export type SignupCompletionResult = { status: "completed" | "invalid" | "password-invalid" | "rate-limited" | "needs-verification" | "pending-reconciliation" | "origin-changed" | "origin-review-required" | "unavailable" };
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const pending=():SignupCompletionResult=>({status:"pending-reconciliation"});
 function reservation(value:unknown,requestId:string):{status:"acquired"|"acknowledged";requestId:string;generation:string}|null {
@@ -44,7 +48,7 @@ function reservation(value:unknown,requestId:string):{status:"acquired"|"acknowl
 }
 
 /** Explicit POST. This service is not safe to enable without the documented gates. */
-export async function completePublicSignup(ports: SignupCompletionPorts, input: { password: unknown; acceptedLegal: unknown; termsVersion: unknown; privacyVersion: unknown; acceptedOrigin?: unknown }, current: { terms: string; privacy: string }): Promise<SignupCompletionResult> {
+export async function completePublicSignup(ports: SignupCompletionPorts, input: { password: unknown; acceptedLegal: unknown; termsVersion: unknown; privacyVersion: unknown; acceptedOrigin?: unknown; originRevision?:unknown }, current: { terms: string; privacy: string }): Promise<SignupCompletionResult> {
   try {
     if (!ports.reservationEnabled()) return {status:"unavailable"};
     const checkpoint=ports.readCheckpoint(),now=ports.now();
@@ -52,9 +56,13 @@ export async function completePublicSignup(ports: SignupCompletionPorts, input: 
     const identity=await ports.readVerifiedIdentity();
     if (!identity || identity.userId!==checkpoint.userId || identity.sessionId!==checkpoint.sessionId || /[\u0000-\u001f\u007f-\u009f<>]/u.test(identity.email)) return {status:"needs-verification"};
     const email=identity.email.trim().toLowerCase();if (!validEmail(email)) return {status:"needs-verification"};
-    // A separate authenticated command fences withdrawal before either completion read.
-    // The standalone withdrawal endpoint is still required when the checkpoint has expired.
-    if(checkpoint.originPending && input.acceptedOrigin===false) {
+    // Legacy-only withdrawal. The v2 path combines the displayed revision and
+    // refusal with reservation; a current read here would race reconsent.
+    const revisionMode=ports.originRevisionMode?.()===true;
+    const snapshot=revisionMode?parseSignupOriginForm(input.originRevision):null;
+    if(revisionMode && (!snapshot || !ports.reserveCompletionV2 || !ports.finishCompletionV2))return {status:"unavailable"};
+    if(revisionMode && snapshot?.revision===null && input.acceptedOrigin===true)return {status:"invalid"};
+    if(!revisionMode && checkpoint.originPending && input.acceptedOrigin===false) {
       try {
         const result=await ports.withdrawCurrent(identity.userId,identity.sessionId);
         if(!result || typeof result!=="object" || Array.isArray(result) || Object.keys(result).sort().join(",")!=="status" || !["withdrawn","absent"].includes((result as {status:string}).status)) return pending();
@@ -65,6 +73,9 @@ export async function completePublicSignup(ports: SignupCompletionPorts, input: 
     let finished:unknown;
     try { finished=await ports.confirmFinished(identity.userId,identity.sessionId,checkpoint.intentId); } catch { return pending(); }
     if(finished===true) {
+      // Completion may have won in another tab and transferred consent to a
+      // new revision. Never claim a refusal was applied by that completion.
+      if(revisionMode && input.acceptedOrigin!==true)return {status:"origin-review-required"};
       await ports.clearCheckpoint();return {status:"completed"};
     }
     if(finished!==false) return pending();
@@ -77,18 +88,24 @@ export async function completePublicSignup(ports: SignupCompletionPorts, input: 
     // Old cookie evidence is not a durable fence and must never authorize retry.
     if (checkpoint.passwordConfirmed) return pending();
     if (typeof input.password!=="string" || input.password.length>4096 || !validNewPassword(input.password)) return {status:"password-invalid"};
-    const acceptOrigin=intent.originPending && checkpoint.originPending && input.acceptedOrigin===true;
+    const acceptOrigin=revisionMode ? snapshot?.revision!==null && input.acceptedOrigin===true : intent.originPending && checkpoint.originPending && input.acceptedOrigin===true;
     const requestId=ports.newRequestId();if(typeof requestId!=="string" || !UUID.test(requestId)) return {status:"unavailable"};
     const scope={userId:identity.userId,sessionId:identity.sessionId,intentId:intent.intentId,subjectHash:hash,requestId};
     let result:ReturnType<typeof reservation>;
-    try {result=reservation(await ports.reserveCompletion({...scope,terms:intent.termsVersion,privacy:intent.privacyVersion,acceptOrigin,originVersion:acceptOrigin?SIGNUP_ORIGIN_CONSENT_VERSION:null}),requestId);} catch {return pending();}
+    try {
+      const args={...scope,terms:intent.termsVersion,privacy:intent.privacyVersion,acceptOrigin,originVersion:acceptOrigin?SIGNUP_ORIGIN_CONSENT_VERSION:null};
+      const raw=revisionMode?await ports.reserveCompletionV2!(args,snapshot!.revision):await ports.reserveCompletion(args);
+      if(revisionMode && raw && typeof raw==='object' && !Array.isArray(raw) && Object.keys(raw).join(',')==='status' && (raw as {status:unknown}).status==='stale')return {status:'origin-changed'};
+      result=reservation(raw,requestId);
+    } catch {return pending();}
     if(!result)return pending();
     const fence:CompletionFence={...scope,requestId:result.requestId,generation:result.generation};
     // Only a durable acknowledgement for this same session can resume. It
     // already contains proof of the original provider response; never call Auth.
     if(result.status==="acknowledged") {
       try {
-        if(await ports.finishCompletion(fence,{terms:current.terms,privacy:current.privacy,originVersion:SIGNUP_ORIGIN_CONSENT_VERSION})!==true)return pending();
+        const versions={terms:current.terms,privacy:current.privacy,originVersion:SIGNUP_ORIGIN_CONSENT_VERSION};
+        if(await (revisionMode?ports.finishCompletionV2!(fence,versions):ports.finishCompletion(fence,versions))!==true)return pending();
         await ports.clearCheckpoint();return {status:"completed"};
       } catch {return pending();}
     }
@@ -102,7 +119,8 @@ export async function completePublicSignup(ports: SignupCompletionPorts, input: 
       // Session rotation is unresolved: do not substitute a different session.
       if(!after || after.userId!==identity.userId || after.sessionId!==identity.sessionId || after.email.trim().toLowerCase()!==email)return uncertain();
       if(await ports.acknowledgePassword(fence)!==true)return pending();
-      if(await ports.finishCompletion(fence,{terms:current.terms,privacy:current.privacy,originVersion:SIGNUP_ORIGIN_CONSENT_VERSION})!==true)return pending();
+      const versions={terms:current.terms,privacy:current.privacy,originVersion:SIGNUP_ORIGIN_CONSENT_VERSION};
+      if(await (revisionMode?ports.finishCompletionV2!(fence,versions):ports.finishCompletion(fence,versions))!==true)return pending();
       await ports.clearCheckpoint();return {status:"completed"};
     }catch{return pending();}
   }catch{return {status:"unavailable"};}

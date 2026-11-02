@@ -100,6 +100,6 @@ export async function signupOriginV2Rpc<Name extends keyof OriginV2Args>(config:
 
 /** Draft-only transport. No environment variable can turn this on. */
 export async function signupFenceRpc<K extends keyof FenceArgs>(config:SupabaseAuthConfig,name:K,body:FenceArgs[K]):Promise<unknown> {
-  if (!signupFenceDeployed(config) || (name !== "signup_fence_withdraw" && !signupEnabled(config)) || !["signup_fence_reserve","signup_fence_start","signup_fence_uncertain","signup_fence_ack","signup_fence_finish","signup_fence_confirm","signup_fence_withdraw"].includes(name)) return signupUnavailable();
+  if (!signupFenceDeployed(config) || (name !== "signup_fence_withdraw" && !signupEnabled(config)) || !["signup_fence_reserve","signup_fence_reserve_origin_v2","signup_fence_start","signup_fence_uncertain","signup_fence_ack","signup_fence_finish","signup_fence_finish_origin_v2","signup_fence_confirm","signup_fence_withdraw"].includes(name)) return signupUnavailable();
   return postRpc(config,name,body);
 }
