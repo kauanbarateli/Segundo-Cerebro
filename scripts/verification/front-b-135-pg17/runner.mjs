@@ -21,7 +21,7 @@ const SAME_BROWSER_PINS=Object.freeze([
  ['scripts/verification/front-b-135-draft/same-browser-composed-v1.guarded.sql.txt','038f7a9fa96eaebcdee44b8974e41a1b13dd796651ca5d0fe12a56dcec7fb652']
 ]);
 const LOCAL_PINS=Object.freeze({
- 'origin-218-freeze-exception.draft.mjs':'8cfa4ff80fbc1c7628cab0bb6e46b92664898e0520aba1d721f1392edc402a21',
+ 'origin-218-freeze-exception.draft.mjs':'2c54e51993b05d04fa9da2bd8335cdc03726617f45003b8604a2ab8b37454aca',
  'withdrawal-v2.fixture.sql':'25db90f494174bbe1ca13724bbd301f526a7f8e638ad53270749a24036d7c89a',
  'withdrawal-v2.guarded.sql.txt':'02ef5708f3d9bf74d4ecc7d1946461503eb20d6f4cbadd9b6fb98d7ac85ccdff',
  'withdrawal-v2-race.draft.mjs':'e8401a167b3d9356b5c56d7e83c56bf85796e6d9881a3bc24e1bf66009ea874b',
@@ -46,7 +46,7 @@ const LOCAL_PINS=Object.freeze({
 });
 const SUPPORT_PINS=Object.freeze([
  [BASE+'runner.test.mjs','d482b4ae531c6af9a6680adac9f271809501ae1dc34b1b712393d98695db595e'],
- [BASE+'origin-218-freeze-exception.draft.test.mjs','a638be7dec426b5cd2fa7cfea5878c34ca6771307d1a85e97736826cbc39714b'],
+ [BASE+'origin-218-freeze-exception.draft.test.mjs','434324a5c05876aba211680fd8764a5e04de8bf3310c3e182199a9bc08b58e99'],
  [BASE+'withdrawal-v2-race.draft.test.mjs','7e246b335f59fa77f1585dc9bd440dfa61674943f4e6b95bd214ef74ac746b89'],
  [BASE+'full-cutover-transaction.draft.test.mjs','680ead06bfb0b9b6dd97e951f32ca21720a09c0c1f8ecf236ff8d42339c37165'],
  [BASE+'persistent-freeze-orders.draft.test.mjs','055585f6e0bdd89dd6ceb04ec64418bbde7d180c120dab34f4b9cced4463f723'],
@@ -133,7 +133,7 @@ export async function execute(env=process.env){
      const initial=json(await checked(`select json_build_object('kind','initial','result',public.signup_origin_status_v2('${context.user}'::uuid,'${context.session}'::uuid));`));
      if(initial?.kind!=='initial'||initial.result?.status!=='active'||!/^[0-9a-f-]{36}$/i.test(initial.result?.revision??''))fail();
      results.push(await observeWithdrawalRace(ports,{nonce,systemIdentifier,user:context.user,session:context.session},initial.result.revision,kind==='withdrawal-renew-first'?'renew-first':'withdraw-first'));
-    } else if(kind.startsWith('origin-218-freeze-'))results.push(await observeOrigin218Freeze(ports,{nonce,systemIdentifier,user:context.user,session:context.session},bytes.get(BASE+'persistent-freeze.quarantine.guarded.sql.txt'),bytes.get(BASE+'withdrawal-v2.guarded.sql.txt'),kind==='origin-218-freeze-commit'?'commit':'rollback'));
+    } else if(kind.startsWith('origin-218-freeze-'))results.push(await observeOrigin218Freeze(ports,{nonce,systemIdentifier,user:context.user,session:context.session},bytes.get(BASE+'persistent-freeze.quarantine.guarded.sql.txt'),bytes.get(BASE+'withdrawal-v2.guarded.sql.txt'),kind==='origin-218-freeze-commit'?'commit':'rollback',bytes.get(SAME_BROWSER_PINS[0][0])));
     else if(kind==='full-cutover')results.push(await observeFullCutover({exec:checked,query:async sql=>json(await checked(sql))},{foundation:bytes.get(SAME_BROWSER_PINS[0][0]),quarantine:bytes.get(BASE+'persistent-freeze.quarantine.guarded.sql.txt'),cutover:bytes.get(BASE+'persistent-freeze.cutover.guarded.sql.txt'),preflight:bytes.get(BASE+'ledger-preflight.readonly.sql.txt')}));
     else if(kind==='freeze-reverse'||kind==='freeze-rollback')results.push(await observeFreezeOrder(ports,{nonce,systemIdentifier},sameBrowser.composition.toString('utf8'),bytes.get(BASE+'persistent-freeze.quarantine.guarded.sql.txt'),kind==='freeze-reverse'?'reverse':'rollback'));
     else if(kind==='persistent-freeze')results.push(await observePersistentFreeze(ports,{nonce,systemIdentifier},sameBrowser.composition.toString('utf8'),bytes.get(BASE+'persistent-freeze.quarantine.guarded.sql.txt')));

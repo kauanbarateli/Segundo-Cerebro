@@ -3,10 +3,17 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { origin218FreezePlan, observeOrigin218Freeze } from './origin-218-freeze-exception.draft.mjs';
 const freeze=await readFile(new URL('./persistent-freeze.quarantine.guarded.sql.txt',import.meta.url));
+const foundation=await readFile(new URL('../front-b-135-draft/admission-feedback-metrics-atomic.sql.txt',import.meta.url));
 const candidate=await readFile(new URL('./withdrawal-v2.guarded.sql.txt',import.meta.url));
 const ctx={nonce:'1'.repeat(32),systemIdentifier:'1234567890123456',user:'10000000-0000-4000-8000-000000000001',session:'20000000-0000-4000-8000-000000000001'};
 test('accepts only pinned sources and emits a fully isolated transaction plan',()=>{
- const p=origin218FreezePlan(ctx,freeze,candidate,'commit');
+ const p=origin218FreezePlan(ctx,freeze,candidate,'commit',foundation);
+ assert.match(p.setup,/LEGACY_WITHDRAWAL_FIXTURE_COLLISION/);assert.match(p.setup,/create function public.signup_origin_withdraw\(p_user uuid,p_session uuid\)/);
+ assert.match(p.setup,/SELECT app_private.draft_withdraw_current\(p_user,p_session\)/);
+ for(const name of ['app_private.draft_withdraw_identity','app_private.draft_withdraw_pending_origin','app_private.draft_withdraw_origin','app_private.draft_withdraw_current','app_private.signup_origin_withdraw','public.signup_origin_withdraw','public.signup_fence_withdraw','app_private.signup_discard_pending_origin','public.signup_discard_pending_origin'])assert.ok(p.setup.includes(`to_regprocedure('${name}(`),name);
+ assert.match(p.setup,/grant execute on function app_private.draft_withdraw_pending_origin[\s\S]*public.signup_fence_withdraw\(uuid,uuid\) to service_role/);
+ assert.doesNotMatch(p.setup,/grant execute on function app_private.draft_withdraw_identity/);
+ assert.throws(()=>origin218FreezePlan(ctx,freeze,candidate,'commit',Buffer.concat([foundation,Buffer.from(' ')])));
  assert.match(p.cutter,/access exclusive mode/); assert.match(p.writer,/set local role service_role/);
  assert.match(p.waiting(111,222),/pg_blocking_pids\(222\)/); assert.match(p.waiting(111,222),/RowShareLock/);
  assert.match(p.cutover,/disable trigger sc_cutover_freeze_038f/); assert.match(p.cutover,/enable always trigger sc_cutover_freeze_038f/);
@@ -14,8 +21,8 @@ test('accepts only pinned sources and emits a fully isolated transaction plan',(
  assert.match(p.verify,/tgenabled='A'/); assert.match(p.setup,/OFFLINE_INSTANCE_REFUSED/);
  assert.match(p.diagnostic(111,222),/blockedByCutter/); assert.match(p.diagnostic(111,222),/intentRowExclusive/); assert.doesNotMatch(p.diagnostic(111,222),/query_start|query_text|usename/);
  assert.match(p.diagnostic(111,222),/'idle',exists\(select 1 from pg_stat_activity where pid=222 and backend_type='client backend' and state='idle'\)/);
- assert.throws(()=>origin218FreezePlan({...ctx,nonce:'bad'},freeze,candidate,'commit'));
- assert.throws(()=>origin218FreezePlan(ctx,freeze,Buffer.concat([candidate,Buffer.from(' ')]),'commit'));
+ assert.throws(()=>origin218FreezePlan({...ctx,nonce:'bad'},freeze,candidate,'commit',foundation));
+ assert.throws(()=>origin218FreezePlan(ctx,freeze,Buffer.concat([candidate,Buffer.from(' ')]),'commit',foundation));
  assert.throws(()=>p.waiting(111,111));
 });
 function mock(mode,opts={}){
@@ -24,10 +31,10 @@ function mock(mode,opts={}){
  return {traces,ports:{async open(){return sessions[index++];},async pause(){},async query(sql){traces.push(sql);if(sql.includes("'kind','waiting'"))return {kind:'waiting',blocked:!opts.neverWait};if(sql.includes("'kind','diagnostic'"))return {kind:'diagnostic',present:true,active:!opts.early,idle:!!opts.early,blockedByCutter:!opts.early,waitingOnLock:!opts.early,intentRowShare:false,intentRowExclusive:!opts.early,intentAccessShare:false,originRowShare:false,originRowExclusive:false,originAccessShare:false};if(sql.includes("'kind','verify'"))return {kind:'verify',v2:mode==='commit',freeze:true};return {kind:'setup'};}}};
 }
 for(const mode of ['commit','rollback'])test(`requires observed waiting and retained freeze after ${mode}`,async()=>{
- const f=mock(mode);const result=await observeOrigin218Freeze(f.ports,ctx,freeze,candidate,mode);
+ const f=mock(mode);const result=await observeOrigin218Freeze(f.ports,ctx,freeze,candidate,mode,foundation);
  assert.equal(result.scenario,`origin-218-freeze-${mode}-pg17`);assert.equal(result.acceptance,false);assert.equal(result.hostedCertified,false);
  assert.ok(f.traces.some(sql=>sql.includes('pg_blocking_pids')));assert.ok(f.traces.some(sql=>sql.includes(`${mode};select json_build_object`)));
 });
-test('fails closed when a blocked writer is not observed',async()=>{const f=mock('commit',{neverWait:true});await assert.rejects(observeOrigin218Freeze(f.ports,ctx,freeze,candidate,'commit'),/ORIGIN_218_FREEZE_REFUSED/);});
-test('a classified early error remains a failure and consumes only the expected receipt',async()=>{const f=mock('commit',{neverWait:true,early:true});await assert.rejects(observeOrigin218Freeze(f.ports,ctx,freeze,candidate,'commit'),/ORIGIN_218_FREEZE_REFUSED/);assert.ok(f.traces.some(sql=>sql.includes("'kind','diagnostic'")));});
-test('fails closed when a session cannot close',async()=>{const f=mock('rollback',{closeFails:true});await assert.rejects(observeOrigin218Freeze(f.ports,ctx,freeze,candidate,'rollback'),/ORIGIN_218_FREEZE_REFUSED/);});
+test('fails closed when a blocked writer is not observed',async()=>{const f=mock('commit',{neverWait:true});await assert.rejects(observeOrigin218Freeze(f.ports,ctx,freeze,candidate,'commit',foundation),/ORIGIN_218_FREEZE_REFUSED/);});
+test('a classified early error remains a failure and consumes only the expected receipt',async()=>{const f=mock('commit',{neverWait:true,early:true});await assert.rejects(observeOrigin218Freeze(f.ports,ctx,freeze,candidate,'commit',foundation),/ORIGIN_218_FREEZE_REFUSED/);assert.ok(f.traces.some(sql=>sql.includes("'kind','diagnostic'")));});
+test('fails closed when a session cannot close',async()=>{const f=mock('rollback',{closeFails:true});await assert.rejects(observeOrigin218Freeze(f.ports,ctx,freeze,candidate,'rollback',foundation),/ORIGIN_218_FREEZE_REFUSED/);});

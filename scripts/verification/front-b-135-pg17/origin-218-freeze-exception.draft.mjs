@@ -5,15 +5,38 @@ const fail=()=>{throw Error('ORIGIN_218_FREEZE_REFUSED');};
 const exact=(x,keys)=>x&&typeof x==='object'&&!Array.isArray(x)&&Object.keys(x).length===keys.length&&keys.every(k=>Object.hasOwn(x,k));
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const SHA='02ef5708f3d9bf74d4ecc7d1946461503eb20d6f4cbadd9b6fb98d7ac85ccdff';
+const FOUNDATION_SHA='aca4ef373aec1ad3c2ddce859d412a5454e1cb06f457e395fdab5fbada6cacff';
 const digest=b=>createHash('sha256').update(b).digest('hex');
 const pid=x=>Number.isSafeInteger(x)&&x>1;
 
-export function origin218FreezePlan(ctx,freezeBytes,candidateBytes,mode){
+function legacyWithdrawalFixture(foundationBytes){
+ if(!Buffer.isBuffer(foundationBytes)||digest(foundationBytes)!==FOUNDATION_SHA)fail();
+ const source=foundationBytes.toString('utf8');
+ const defs=[
+  ['CREATE FUNCTION app_private.draft_withdraw_identity(', '\n$$;'],
+  ['CREATE FUNCTION app_private.draft_withdraw_pending_origin(', '\nEND $$;'],
+  ['CREATE FUNCTION app_private.draft_withdraw_origin(', '\nEND $$;'],
+  ['CREATE FUNCTION app_private.draft_withdraw_current(', '\nEND $$;'],
+  ['CREATE OR REPLACE FUNCTION app_private.signup_origin_withdraw(', '\n$$;'],
+  ['create function public.signup_origin_withdraw(', '$$;'],
+  ['CREATE FUNCTION public.signup_fence_withdraw(', '$$;'],
+  ['create function app_private.signup_discard_pending_origin(', '\nend $$;'],
+  ['create function public.signup_discard_pending_origin(', '$$;'],
+ ];
+ const extracted=defs.map(([start,end])=>{if(source.split(start).length!==2)fail();const a=source.indexOf(start),b=source.indexOf(end,a);if(b<0)fail();return source.slice(a,b+end.length);});
+ const signatures=['app_private.draft_withdraw_identity(uuid,uuid)','app_private.draft_withdraw_pending_origin(uuid,uuid,uuid,text)','app_private.draft_withdraw_origin(uuid,uuid,uuid,text)','app_private.draft_withdraw_current(uuid,uuid)','app_private.signup_origin_withdraw(uuid,uuid)','public.signup_origin_withdraw(uuid,uuid)','public.signup_fence_withdraw(uuid,uuid)','app_private.signup_discard_pending_origin(uuid,uuid,uuid,text)','public.signup_discard_pending_origin(uuid,uuid,uuid,text)'];
+ const absent=signatures.map(x=>`to_regprocedure('${x}') is not null`).join(' or ');
+ return `do $fixture_guard$ begin if ${absent} then raise exception 'LEGACY_WITHDRAWAL_FIXTURE_COLLISION'; end if; end $fixture_guard$;\n${extracted.join('\n')}\n`+
+  `revoke all on function ${signatures.join(',')} from public,anon,authenticated,service_role;\n`+
+  `grant execute on function app_private.draft_withdraw_pending_origin(uuid,uuid,uuid,text),app_private.draft_withdraw_origin(uuid,uuid,uuid,text),app_private.draft_withdraw_current(uuid,uuid),app_private.signup_origin_withdraw(uuid,uuid),public.signup_origin_withdraw(uuid,uuid),public.signup_fence_withdraw(uuid,uuid) to service_role;\n`;
+}
+export function origin218FreezePlan(ctx,freezeBytes,candidateBytes,mode,foundationBytes){
  if(!exact(ctx,['nonce','systemIdentifier','user','session'])||!/^[a-f0-9]{32}$/.test(ctx.nonce)||!/^\d{16,20}$/.test(ctx.systemIdentifier)||!UUID.test(ctx.user)||!UUID.test(ctx.session)||!['commit','rollback'].includes(mode))fail();
  if(!Buffer.isBuffer(candidateBytes)||digest(candidateBytes)!==SHA)fail();
  const source=candidateBytes.toString('utf8'), marker='-- Distinct, opaque revisions', end='\nCOMMIT;';
  if(source.split(marker).length!==2||source.split(end).length!==2||!source.includes('$guard$')||!source.trimEnd().endsWith('COMMIT;'))fail();
  const body=source.slice(source.indexOf(marker),source.indexOf(end));
+ const legacy=legacyWithdrawalFixture(foundationBytes);
  const freeze=qualifyFreeze(freezeBytes), prefix=`sc.fb.218.${ctx.nonce}`;
  const checkStart=freeze.indexOf('do $freeze_check$'),checkEnd=freeze.indexOf('end $freeze_check$;',checkStart);
  if(checkStart<0||checkEnd<0||freeze.indexOf('do $freeze_check$',checkStart+1)!==-1)fail();
@@ -22,7 +45,7 @@ export function origin218FreezePlan(ctx,freezeBytes,candidateBytes,mode){
  const timeouts="set local statement_timeout='20s';set local lock_timeout='15s';";
  const wrapper=`create function public.sc_test_origin218_old(u uuid,s uuid) returns jsonb language plpgsql security invoker set search_path='' as $test$ begin perform public.signup_origin_withdraw(u,s);return pg_catalog.jsonb_build_object('blocked',false,'reason','unexpected-success');exception when others then if SQLSTATE='55000' and SQLERRM='QA_CUTOVER_PERSISTENT_WRITE_FREEZE' then return pg_catalog.jsonb_build_object('blocked',true,'reason','freeze');end if;return pg_catalog.jsonb_build_object('blocked',false,'reason',case SQLSTATE when '42501' then 'permission-or-identity' when '42883' then 'missing-function' when '40P01' then 'deadlock' when '57014' then 'cancelled' else 'other' end);end $test$;`;
  return Object.freeze({
-  setup:`begin;${guard}${freeze}\n${wrapper}commit;select json_build_object('kind','setup');`,
+  setup:`begin;${guard}${legacy}${freeze}\n${wrapper}commit;select json_build_object('kind','setup');`,
   cutter:`begin;${timeouts}set local application_name='${prefix}.cutter';${guard}select json_build_object('kind','cutter','pid',pg_backend_pid());lock table app_private.signup_intents,app_private.signup_origins in access exclusive mode;select json_build_object('kind','locked');`,
   writer:`begin;${timeouts}set local application_name='${prefix}.writer';${guard}select json_build_object('kind','writer','pid',pg_backend_pid());set local role service_role;select json_build_object('kind','old-result','result',public.sc_test_origin218_old('${ctx.user}'::uuid,'${ctx.session}'::uuid));reset role;commit;select json_build_object('kind','writer-done');`,
   waiting:(blocker,waiter)=>{if(!pid(blocker)||!pid(waiter)||blocker===waiter)fail();return `begin read only;${guard}select json_build_object('kind','waiting','blocked',${blocker}=any(pg_blocking_pids(${waiter})) and exists(select 1 from pg_catalog.pg_locks where pid=${waiter} and relation='app_private.signup_intents'::regclass and mode='RowShareLock' and not granted) and exists(select 1 from pg_stat_activity where pid=${waiter} and application_name='${prefix}.writer' and state='active'));rollback;`;},
@@ -32,8 +55,8 @@ export function origin218FreezePlan(ctx,freezeBytes,candidateBytes,mode){
  });
 }
 
-export async function observeOrigin218Freeze(ports,ctx,freezeBytes,candidateBytes,mode){
- const p=origin218FreezePlan(ctx,freezeBytes,candidateBytes,mode);if(!ports||['open','query','pause'].some(k=>typeof ports[k]!=='function'))fail();let a,b,closedA=false,closedB=false,error,phase='setup';
+export async function observeOrigin218Freeze(ports,ctx,freezeBytes,candidateBytes,mode,foundationBytes){
+ const p=origin218FreezePlan(ctx,freezeBytes,candidateBytes,mode,foundationBytes);if(!ports||['open','query','pause'].some(k=>typeof ports[k]!=='function'))fail();let a,b,closedA=false,closedB=false,error,phase='setup';
  const kind=(x,k)=>exact(x,['kind'])&&x.kind===k;
  try {
   if(!kind(await ports.query(p.setup),'setup'))fail();a=await ports.open('cutter');b=await ports.open('writer');
