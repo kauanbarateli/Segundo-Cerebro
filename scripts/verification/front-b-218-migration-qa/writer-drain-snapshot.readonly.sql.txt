@@ -1,0 +1,60 @@
+-- QA diagnostics only. Counts/catalogue, never payloads or raw SQL.
+-- Each invocation is one snapshot; this does not stop new work or prove drain.
+BEGIN TRANSACTION READ ONLY;
+WITH snapshot AS (
+SELECT clock_timestamp() AS observed_at, current_user AS executor,
+ current_setting('server_version_num') AS pg_version,
+ (SELECT count(*) FROM app_private.signup_settings WHERE singleton AND NOT enabled) AS signup_explicitly_closed,
+ (SELECT count(*) FROM app_private.signup_intents) AS intents,
+ (SELECT count(*) FROM app_private.signup_completion_fences_draft) AS fences,
+ (SELECT count(*) FROM app_private.signup_origins) AS origins,
+ (SELECT count(*) FROM pg_stat_activity WHERE pid<>pg_backend_pid() AND backend_type='client backend' AND state='active') AS active_clients,
+ (SELECT count(*) FROM pg_stat_activity WHERE pid<>pg_backend_pid() AND backend_type='client backend' AND xact_start IS NOT NULL) AS client_open_transactions,
+ (SELECT count(*) FROM pg_locks WHERE NOT granted AND relation IN ('app_private.signup_intents'::regclass,'app_private.signup_origins'::regclass,'app_private.signup_completion_fences_draft'::regclass,'app_private.user_admission'::regclass)) AS waiters_in_scope,
+ (SELECT count(*) FROM pg_locks WHERE granted AND mode IN ('RowExclusiveLock','ShareRowExclusiveLock','ExclusiveLock','AccessExclusiveLock') AND relation IN ('app_private.signup_intents'::regclass,'app_private.signup_origins'::regclass,'app_private.signup_completion_fences_draft'::regclass,'app_private.user_admission'::regclass)) AS write_locks_in_scope,
+ (SELECT count(*) FROM cron.job) AS all_cron_jobs,
+ (SELECT count(*) FROM cron.job WHERE active) AS active_cron_jobs,
+ (SELECT count(*) FROM cron.job WHERE jobid=1 AND jobname='sc-onboarding-retention-v1' AND active AND username='postgres' AND encode(sha256(convert_to(command,'UTF8')),'hex')='e481eb4d7db482f3a967adf470ad2e0876b42082336e754136e0809f19acee87') AS expected_onboarding_job,
+ (SELECT count(*) FROM cron.job WHERE jobname ILIKE 'sc-signup-%' OR command ~* '(signup_prune|signup_browser_prune)') AS named_signup_jobs,
+ (SELECT count(*) FROM cron.job_run_details WHERE end_time IS NULL) AS unfinished_cron_runs,
+ (SELECT count(*) FROM pg_stat_activity WHERE backend_type='pg_cron launcher') AS cron_launchers,
+ (SELECT count(*) FROM pg_stat_activity WHERE backend_type ILIKE '%pg_net%' AND datname=current_database()) AS pgnet_workers,
+ to_regnamespace('net') IS NOT NULL AS net_schema_present,
+ to_regclass('net.http_request_queue') IS NOT NULL AS net_queue_visible,
+ has_schema_privilege('postgres','cron','USAGE') AS postgres_cron_usage,
+ has_table_privilege('postgres','cron.job','UPDATE') AS postgres_cron_update,
+ has_schema_privilege('service_role','cron','USAGE') AS service_cron_usage,
+ pg_has_role('postgres','pg_read_all_stats','USAGE') AS postgres_read_all_stats,
+ pg_has_role('postgres','pg_signal_backend','USAGE') AS postgres_signal_backend
+), expected(signature,definition_sha,security_definer) AS (VALUES
+ ('app_private.append_event(uuid,text,uuid,text,text,jsonb,jsonb)','f59ebde8976e8b6d0f68dcc9676336f29c648de86cb3d47f92c26d9fdcd19c85',true),
+ ('app_private.capture_task_bump()','bd68e4c06393fb525c51e41307f8079b0e945213826588acd06d8e3a9cf17342',true),
+ ('app_private.capture_task_event()','1e3e334e6cb087b817ee81ca1a240137b8e268d50dd84c7b188ea80c1e773410',true),
+ ('app_private.fgt_receipt_guard()','f7ba162542db86685b237a5fd9b310a6e4b40185a3a651fb6315b38474cecd69',true),
+ ('app_private.finance_bump()','bf97b313f7a08e68ff04227d0127ae3dd92c614deb0b282016fd4253a835d520',true),
+ ('app_private.onboarding_event(uuid,uuid)','ce45f7655d34511068e70de70cb3afa9997c82360285b119ea5b6b21313e5e03',true),
+ ('app_private.onboarding_expire_round(uuid,uuid)','449fe6c9705096cb3bd1679fc6637817c2c6dc47924af7c7463ebe37e8d8bb5f',true),
+ ('app_private.onboarding_oauth_permit_zero()','e64d723e431c60b0f2fd2c10192c158f33849b6eb3cc8d457a0a1f96b40ed622',true),
+ ('app_private.onboarding_reconcile(uuid,uuid)','93f3d8afab0eb2d365a490019bbc4e017b1db620cb2fc75edbbcfa2b09201cbf',true),
+ ('app_private.onboarding_retention_sweep()','92bc619ffb958c804a82a97a5923bca21426245e0e7137b4c4a4caa8e376e1c7',false),
+ ('app_private.projects_habits_bump()','1eceff8f29abf948e13420555cca33d5e9fc0ef73e1d3a538990c0154c890997',true),
+ ('app_private.vault_bump()','28424a04e380b40acefd37109e02efb69f7925a052f4313fe17b7003fcd33480',true)
+), checks AS (SELECT e.*,to_regprocedure(signature) AS routine FROM expected e), function_audit AS (
+SELECT count(*) AS functions_checked,
+ count(*) FILTER(WHERE routine IS NULL OR (SELECT pg_get_userbyid(proowner) FROM pg_proc WHERE oid=routine) IS DISTINCT FROM 'postgres'
+  OR (SELECT prosecdef FROM pg_proc WHERE oid=routine) IS DISTINCT FROM security_definer
+  OR (SELECT encode(sha256(convert_to(pg_get_functiondef(oid),'UTF8')),'hex') FROM pg_proc WHERE oid=routine) IS DISTINCT FROM definition_sha
+  OR has_function_privilege('service_role',routine,'EXECUTE') IS DISTINCT FROM false
+  OR has_function_privilege('authenticated',routine,'EXECUTE') IS DISTINCT FROM false
+  OR has_function_privilege('anon',routine,'EXECUTE') IS DISTINCT FROM false
+  OR (SELECT count(*) FROM pg_proc p CROSS JOIN LATERAL aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a WHERE p.oid=routine AND a.privilege_type='EXECUTE' AND a.grantee=p.proowner AND a.grantor=p.proowner AND NOT a.is_grantable)<>1
+  OR (SELECT count(*) FROM pg_proc p CROSS JOIN LATERAL aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a WHERE p.oid=routine AND (a.privilege_type<>'EXECUTE' OR a.grantee<>p.proowner OR a.grantor<>p.proowner OR a.is_grantable))<>0) AS function_mismatches
+FROM checks
+), trigger_audit AS (
+SELECT count(*) AS trigger_count,
+ encode(sha256(convert_to(string_agg(format('%s.%s:%s:%s:%s',n.nspname,c.relname,t.tgname,t.tgenabled,pg_get_triggerdef(t.oid)),E'\n' ORDER BY n.nspname,c.relname,t.tgname),'UTF8')),'hex') AS trigger_set_sha
+FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid JOIN pg_namespace n ON n.oid=c.relnamespace
+WHERE NOT t.tgisinternal AND ((n.nspname='app_private' AND c.relname IN ('onboarding_retention_state','onboarding_rounds','onboarding_intents','onboarding_oauth','command_receipts')) OR (n.nspname='public' AND c.relname='domain_events'))
+)
+SELECT row_to_json(snapshot) AS snapshot,row_to_json(function_audit) AS function_audit,row_to_json(trigger_audit) AS trigger_audit FROM snapshot,function_audit,trigger_audit;
+ROLLBACK;

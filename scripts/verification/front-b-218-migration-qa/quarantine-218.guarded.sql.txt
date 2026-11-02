@@ -1,0 +1,38 @@
+-- GUARDED QA proposal only. Not an executable migration.
+BEGIN;
+DO $manual_guard$ BEGIN RAISE EXCEPTION 'STOP: quarantine is not qualified or authorized'; END $manual_guard$;
+DO $external_guard$ BEGIN RAISE EXCEPTION 'STOP: destination, writers and Auth not proven'; END $external_guard$;
+SET LOCAL lock_timeout='5s'; SET LOCAL statement_timeout='60s';
+LOCK TABLE app_private.signup_settings,app_private.signup_intents,app_private.signup_origins IN ACCESS EXCLUSIVE MODE;
+DO $preflight$ BEGIN
+ IF current_user<>'postgres' OR current_setting('server_version_num')<>'170011' OR to_regclass('supabase_migrations.schema_migrations') IS NULL THEN RAISE EXCEPTION 'STOP: executor, version or ledger differs'; END IF;
+ IF EXISTS(SELECT 1 FROM (VALUES ('20261101172256','m028_front_b_signup_feedback_metrics_qa'),('20261101234319','m029_front_b_signup_quarantine_038f_qa'),('20261101234954','m029_front_b_signup_browser_cutover_038f_qa'),('20261101235120','m029_front_b_signup_thaw_038f_qa')) AS e(version,name) WHERE NOT EXISTS(SELECT 1 FROM supabase_migrations.schema_migrations m WHERE m.version=e.version AND m.name=e.name)) OR EXISTS(SELECT 1 FROM supabase_migrations.schema_migrations WHERE version>'20261101235120') THEN RAISE EXCEPTION 'STOP: ledger differs'; END IF;
+ IF NOT EXISTS(SELECT 1 FROM app_private.signup_settings WHERE singleton AND NOT enabled) OR to_regprocedure('app_private.sc_cutover_freeze_038f()') IS NOT NULL OR EXISTS(SELECT 1 FROM pg_trigger WHERE tgrelid IN ('app_private.signup_intents'::regclass,'app_private.signup_origins'::regclass) AND NOT tgisinternal) THEN RAISE EXCEPTION 'STOP: settings or trigger baseline differs'; END IF;
+END $preflight$;
+-- Persist beyond the transaction; this deliberately blocks all DML/TRUNCATE.
+CREATE FUNCTION app_private.sc_cutover_freeze_038f() RETURNS trigger LANGUAGE plpgsql SET search_path='' AS $freeze_body$
+begin
+ raise exception 'QA_CUTOVER_PERSISTENT_WRITE_FREEZE' using errcode='55000';
+end;
+$freeze_body$;
+REVOKE ALL ON FUNCTION app_private.sc_cutover_freeze_038f() FROM PUBLIC,anon,authenticated,service_role;
+CREATE TRIGGER sc_cutover_freeze_038f BEFORE INSERT OR UPDATE OR DELETE OR TRUNCATE ON app_private.signup_intents FOR EACH STATEMENT EXECUTE FUNCTION app_private.sc_cutover_freeze_038f();
+CREATE TRIGGER sc_cutover_freeze_038f BEFORE INSERT OR UPDATE OR DELETE OR TRUNCATE ON app_private.signup_origins FOR EACH STATEMENT EXECUTE FUNCTION app_private.sc_cutover_freeze_038f();
+ALTER TABLE app_private.signup_intents ENABLE ALWAYS TRIGGER sc_cutover_freeze_038f;
+ALTER TABLE app_private.signup_origins ENABLE ALWAYS TRIGGER sc_cutover_freeze_038f;
+
+do $freeze_check$ declare fn oid; begin
+ fn:=pg_catalog.to_regprocedure('app_private.sc_cutover_freeze_038f()');
+ if fn is null or not exists(select 1 from pg_catalog.pg_proc p join pg_catalog.pg_language l on l.oid=p.prolang
+  where p.oid=fn and pg_catalog.pg_get_userbyid(p.proowner)='postgres' and p.prokind='f' and not p.prosecdef and not p.proisstrict and p.proconfig=ARRAY['search_path=""']::text[] and l.lanname='plpgsql' and pg_catalog.pg_get_function_result(p.oid)='trigger'
+   and pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(pg_catalog.replace(p.prosrc,E'\r\n',E'\n'),'UTF8')),'hex')='85efc797c669b1550ffebf9402a28c84a9b48c5a0c0ea46f26981f6beea9269d'
+   and not pg_catalog.has_function_privilege(pg_catalog.to_regrole('anon'),p.oid,'EXECUTE')
+   and not pg_catalog.has_function_privilege(pg_catalog.to_regrole('authenticated'),p.oid,'EXECUTE')
+   and not pg_catalog.has_function_privilege(pg_catalog.to_regrole('service_role'),p.oid,'EXECUTE')
+   and not exists(select 1 from pg_catalog.aclexplode(coalesce(p.proacl,pg_catalog.acldefault('f',p.proowner))) a where a.privilege_type<>'EXECUTE' or a.is_grantable or a.grantor<>p.proowner or a.grantee<>p.proowner))
+  or (select count(*) from pg_catalog.pg_trigger t where t.tgfoid=fn and not t.tgisinternal)<>2
+  or not exists(select 1 from pg_catalog.pg_trigger t where t.tgname='sc_cutover_freeze_038f' and t.tgrelid='app_private.signup_intents'::regclass and t.tgfoid=fn and t.tgtype=62 and t.tgenabled='A' and t.tgqual is null and t.tgnargs=0 and t.tgattr=''::pg_catalog.int2vector and t.tgconstraint=0 and not t.tgisinternal)
+  or not exists(select 1 from pg_catalog.pg_trigger t where t.tgname='sc_cutover_freeze_038f' and t.tgrelid='app_private.signup_origins'::regclass and t.tgfoid=fn and t.tgtype=62 and t.tgenabled='A' and t.tgqual is null and t.tgnargs=0 and t.tgattr=''::pg_catalog.int2vector and t.tgconstraint=0 and not t.tgisinternal)
+ then raise exception 'PERSISTENT_FREEZE_NOT_PROVEN'; end if;
+end $freeze_check$;
+COMMIT;
