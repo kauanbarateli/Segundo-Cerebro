@@ -281,3 +281,12 @@ Autorizada pelo mantenedor ("pode aplicar tudo", projeto em fase de testes, sem 
 - **027**, linhas 707, 1102, 1138 e 1245: a mesma normalização `replace(<corpo>,chr(13)||chr(10),chr(10))` dentro do `sha256` dos quatro pins de `prosrc` (158.146 bytes).
 
 **Pendente fora do banco:** proteção contra senhas vazadas no Auth de produção (ação do mantenedor no painel); `GOOGLE_OAUTH_CLIENT_ID` e `GOOGLE_OAUTH_CLIENT_SECRET` ausentes em Production no Vercel; `FINANCE_GOALS_V1_ENABLED` e `FINANCE_GOALS_IMAGES_V1_ENABLED` só em Preview (decisão de habilitar em Production é do mantenedor). Aparelhos reais, zoom, leitor de tela e aceite #44 seguem adiados para depois da liberação na `main`.
+
+## Merge e publicação em produção (30/10/2026)
+
+- **Merge:** PR #120 mesclada em `main` por merge commit `bd35288404c493d1b03f7a1a0208f808cc2079a2`, com head `6eede43` e 48 checks verdes (CI geral e workflows nativos), PR limpa. Autorizado pelo mantenedor após a aplicação do banco e o catálogo sem desvios.
+- **Auto-deploy:** `vercel.json` mantém `git.deploymentEnabled.main=false`, então o merge não publicou sozinho. A proteção foi preservada (não alterada).
+- **Deployment de produção:** criado explicitamente, a pedido do mantenedor, `dpl_9sE2Ph3xcT8Wc4jik4ihP2BLsUP5` (`main`, `bd35288`, target `production`), READY, sem erro de alias. Variáveis de Production cadastradas pelo mantenedor antes (Google OAuth e flags de Metas).
+- **Domínio:** `www.segundocerebroapp.com.br` estava fixado em `dpl_79iRhLzr6LmNQvGPkGJLts2aSHWe` (`c46acea`). A pedido do mantenedor, foi reatribuído ao novo deployment. Reversão: reatribuir o alias ao deployment anterior.
+- **Verificação:** `/` redireciona 307 para `/entrar?notice=session-required` (sem sessão), `/conheca` responde 200, sem erros de runtime na última hora. Isso não substitui os aceites com aparelho real, zoom, leitor de tela e #44, adiados pelo mantenedor.
+- **Riscos aceitos:** proteção contra senhas vazadas do Auth indisponível no plano atual (exige Pro); 16 branches obsoletas aguardam remoção manual.
