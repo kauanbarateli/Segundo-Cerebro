@@ -21,7 +21,7 @@ const SAME_BROWSER_PINS=Object.freeze([
  ['scripts/verification/front-b-135-draft/same-browser-composed-v1.guarded.sql.txt','038f7a9fa96eaebcdee44b8974e41a1b13dd796651ca5d0fe12a56dcec7fb652']
 ]);
 const LOCAL_PINS=Object.freeze({
- 'recovery-ledger-bound.draft.mjs':'7f3c5a1a6310a3ee5f740a9207f0a2abdfaf41f634157fbdacb5fe66cf6391b3',
+ 'recovery-ledger-bound.draft.mjs':'c367ab39f98ab2f20c0af6063ec0223029500b76de9dfa1ff6323fa5004c2f8b',
  'recovery-ledger-bound.guarded.sql.txt':'7b51eb4ea9b12deed1a969efdfc9368bd494ce2247af495f004c2cf6a92ac84c',
  'install-only.reviewable.sql.txt':'fab48cfdf12630643623e4e1d58251b3bcc35bc7c6c0f57d7d93e415514ddb00',
  'ledger-visibility-probe.draft.mjs':'94742c71529b24a0308844a6b63659ef18d647b94613c0c62ee85ca4c2969d5d',
@@ -55,7 +55,7 @@ const LOCAL_PINS=Object.freeze({
  'ledger-preflight.readonly.sql.txt':'21f4757e4be28ac872703724051512dd7ae149c5efcebd24128022af4bd2a141'
 });
 const SUPPORT_PINS=Object.freeze([
- [BASE+'recovery-ledger-bound.draft.test.mjs','23cfeb4a7c08fce2fcde9463fb85d1966107105487d4ee88cbe49a34ad35562c'],
+ [BASE+'recovery-ledger-bound.draft.test.mjs','cb9bb6325b7a134d49ed64e5e55d2547261fdac30dbdaeb72f5db448c0b4d232'],
  [BASE+'ledger-visibility-probe.draft.test.mjs','3a385b67ffe80318b0d0f68889b95760b7311ab6f0f688c9fbe1448a6285a0d8'],
  [BASE+'pending-origin-race.draft.test.mjs','60d75a26b898c54b9c8aec74edbc1de78bb576d5b8387e4a0b666c38b1ce96cb'],
  [BASE+'origin-218-full-ledger.draft.test.mjs','2afdb1127a77ec167fac50eac02daf014682cc15854240295926e5d1aff1b871'],
@@ -141,7 +141,7 @@ export async function execute(env=process.env){
       await checked(bytes.get(BASE+'withdrawal-v2.fixture.sql').toString('utf8'));
       const candidate=bytes.get(BASE+'withdrawal-v2.guarded.sql.txt').toString('utf8'),guard="DO $guard$ BEGIN RAISE EXCEPTION 'GUARDED: review cutover and exact database provenance'; END $guard$;";
       if(candidate.split(guard).length!==2)fail();await checked(candidate.replace(guard,''));
-    } else if(!kind.startsWith('ledger-visibility-')) for(const sql of ['legacy','persistent-freeze','freeze-reverse','freeze-rollback','full-cutover'].includes(kind)?[sameBrowser.fixture,sameBrowser.foundation]:[sameBrowser.fixture,sameBrowser.foundation,sameBrowser.composition,sameBrowser.seed])await checked(sql.toString('utf8'));
+    } else if(!kind.startsWith('ledger-visibility-')) for(const sql of ['legacy','persistent-freeze','freeze-reverse','freeze-rollback','full-cutover'].includes(kind)?[sameBrowser.fixture,sameBrowser.foundation]:kind==='recovery-ledger-bound'?[sameBrowser.fixture,sameBrowser.foundation,sameBrowser.composition]:[sameBrowser.fixture,sameBrowser.foundation,sameBrowser.composition,sameBrowser.seed])await checked(sql.toString('utf8'));
     process.stderr.write(JSON.stringify({stage:'case-fixture-ready',kind})+'\n');
     const context={nonce,systemIdentifier,user:'10000000-0000-4000-8000-000000000001',session:'20000000-0000-4000-8000-000000000001',intent:'30000000-0000-4000-8000-000000000001',requestA:'40000000-0000-4000-8000-000000000001',requestB:'40000000-0000-4000-8000-000000000002'};
     if(kind==='reservation')for(const nullCase of ['intent_state','intent_expiry','admission_origin','admission_state','identity_null']){const result=json(await checked(nullCaseSql(context,nullCase)));if(result.kind!=='null-refused'||result.case!==nullCase||Object.keys(result).length!==2)fail();const baseline=json(await checked(nullBaselineSql(context)));if(baseline.kind!=='baseline'||baseline.intact!==true||Object.keys(baseline).length!==2)fail();}

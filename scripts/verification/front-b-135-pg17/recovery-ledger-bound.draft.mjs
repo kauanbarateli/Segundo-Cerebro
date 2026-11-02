@@ -29,6 +29,7 @@ export async function observeRecoveryLedger(ports,ctx,inputs){
   phase='quarantine';await ports.exec(p.quarantine);
   phase='seed-statement';await ports.exec(p.seedStatement);
   phase='before';const before=await ports.query(p.check);if(!before||before.quarantine!==true||before.cutover!==false||before.freeze!==true||before.triggers!==true||before.v2!==false)fail();
+  phase='empty';const empty=await ports.query("select json_build_object('intents',(select count(*) from app_private.signup_intents),'origins',(select count(*) from app_private.signup_origins),'fences',(select count(*) from app_private.signup_completion_fences_draft));");if(!empty||Object.keys(empty).sort().join(',')!=='fences,intents,origins'||empty.intents!==0||empty.origins!==0||empty.fences!==0)fail();
   phase='recovery';await ports.exec(p.recovery);
   phase='after';const after=await ports.query(p.check);if(!after||after.quarantine!==true||after.cutover!==false||after.freeze!==false||after.triggers!==false||after.v2!==false)fail();
   return Object.freeze({scenario:'recovery-ledger-bound-pg17',status:'CASE_OBSERVED_CLEANUP_PENDING',acceptance:false,hostedCertified:false});

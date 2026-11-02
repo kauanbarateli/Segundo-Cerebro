@@ -10,8 +10,9 @@ test('derives only from pinned bytes with synthetic ledger values',()=>{
  assert.throws(()=>recoveryLedgerPlan(ctx,{...inputs,recovery:Buffer.concat([inputs.recovery,Buffer.from(' ')])}));assert.throws(()=>recoveryLedgerPlan(ctx,{...inputs,install:Buffer.concat([inputs.install,Buffer.from(' ')])}));
 });
 test('demands freeze before recovery and absence after',async()=>{
- const base={quarantine:true,cutover:false,freeze:true,triggers:true,v2:false};let calls=[];const states=[base,{...base,freeze:false,triggers:false}];const result=await observeRecoveryLedger({exec:async sql=>calls.push(sql),query:async()=>states.shift()},ctx,inputs);assert.equal(result.scenario,'recovery-ledger-bound-pg17');assert.equal(calls.length,4);
+ const base={quarantine:true,cutover:false,freeze:true,triggers:true,v2:false};let calls=[];const states=[base,{intents:0,origins:0,fences:0},{...base,freeze:false,triggers:false}];const result=await observeRecoveryLedger({exec:async sql=>calls.push(sql),query:async()=>states.shift()},ctx,inputs);assert.equal(result.scenario,'recovery-ledger-bound-pg17');assert.equal(calls.length,4);
  await assert.rejects(()=>observeRecoveryLedger({exec:async()=>{},query:async()=>({...base,freeze:false})},ctx,inputs));
+ const nonempty=[base,{intents:1,origins:0,fences:0}];await assert.rejects(()=>observeRecoveryLedger({exec:async()=>{},query:async()=>nonempty.shift()},ctx,inputs));
 });
 test('diagnostic is phase-only and suppresses arbitrary failure text',async()=>{
  const messages=[];const previous=process.stderr.write;process.stderr.write=function(value){messages.push(String(value));return true;};
@@ -19,4 +20,10 @@ test('diagnostic is phase-only and suppresses arbitrary failure text',async()=>{
   await assert.rejects(()=>observeRecoveryLedger({exec:async()=>{throw Object.assign(new Error('secret sql'),{code:'untrusted secret'});},query:async()=>null},ctx,inputs));
   assert.deepEqual(messages.map(JSON.parse),[{code:'RECOVERY_LEDGER_BOUND_REFUSED',phase:'seed',reason:'OTHER'}]);
  }finally{process.stderr.write=previous;}
+});
+test('recovery fixture excludes the race seed that creates an intent',async()=>{
+ const runner=await readFile(new URL('./runner.mjs',import.meta.url),'utf8');
+ const raceSeed=await readFile(new URL('./same-browser-seed.sql',import.meta.url),'utf8');
+ assert.match(raceSeed,/insert into app_private\.signup_intents/i);
+ assert.ok(runner.includes("kind==='recovery-ledger-bound'?[sameBrowser.fixture,sameBrowser.foundation,sameBrowser.composition]:[sameBrowser.fixture,sameBrowser.foundation,sameBrowser.composition,sameBrowser.seed]"));
 });
