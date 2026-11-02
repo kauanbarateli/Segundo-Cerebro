@@ -11,7 +11,9 @@ for (const width of [320, 768, 1280]) {
     await page.goto("/configuracoes");
     await page.getByRole("combobox", { name: "Privilégio Admin da demonstração" }).selectOption("enabled");
 
-    for (const route of WORKSPACE_ROUTES) {
+    // Admin opens from its own view: never a navigation item, even with privilege.
+    await expect(page.getByRole("link", { name: "Admin", exact: true })).toHaveCount(0);
+    for (const route of WORKSPACE_ROUTES.filter((item) => item.feature !== "admin")) {
       // Layout Codex: phones (≤600px) open the same sidebar as a modal menu.
       let destination = width <= 600
         ? page.getByRole("navigation", { name: "Navegação no celular", exact: true }).getByRole("link", { name: route.label, exact: true })

@@ -34,3 +34,7 @@ Alvos mínimos 44px; foco em duas camadas; skip-link aponta para main focalizáv
 - **RECOMENDADO:** variante só por escolha em Configurações → Aparência, chave `segundo-cerebro-desktop-navigation-v1` pintada no mesmo script do `<head>` (`data-desktop-navigation`), independente de `segundo-cerebro-sidebar`. Elegível em `(min-width:1051px) and (any-pointer:fine)`; fora disso lateral e navegação do celular atuais. As duas variantes são renderizadas no servidor e o CSS esconde a inativa (`display:none`/`visibility:hidden`), então há um único landmark "Navegação principal".
 - **RECOMENDADO:** itens vêm de `groupNavigationRoutes(getVisibleRoutes(policy))` (ordem, vetos, ocultação e Admin) com separadores só entre grupos reais; utilitários e Métricas ficam fixos; o que não cabe vai para "Mais áreas" (popover de links), sem encolher alvos nem quebrar linha. Busca e conta migram para a topbar; o popover de conta é o mesmo, com "Meu perfil".
 - **INFERIDO:** ativo usa accent + marcador inferior + `aria-current`; toque e movimento reduzido não ampliam; Escape fecha o balão; trocar de variante leva o foco ao mesmo destino visível. Toasts e o fim do conteúdo reservam `--dock-clearance`.
+
+## 02/11/2026 — Admin fora da navegação
+
+Decisão do mantenedor: Admin não aparece como item da lateral, da dock ou do menu do celular, nem com privilégio. A área vai para outra visualização. A rota `/admin`, a regra de acesso (`resolveAccess`) e a busca continuam iguais; `getNavigationRoutes` é a fonte única dos itens do shell.

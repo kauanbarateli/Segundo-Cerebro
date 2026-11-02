@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { FEATURE_KEYS, resolveAccess, type AccessPolicy } from "../src/core/access/resolve-access";
 import { DEFAULT_DEMO_POLICY, parseDemoPolicy, serializeDemoPolicy } from "../src/lib/navigation/demo-state";
-import { filterRoutes, getMobileRoutes, getRouteByPath, getVisibleRoutes, MVP_WORKSPACE_ROUTES, WORKSPACE_ROUTES } from "../src/lib/navigation/routes";
+import { filterRoutes, getMobileRoutes, getNavigationRoutes, getRouteByPath, getVisibleRoutes, MVP_WORKSPACE_ROUTES, WORKSPACE_ROUTES } from "../src/lib/navigation/routes";
 import { groupNavigationRoutes } from "../src/lib/navigation/groups";
 import { parseSidebarState, resolveSidebarState } from "../src/lib/navigation/sidebar-preference";
 
@@ -101,7 +101,7 @@ describe("armazenamento exclusivo da demonstração", () => {
 });
 
 describe("layout Codex: grupos da lateral sem reordenar a escolha da pessoa", () => {
-  const labels = (policy: AccessPolicy) => groupNavigationRoutes(getVisibleRoutes(policy));
+  const labels = (policy: AccessPolicy) => groupNavigationRoutes(getNavigationRoutes(policy));
 
   it("agrupa a ordem padrão em Meu dia, Meu contexto e Vida pessoal, com utilitários no rodapé", () => {
     const navigation = labels(DEFAULT_DEMO_POLICY);
@@ -131,13 +131,17 @@ describe("layout Codex: grupos da lateral sem reordenar a escolha da pessoa", ()
       getVisibleRoutes(policy).map((route) => route.feature).filter((feature) => !["configuracoes", "integracoes", "admin"].includes(feature)));
   });
 
-  it("ocultar e vetar continuam valendo dentro dos grupos e Admin vai ao rodapé com privilégio", () => {
+  it("ocultar e vetar continuam valendo dentro dos grupos; Admin não entra na navegação, nem com privilégio", () => {
     const policy: AccessPolicy = { isAdmin: true, entitlements: { drive: false }, preferences: { cofre: { visible: false, order: 9 } } };
     const navigation = labels(policy);
     const features = navigation.groups.flatMap((group) => group.routes.map((route) => route.feature));
     expect(features).not.toContain("drive");
     expect(features).not.toContain("cofre");
-    expect(navigation.utility.map((route) => route.feature)).toContain("admin");
+    expect(navigation.utility.map((route) => route.feature)).toEqual(["configuracoes", "integracoes"]);
+    // The route, its access rule and the search keep Admin reachable for the privileged person.
+    expect(resolveAccess("admin", policy).allowed).toBe(true);
+    expect(getVisibleRoutes(policy).map((route) => route.feature)).toContain("admin");
+    expect(getNavigationRoutes(policy).map((route) => route.feature)).not.toContain("admin");
   });
 });
 
