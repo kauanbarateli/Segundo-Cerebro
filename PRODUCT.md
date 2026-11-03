@@ -20,7 +20,7 @@ Capturar, conectar e reencontrar informações pessoais com pouco esforço. O In
 
 ## Operating Context
 
-MVP operacional: Início, Capturar, Conhecimento, Tarefas, Calendário, Projetos, Hábitos, Financeiro, Cofre, Configurações, Integrações, Admin, onboarding facultativo e landing pública. Drive foi retirado (D032), sem apagar infraestrutura compartilhada. Restore é pós-lançamento (D078). D-084 retoma a implementação do doc18 em quatro frentes, com fidelidade ao protótipo. Merge e deploy continuam bloqueados até as validações.
+MVP operacional: Início, Capturar, Conhecimento, Tarefas, Calendário, Projetos, Hábitos, Financeiro, Cofre, Configurações, Integrações, Admin, onboarding facultativo e landing pública. Drive foi retirado (D032), sem apagar infraestrutura compartilhada. Restore é pós-lançamento (D078). D-084 retoma a implementação do doc18 em quatro frentes, com fidelidade ao protótipo. O MVP foi incorporado e publicado em 30/10 (PR #120); merge e deploy seguem condicionados a CI verde e a pedido explícito do mantenedor.
 
 ## Capabilities and Constraints
 

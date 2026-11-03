@@ -1,6 +1,6 @@
 # Dock desktop opcional — doc21 (02/11/2026)
 
-Execução do [doc21](https://github.com/kauanbarateli/Segundo-Cerebro/pull/223) na branch `codex/dock-desktop-opt-in`, criada a partir da `main` reconciliada e rebaseada sobre `7519b614`. A branch antiga da PR #120 não foi retomada. Merge e deploy permanecem bloqueados; o deploy desta branch está desligado em `vercel.json`.
+Execução do [doc21](https://github.com/kauanbarateli/Segundo-Cerebro/pull/223) na branch `codex/dock-desktop-opt-in`, criada a partir da `main` reconciliada e rebaseada sobre `7519b614`. A branch antiga da PR #120 não foi retomada. Mesclada pela [#224](https://github.com/kauanbarateli/Segundo-Cerebro/pull/224) (`97d53b28`) e publicada em produção em 02/11/2026 (`dpl_D5RWDAHiFZ2JNjBc6PDaUTvuWzVp`). O planejamento #223 foi encerrado sem merge; sua branch `codex/plano-dock-desktop-20261102` fica preservada para consulta.
 
 ## Implementado
 

@@ -11,8 +11,8 @@ import { accountPresentation } from "@/adapters/db/account-presentation";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Segundo Cérebro · Em construção",
-  description: "Um espaço para capturar ideias, conectar conhecimento e organizar o dia. Acompanhe a construção do novo Segundo Cérebro.",
+  title: "Segundo Cérebro",
+  description: "Um espaço para capturar ideias, conectar conhecimento e organizar o dia.",
   robots: { index: false, follow: false },
   applicationName: "Segundo Cérebro",
   appleWebApp: { capable: true, title: "Segundo Cérebro", statusBarStyle: "default", startupImage: pwaAssets.startupImages },

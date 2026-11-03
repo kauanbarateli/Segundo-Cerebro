@@ -1,6 +1,6 @@
 # Segundo Cérebro
 
-Sistema de informações pessoais com Capturar, Tarefas, Conhecimento, Projetos, Hábitos, Financeiro, Cofre e Calendário Google, reunidos pelo Início, Busca e vínculos. O MVP está em validação e a produção oferece login, com acesso privado protegido. Jornadas autenticadas e aceites externos continuam pendentes. O [relatório de entrega](docs/implementation/entrega-mvp-pendencias.md) registra as evidências, as configurações restantes e as migrations já informadas como aplicadas.
+Sistema de informações pessoais com Capturar, Tarefas, Conhecimento, Projetos, Hábitos, Financeiro, Cofre e Calendário Google, reunidos pelo Início, Busca e vínculos. O MVP está publicado em produção desde 30/10/2026 (PR #120), com login e acesso privado protegido; o cadastro público continua fechado. Jornadas autenticadas e aceites externos continuam pendentes. O [relatório de entrega](docs/implementation/entrega-mvp-pendencias.md) registra as evidências, as configurações restantes e as migrations já informadas como aplicadas.
 
 **Escopo vigente — 12/10/2026:** a entrega da aba Drive foi retirada do MVP por pedido do mantenedor ([D-032](docs/planejamento/registro-de-decisoes.md#retirada-da-entrega-drive--12102026)). Sua nova lógica ainda será descrita; não há substituição ou fase prometida. O código, as migrations e as evidências anteriores permanecem preservados. Imagens de Capturar e Avatar continuam usando a infraestrutura privada compartilhada de Storage.
 
@@ -39,7 +39,7 @@ O [CI](.github/workflows/ci.yml) inclui esses portões, parsing SQL, testes em U
 
 ## Banco e operação
 
-Existem **27 migrations versionadas**, de 001 a 027, com cópias ordenadas no [pacote SQL Editor](supabase/sql-editor/README.md) e hashes no [manifest](supabase/sql-editor/manifest.json). A homologação isolada twrydxsdemaykgvdlpyd possui instalação 001–027 registrada no [ledger próprio](docs/implementation/homologacao-twry-20261022.md), incluindo a 026 de onboarding e a 027 financeira. Isso não comprova que produção esteja na mesma versão: o projeto pessoal rishenjoikgmfubmnfiu exige inventário readonly e reconciliação próprios antes do corte.
+Existem **27 migrations versionadas**, de 001 a 027, com cópias ordenadas no [pacote SQL Editor](supabase/sql-editor/README.md) e hashes no [manifest](supabase/sql-editor/manifest.json). A homologação isolada twrydxsdemaykgvdlpyd possui instalação 001–027 registrada no [ledger próprio](docs/implementation/homologacao-twry-20261022.md), incluindo a 026 de onboarding e a 027 financeira. Em produção, o projeto pessoal rishenjoikgmfubmnfiu recebeu 020–027 pelo mantenedor em 30/10, com catálogo de 2.512 verificações sem desvios; a proveniência e os limites estão na [reconciliação do banco](docs/implementation/reconciliacao-banco-20261031.md).
 
 **Não reaplicar migrations confirmadas nem repetir o bootstrap master.** Conferir o destino e seu histórico antes de selecionar qualquer versão pendente, preservando os bytes canônicos. A aplicação hospedada segue a [OP-009](docs/implementation/decisoes-operacionais.md#op-009--conexão-pessoal-e-aplicação-supervisionada) e as autorizações específicas de cada ambiente; nunca ocorre por CI, build ou deploy. Os testes descartáveis do GitHub não são o ledger de um Supabase hospedado. BlackSheep/Sistema VOE permanecem fora do escopo.
 
