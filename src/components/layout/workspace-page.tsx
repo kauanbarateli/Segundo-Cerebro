@@ -6,10 +6,9 @@ import { resolveAccess, type FeatureKey } from "@/core/access/resolve-access";
 import { Icons } from "@/components/ui/icons";
 import { useDemoAccess } from "@/lib/navigation/demo-access-provider";
 import { WORKSPACE_ROUTES } from "@/lib/navigation/routes";
-import { NavigationIcon } from "./navigation-icon";
 
 export function WorkspacePage({ feature, children, title, subtitle, actions }: {
-  feature: FeatureKey; children?: ReactNode;
+  feature: FeatureKey; children: ReactNode;
   /** Layout Codex heading: defaults to the module name and its subtitle. */
   title?: ReactNode; subtitle?: ReactNode; actions?: ReactNode;
 }) {
@@ -32,18 +31,7 @@ export function WorkspacePage({ feature, children, title, subtitle, actions }: {
             : "Um veto de acesso simulado impede abrir este módulo, inclusive pelo endereço direto. Reveja o cenário em Configurações para permitir o acesso."}</p>
           <Link className="shell-inline-link" href="/configuracoes">Rever opções de demonstração<Icons.ChevronRight /></Link>
         </section>
-      ) : children ?? (
-        <section className="shell-empty" aria-labelledby="empty-title" data-access="allowed">
-          <span className="shell-empty-icon"><NavigationIcon feature={feature} /></span>
-          <h2 id="empty-title">{route.emptyTitle}</h2><p>{route.emptyDescription}</p>
-          <div className="shell-empty-actions">
-            {feature === "inicio" ? <>
-              <Link className="shell-inline-link" href="/capturar">Explorar Capturar<Icons.ChevronRight /></Link>
-              <Link className="shell-inline-link" href="/design-system">Fundamentos visuais<Icons.ChevronRight /></Link>
-            </> : <Link className="shell-inline-link" href="/">Voltar ao Início<Icons.ChevronRight /></Link>}
-          </div>
-        </section>
-      )}
+      ) : children}
     </>
   );
 }
