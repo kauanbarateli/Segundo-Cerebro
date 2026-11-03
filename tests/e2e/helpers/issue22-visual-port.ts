@@ -98,8 +98,14 @@ const convergenceHashes: Readonly<Record<string, string>> = Object.freeze({
 const frenteAHashes: Readonly<Record<string, string>> = Object.freeze({
   "DESIGN.md": "50a267aee63986b33eb733c6587886911a7dcec08a80d63e5db8f3c4b21449c1",
 });
+// Organização de 03/11/2026: PRODUCT.md and DESIGN.md only replace the "merge e deploy bloqueados"
+// status text with the published state (PR #120). Two reviewed blobs qualify C; nothing visual changes.
+const organizacaoHashes: Readonly<Record<string, string>> = Object.freeze({
+  "PRODUCT.md": "d6004d72ca672328529e5ea49de1c30922f696dc66d71b6280b0791440b7301e",
+  "DESIGN.md": "2f37d1be0eae3ca795c97fb22ed0d3852ac4b070321fb8ae4b12e5abc4b29e34",
+});
 /** The caller computes the hash from the exact Git blob, never a manifest hint. */
-export function qualifyVisualStableSource(tree: VisualTree, path: string, sha256: string): "baseline" | "landing" | "layout" | "planning" | "convergence" | "frente-a" {
+export function qualifyVisualStableSource(tree: VisualTree, path: string, sha256: string): "baseline" | "landing" | "layout" | "planning" | "convergence" | "frente-a" | "organizacao" {
   if (!["B", "P", "C"].includes(tree) || !Object.hasOwn(stableHashes, path)) throw new Error("VISUAL_STABLE_SOURCE_CHANGED:" + path);
   if (sha256 === stableHashes[path]) return "baseline";
   if (tree === "C" && Object.hasOwn(landingHashes, path) && sha256 === landingHashes[path]) return "landing";
@@ -107,6 +113,7 @@ export function qualifyVisualStableSource(tree: VisualTree, path: string, sha256
   if (tree === "C" && Object.hasOwn(planningHashes, path) && sha256 === planningHashes[path]) return "planning";
   if (tree === "C" && Object.hasOwn(convergenceHashes, path) && sha256 === convergenceHashes[path]) return "convergence";
   if (tree === "C" && Object.hasOwn(frenteAHashes, path) && sha256 === frenteAHashes[path]) return "frente-a";
+  if (tree === "C" && Object.hasOwn(organizacaoHashes, path) && sha256 === organizacaoHashes[path]) return "organizacao";
   throw new Error("VISUAL_STABLE_SOURCE_CHANGED:" + path);
 }
 /** Full historical JSON equality after removing only the three approved fields. */

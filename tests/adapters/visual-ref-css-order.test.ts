@@ -37,6 +37,14 @@ describe("only C accepts the exact approved landing additions without changing h
     for (const changed of [hash.toUpperCase(), hash + "0", "0".repeat(64)]) reject(() => qualifyVisualStableSource("C", path, changed));
     for (const other of [tokensPath, "PRODUCT.md", "src/app/globals.css", "src/components/features/capturar/capture.css", "src/components/features/tarefas/tasks.css"]) reject(() => qualifyVisualStableSource("C", other, hash));
   });
+  it("qualifies only the exact 03/11 status text of PRODUCT.md and DESIGN.md for C", () => {
+    for (const [path, hash] of [["PRODUCT.md", "d6004d72ca672328529e5ea49de1c30922f696dc66d71b6280b0791440b7301e"], ["DESIGN.md", "2f37d1be0eae3ca795c97fb22ed0d3852ac4b070321fb8ae4b12e5abc4b29e34"]] as const) {
+      expect(qualifyVisualStableSource("C", path, hash)).toBe("organizacao");
+      for (const tree of ["B", "P"] as const) reject(() => qualifyVisualStableSource(tree, path, hash));
+      for (const changed of [hash.toUpperCase(), hash + "0", "0".repeat(64)]) reject(() => qualifyVisualStableSource("C", path, changed));
+      for (const other of [tokensPath, "src/app/globals.css", "src/components/features/capturar/capture.css", "src/components/features/tarefas/tasks.css"]) reject(() => qualifyVisualStableSource("C", other, hash));
+    }
+  });
   it("accepts old hashes for every tree and the two reviewed new hashes only for C", () => {
     for (const tree of ["B", "P", "C"] as const) {
       expect(qualifyVisualStableSource(tree, tokensPath, oldTokensHash)).toBe("baseline");
